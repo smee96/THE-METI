@@ -1,0 +1,62 @@
+{
+  "version": "7",
+  "dialect": "SQLite",
+  "entries": [
+    {
+      "idx": 1,
+      "version": "0001",
+      "when": 1745712000,
+      "tag": "users_auth",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "0002",
+      "when": 1745712001,
+      "tag": "cards",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "0003",
+      "when": 1745712002,
+      "tag": "groups",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "0004",
+      "when": 1745712003,
+      "tag": "events",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "0005",
+      "when": 1745712004,
+      "tag": "chat",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "0006",
+      "when": 1745712005,
+      "tag": "recruiting",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "0007",
+      "when": 1745712006,
+      "tag": "rewards_partner",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "0008",
+      "when": 1745712007,
+      "tag": "plans_billing",
+      "breakpoints": true
+    }
+  ]
+}

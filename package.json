@@ -1,19 +1,38 @@
 {
-  "name": "webapp",
+  "name": "meti-backend",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:sandbox": "wrangler pages dev dist --d1=meti-production --local --ip 0.0.0.0 --port 3000",
     "build": "vite build",
-    "preview": "wrangler pages dev",
-    "deploy": "npm run build && wrangler pages deploy",
-    "cf-typegen": "wrangler types --env-interface CloudflareBindings"
+    "preview": "wrangler pages dev dist --d1=meti-production --local",
+    "deploy": "npm run build && wrangler pages deploy dist --project-name meti-backend",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "db:create": "wrangler d1 create meti-production",
+    "db:migrate:local": "wrangler d1 migrations apply meti-production --local",
+    "db:migrate:prod": "wrangler d1 migrations apply meti-production",
+    "db:seed": "wrangler d1 execute meti-production --local --file=./seed.sql",
+    "db:reset": "rm -rf .wrangler/state/v3/d1 && npm run db:migrate:local && npm run db:seed",
+    "db:console:local": "wrangler d1 execute meti-production --local",
+    "db:console:prod": "wrangler d1 execute meti-production",
+    "git:status": "git status",
+    "git:commit": "git add . && git commit -m"
   },
   "dependencies": {
-    "hono": "^4.12.12"
+    "@hono/zod-validator": "^0.7.6",
+    "bcryptjs": "^2.4.3",
+    "hono": "^4.12.12",
+    "jose": "^5.10.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260426.1",
     "@hono/vite-build": "^1.2.0",
+    "@hono/vite-cloudflare-pages": "^0.4.3",
     "@hono/vite-dev-server": "^0.18.2",
+    "@types/bcryptjs": "^2.4.6",
+    "typescript": "^5.7.3",
     "vite": "^6.3.5",
     "wrangler": "^4.4.0"
   }

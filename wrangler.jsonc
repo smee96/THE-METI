@@ -1,34 +1,36 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "webapp",
+  "name": "meti-backend",
   "compatibility_date": "2026-04-13",
   "pages_build_output_dir": "./dist",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ]
-  // "vars": {
-  //   "MY_VAR": "my-variable"
-  // },
-  // "kv_namespaces": [
-  //   {
-  //     "binding": "MY_KV_NAMESPACE",
-  //     "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  //   }
-  // ],
-  // "r2_buckets": [
-  //   {
-  //     "binding": "MY_BUCKET",
-  //     "bucket_name": "my-bucket"
-  //   }
-  // ],
-  // "d1_databases": [
-  //   {
-  //     "binding": "MY_DB",
-  //     "database_name": "my-database",
-  //     "database_id": ""
-  //   }
-  // ],
-  // "ai": {
-  //   "binding": "AI"
-  // }
+  "compatibility_flags": ["nodejs_compat"],
+
+  // D1 Database
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "meti-production",
+      "database_id": "placeholder-will-be-set-after-cf-login"
+    }
+  ],
+
+  // R2 Storage (이미지, 파일 업로드용)
+  "r2_buckets": [
+    {
+      "binding": "STORAGE",
+      "bucket_name": "meti-storage"
+    }
+  ],
+
+  // 환경 변수 (비민감)
+  "vars": {
+    "APP_NAME": "METI",
+    "APP_ENV": "production",
+    "JWT_EXPIRES_IN": "7d",
+    "REFRESH_TOKEN_EXPIRES_IN": "30d"
+  }
+
+  // Secrets (wrangler secret put 으로 설정):
+  // JWT_SECRET
+  // PARTNER_WEBHOOK_SECRET
 }
