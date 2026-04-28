@@ -61,3 +61,6 @@ CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id)
 
 -- role 컬럼 (super_admin / group_admin / user)
 -- ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'; -- 이미 생성된 경우 스킵
+
+-- role 컬럼 추가 (슈퍼어드민 구분용)
+-- ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user';
