@@ -1,0 +1,2496 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>METI API 문서 v1.0</title>
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-dark: #4f46e5;
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface2: #334155;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --green: #22c55e;
+      --blue: #3b82f6;
+      --orange: #f59e0b;
+      --red: #ef4444;
+      --purple: #a855f7;
+      --cyan: #06b6d4;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+
+    /* 사이드바 */
+    #sidebar {
+      width: 280px; min-width: 280px; background: var(--surface); border-right: 1px solid var(--border);
+      height: 100vh; overflow-y: auto; position: sticky; top: 0;
+    }
+    .sidebar-header { padding: 24px 20px; border-bottom: 1px solid var(--border); }
+    .sidebar-header h1 { font-size: 20px; font-weight: 700; color: var(--primary); }
+    .sidebar-header p { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .sidebar-section { padding: 12px 0; }
+    .sidebar-section-title {
+      padding: 6px 20px; font-size: 10px; font-weight: 700; letter-spacing: 1px;
+      color: var(--text-muted); text-transform: uppercase;
+    }
+    .sidebar-link {
+      display: flex; align-items: center; gap: 8px; padding: 7px 20px;
+      color: var(--text-muted); text-decoration: none; font-size: 13px;
+      border-left: 3px solid transparent; transition: all 0.15s;
+    }
+    .sidebar-link:hover, .sidebar-link.active { color: var(--text); background: var(--surface2); border-left-color: var(--primary); }
+    .method-badge { font-size: 10px; font-weight: 700; padding: 2px 5px; border-radius: 3px; min-width: 38px; text-align: center; }
+    .GET { background: #052e16; color: var(--green); }
+    .POST { background: #172554; color: var(--blue); }
+    .PATCH { background: #451a03; color: var(--orange); }
+    .DELETE { background: #450a0a; color: var(--red); }
+
+    /* 메인 */
+    #main { flex: 1; overflow-y: auto; padding: 40px; max-width: 1100px; }
+    .page-header { margin-bottom: 40px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+    .page-header h1 { font-size: 32px; font-weight: 800; }
+    .page-header p { color: var(--text-muted); margin-top: 8px; line-height: 1.6; }
+    .badges { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .badge-version { background: #1e1b4b; color: var(--primary); }
+    .badge-base { background: #162032; color: var(--cyan); }
+    .badge-auth { background: #1a2030; color: #60a5fa; }
+
+    /* 섹션 */
+    .section { margin-bottom: 60px; }
+    .section-title { font-size: 22px; font-weight: 700; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid var(--primary); display: flex; align-items: center; gap: 10px; }
+    .section-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; background: var(--surface); }
+
+    /* 엔드포인트 카드 */
+    .endpoint { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 20px; overflow: hidden; }
+    .endpoint-header { padding: 16px 20px; display: flex; align-items: flex-start; gap: 12px; cursor: pointer; user-select: none; }
+    .endpoint-header:hover { background: var(--surface2); }
+    .endpoint-meta { flex: 1; }
+    .endpoint-path { font-family: 'Courier New', monospace; font-size: 15px; font-weight: 600; color: var(--text); }
+    .endpoint-desc { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+    .endpoint-tags { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    .tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--surface2); color: var(--text-muted); }
+    .tag-auth { background: #1a2030; color: #60a5fa; }
+    .tag-admin { background: #2d1a2e; color: #c084fc; }
+    .tag-partner { background: #162032; color: var(--cyan); }
+    .chevron { color: var(--text-muted); transition: transform 0.2s; font-size: 12px; margin-top: 2px; }
+    .open .chevron { transform: rotate(180deg); }
+
+    /* 상세 내용 */
+    .endpoint-body { padding: 0 20px 20px; display: none; }
+    .endpoint.open .endpoint-body { display: block; }
+    .endpoint-body-inner { border-top: 1px solid var(--border); padding-top: 16px; }
+
+    .param-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 16px; }
+    .param-table th { background: var(--surface2); padding: 8px 12px; text-align: left; font-size: 11px; letter-spacing: 0.5px; color: var(--text-muted); text-transform: uppercase; }
+    .param-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .param-name { font-family: monospace; color: #93c5fd; }
+    .param-type { color: var(--orange); font-family: monospace; font-size: 12px; }
+    .param-req { color: var(--red); font-size: 11px; font-weight: 700; }
+    .param-opt { color: var(--text-muted); font-size: 11px; }
+    .param-desc { color: var(--text-muted); line-height: 1.5; }
+
+    .sub-title { font-size: 13px; font-weight: 700; color: var(--text-muted); margin: 16px 0 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .code-block { background: #0d1117; border: 1px solid var(--border); border-radius: 8px; padding: 16px; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.6; overflow-x: auto; margin-bottom: 12px; }
+    .code-block .key { color: #79c0ff; }
+    .code-block .str { color: #a5d6ff; }
+    .code-block .num { color: #f97316; }
+    .code-block .bool { color: #a5d6ff; }
+    .code-block .comment { color: #6e7681; }
+    .code-block .null-val { color: #ff7b72; }
+
+    .response-tabs { display: flex; gap: 4px; margin-bottom: 8px; }
+    .res-tab { padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--text-muted); }
+    .res-tab.active { background: var(--surface2); color: var(--text); }
+    .res-tab.success { border-color: #052e16; color: var(--green); }
+    .res-tab.error { border-color: #450a0a; color: var(--red); }
+
+    .info-box { padding: 12px 16px; border-radius: 8px; font-size: 13px; line-height: 1.6; margin-bottom: 12px; }
+    .info-box.warning { background: #1c1a06; border-left: 3px solid var(--orange); color: #fde68a; }
+    .info-box.info { background: #0c1a2e; border-left: 3px solid var(--blue); color: #bfdbfe; }
+    .info-box.success { background: #052e16; border-left: 3px solid var(--green); color: #bbf7d0; }
+
+    .overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .overview-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+    .overview-card h3 { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+    .overview-card p { font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.5; }
+
+    .error-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .error-table th { background: var(--surface2); padding: 8px 12px; text-align: left; }
+    .error-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+    .http-code { font-family: monospace; font-weight: 700; }
+    .http-200 { color: var(--green); }
+    .http-201 { color: var(--cyan); }
+    .http-400 { color: var(--orange); }
+    .http-401 { color: var(--red); }
+    .http-403 { color: #f97316; }
+    .http-404 { color: #fb923c; }
+    .http-409 { color: #c084fc; }
+    .http-500 { color: var(--red); }
+
+    @media (max-width: 768px) {
+      #sidebar { display: none; }
+      #main { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 사이드바 -->
+<nav id="sidebar">
+  <div class="sidebar-header">
+    <h1>METI API</h1>
+    <p>디지털 명함 서비스 · v1.0</p>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">개요</div>
+    <a href="#overview" class="sidebar-link">📋 API 개요</a>
+    <a href="#auth-common" class="sidebar-link">🔐 인증 방식</a>
+    <a href="#errors" class="sidebar-link">⚠️ 에러 코드</a>
+    <a href="#pagination" class="sidebar-link">📄 페이지네이션</a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">인증</div>
+    <a href="#auth-register" class="sidebar-link"><span class="method-badge POST">POST</span> 회원가입</a>
+    <a href="#auth-verify" class="sidebar-link"><span class="method-badge POST">POST</span> 이메일 인증</a>
+    <a href="#auth-login" class="sidebar-link"><span class="method-badge POST">POST</span> 로그인</a>
+    <a href="#auth-refresh" class="sidebar-link"><span class="method-badge POST">POST</span> 토큰 갱신</a>
+    <a href="#auth-logout" class="sidebar-link"><span class="method-badge POST">POST</span> 로그아웃</a>
+    <a href="#auth-forgot" class="sidebar-link"><span class="method-badge POST">POST</span> 비밀번호 찾기</a>
+    <a href="#auth-reset" class="sidebar-link"><span class="method-badge POST">POST</span> 비밀번호 재설정</a>
+    <a href="#auth-me" class="sidebar-link"><span class="method-badge GET">GET</span> 내 정보</a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">명함</div>
+    <a href="#cards-list" class="sidebar-link"><span class="method-badge GET">GET</span> 내 명함 목록</a>
+    <a href="#cards-create" class="sidebar-link"><span class="method-badge POST">POST</span> 명함 생성</a>
+    <a href="#cards-public" class="sidebar-link"><span class="method-badge GET">GET</span> 공개 명함 조회</a>
+    <a href="#cards-detail" class="sidebar-link"><span class="method-badge GET">GET</span> 명함 상세</a>
+    <a href="#cards-update" class="sidebar-link"><span class="method-badge PATCH">PATCH</span> 명함 수정</a>
+    <a href="#cards-delete" class="sidebar-link"><span class="method-badge DELETE">DELETE</span> 명함 삭제</a>
+    <a href="#cards-qr-gen" class="sidebar-link"><span class="method-badge POST">POST</span> QR 토큰 생성</a>
+    <a href="#cards-qr-get" class="sidebar-link"><span class="method-badge GET">GET</span> QR 명함 조회</a>
+    <a href="#cards-save" class="sidebar-link"><span class="method-badge POST">POST</span> 명함첩 저장</a>
+    <a href="#cards-contacts" class="sidebar-link"><span class="method-badge GET">GET</span> 명함첩 목록</a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">그룹</div>
+    <a href="#groups-list" class="sidebar-link"><span class="method-badge GET">GET</span> 그룹 목록</a>
+    <a href="#groups-create" class="sidebar-link"><span class="method-badge POST">POST</span> 그룹 개설 신청</a>
+    <a href="#groups-detail" class="sidebar-link"><span class="method-badge GET">GET</span> 그룹 상세</a>
+    <a href="#groups-join" class="sidebar-link"><span class="method-badge POST">POST</span> 그룹 가입 신청</a>
+    <a href="#groups-leave" class="sidebar-link"><span class="method-badge DELETE">DELETE</span> 그룹 탈퇴</a>
+    <a href="#groups-members" class="sidebar-link"><span class="method-badge GET">GET</span> 멤버 목록</a>
+    <a href="#groups-member-action" class="sidebar-link"><span class="method-badge PATCH">PATCH</span> 멤버 승인/거절</a>
+    <a href="#groups-notices" class="sidebar-link"><span class="method-badge GET">GET</span> 공지사항 목록</a>
+    <a href="#groups-notice-create" class="sidebar-link"><span class="method-badge POST">POST</span> 공지사항 작성</a>
+    <a href="#groups-transfer" class="sidebar-link"><span class="method-badge POST">POST</span> 관리자 권한 이임</a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">행사</div>
+    <a href="#events-list" class="sidebar-link"><span class="method-badge GET">GET</span> 행사 목록</a>
+    <a href="#events-create" class="sidebar-link"><span class="method-badge POST">POST</span> 행사 생성</a>
+    <a href="#events-detail" class="sidebar-link"><span class="method-badge GET">GET</span> 행사 상세</a>
+    <a href="#events-join" class="sidebar-link"><span class="method-badge POST">POST</span> 행사 참가 신청</a>
+    <a href="#events-checkin" class="sidebar-link"><span class="method-badge POST">POST</span> 입장 처리</a>
+    <a href="#events-participants" class="sidebar-link"><span class="method-badge GET">GET</span> 참가자 목록</a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">채팅</div>
+    <a href="#chat-rooms" class="sidebar-link"><span class="method-badge GET">GET</span> 채팅방 목록</a>
+    <a href="#chat-direct" class="sidebar-link"><span class="method-badge POST">POST</span> 1:1 채팅 시작</a>
+    <a href="#chat-messages" class="sidebar-link"><span class="method-badge GET">GET</span> 메시지 목록</a>
+    <a href="#chat-send" class="sidebar-link"><span class="method-badge POST">POST</span> 메시지 전송</a>
+    <a href="#chat-delete" class="sidebar-link"><span class="method-badge DELETE">DELETE</span> 메시지 삭제</a>
+    <a href="#chat-report" class="sidebar-link"><span class="method-badge POST">POST</span> 신고</a>
+    <a href="#chat-block" class="sidebar-link"><span class="method-badge POST">POST</span> 차단</a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">파트너 API</div>
+    <a href="#partner-usermap" class="sidebar-link"><span class="method-badge POST">POST</span> 유저 매핑</a>
+    <a href="#partner-reward" class="sidebar-link"><span class="method-badge POST">POST</span> 리워드 지급</a>
+    <a href="#partner-balance" class="sidebar-link"><span class="method-badge GET">GET</span> 잔액 조회</a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">어드민</div>
+    <a href="#admin-dashboard" class="sidebar-link"><span class="method-badge GET">GET</span> 대시보드</a>
+    <a href="#admin-users" class="sidebar-link"><span class="method-badge GET">GET</span> 유저 목록</a>
+    <a href="#admin-user-update" class="sidebar-link"><span class="method-badge PATCH">PATCH</span> 유저 수정</a>
+    <a href="#admin-groups" class="sidebar-link"><span class="method-badge GET">GET</span> 그룹 목록</a>
+    <a href="#admin-group-action" class="sidebar-link"><span class="method-badge PATCH">PATCH</span> 그룹 승인</a>
+    <a href="#admin-reports" class="sidebar-link"><span class="method-badge GET">GET</span> 신고 목록</a>
+    <a href="#admin-report-action" class="sidebar-link"><span class="method-badge PATCH">PATCH</span> 신고 처리</a>
+    <a href="#admin-partners" class="sidebar-link"><span class="method-badge GET">GET</span> 파트너 목록</a>
+    <a href="#admin-partner-create" class="sidebar-link"><span class="method-badge POST">POST</span> 파트너 등록</a>
+    <a href="#admin-rewards" class="sidebar-link"><span class="method-badge GET">GET</span> 리워드 이력</a>
+    <a href="#admin-nfc" class="sidebar-link"><span class="method-badge GET">GET</span> NFC 카드 목록</a>
+    <a href="#admin-nfc-action" class="sidebar-link"><span class="method-badge PATCH">PATCH</span> NFC 카드 처리</a>
+  </div>
+</nav>
+
+<!-- 메인 -->
+<main id="main">
+
+  <!-- 개요 -->
+  <div id="overview" class="page-header">
+    <h1>🪪 METI API 문서</h1>
+    <p>METI 디지털 명함 서비스의 공식 REST API 문서입니다.<br>모든 API는 JSON 형식으로 요청/응답하며, JWT Bearer 토큰 기반 인증을 사용합니다.</p>
+    <div class="badges">
+      <span class="badge badge-version">v1.0.0</span>
+      <span class="badge badge-base">Base URL: /api/v1</span>
+      <span class="badge badge-auth">JWT Bearer Auth</span>
+    </div>
+  </div>
+
+  <div class="overview-grid">
+    <div class="overview-card">
+      <h3>🌐 Base URL</h3>
+      <p style="font-family:monospace;font-size:13px;color:#06b6d4">/api/v1</p>
+    </div>
+    <div class="overview-card">
+      <h3>🔐 인증 방식</h3>
+      <p>JWT Bearer Token<br><span style="font-size:12px;color:var(--text-muted)">Authorization: Bearer {token}</span></p>
+    </div>
+    <div class="overview-card">
+      <h3>📦 콘텐츠 타입</h3>
+      <p style="font-family:monospace;font-size:13px">Content-Type:<br>application/json</p>
+    </div>
+    <div class="overview-card">
+      <h3>⏰ 토큰 만료</h3>
+      <p>Access Token: 7일<br>Refresh Token: 30일</p>
+    </div>
+  </div>
+
+  <!-- 인증 방식 -->
+  <div id="auth-common" class="section">
+    <div class="section-title"><span class="section-icon">🔐</span>인증 방식</div>
+    <div class="info-box info">
+      대부분의 API는 <strong>Authorization</strong> 헤더에 Bearer 토큰이 필요합니다.<br>
+      토큰은 로그인(POST /auth/login) 또는 토큰 갱신(POST /auth/refresh)으로 발급받습니다.
+    </div>
+    <div class="sub-title">Request Header</div>
+    <div class="code-block"><span class="key">Authorization</span>: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+<span class="key">Content-Type</span>: application/json</div>
+    <div class="sub-title">JWT Payload 구조</div>
+    <div class="code-block">{
+  <span class="key">"sub"</span>: <span class="str">"123"</span>,          <span class="comment">// 유저 ID (string)</span>
+  <span class="key">"email"</span>: <span class="str">"user@example.com"</span>,
+  <span class="key">"plan"</span>: <span class="str">"free"</span>,        <span class="comment">// free | pro | business</span>
+  <span class="key">"account_type"</span>: <span class="str">"personal"</span>,  <span class="comment">// personal | headhunter</span>
+  <span class="key">"iat"</span>: <span class="num">1714118400</span>,
+  <span class="key">"exp"</span>: <span class="num">1714723200</span>
+}</div>
+    <div class="sub-title">파트너 API 인증 (별도)</div>
+    <div class="code-block"><span class="key">X-Partner-API-Key</span>: meti_partner_abc123def456...  <span class="comment">// 관리자가 발급한 파트너 전용 API 키</span></div>
+  </div>
+
+  <!-- 공통 응답 형식 -->
+  <div id="errors" class="section">
+    <div class="section-title"><span class="section-icon">📐</span>공통 응답 형식 & 에러 코드</div>
+    <div class="sub-title">성공 응답 (200 / 201)</div>
+    <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: { <span class="comment">/* 결과 데이터 */</span> },
+  <span class="key">"message"</span>: <span class="str">"처리 완료"</span>
+}</div>
+    <div class="sub-title">페이지네이션 응답</div>
+    <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: [ <span class="comment">/* 항목 배열 */</span> ],
+  <span class="key">"pagination"</span>: {
+    <span class="key">"page"</span>: <span class="num">1</span>,
+    <span class="key">"limit"</span>: <span class="num">20</span>,
+    <span class="key">"total"</span>: <span class="num">150</span>,
+    <span class="key">"total_pages"</span>: <span class="num">8</span>,
+    <span class="key">"has_next"</span>: <span class="bool">true</span>,
+    <span class="key">"has_prev"</span>: <span class="bool">false</span>
+  }
+}</div>
+    <div class="sub-title">실패 응답</div>
+    <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">false</span>,
+  <span class="key">"error"</span>: <span class="str">"에러 메시지"</span>
+}</div>
+    <table class="error-table">
+      <thead><tr><th>HTTP 코드</th><th>의미</th><th>주요 원인</th></tr></thead>
+      <tbody>
+        <tr><td><span class="http-code http-200">200</span></td><td>성공</td><td>요청 정상 처리</td></tr>
+        <tr><td><span class="http-code http-201">201</span></td><td>생성됨</td><td>리소스 생성 성공</td></tr>
+        <tr><td><span class="http-code http-400">400</span></td><td>잘못된 요청</td><td>유효성 검사 실패, 파라미터 누락</td></tr>
+        <tr><td><span class="http-code http-401">401</span></td><td>인증 실패</td><td>토큰 없음, 만료, 잘못된 자격증명</td></tr>
+        <tr><td><span class="http-code http-403">403</span></td><td>권한 없음</td><td>플랜 제한, 그룹/어드민 권한 부족</td></tr>
+        <tr><td><span class="http-code http-404">404</span></td><td>찾을 수 없음</td><td>리소스 미존재 또는 삭제됨</td></tr>
+        <tr><td><span class="http-code http-409">409</span></td><td>충돌</td><td>이메일 중복, 이미 가입된 그룹 등</td></tr>
+        <tr><td><span class="http-code http-500">500</span></td><td>서버 오류</td><td>DB 오류, 예외 처리</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 페이지네이션 -->
+  <div id="pagination" class="section">
+    <div class="section-title"><span class="section-icon">📄</span>페이지네이션</div>
+    <div class="info-box info">목록 조회 API는 모두 공통 쿼리 파라미터로 페이지네이션을 지원합니다.</div>
+    <table class="param-table">
+      <thead><tr><th>파라미터</th><th>타입</th><th>기본값</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td class="param-name">page</td><td class="param-type">integer</td><td>1</td><td class="param-desc">페이지 번호 (1부터 시작)</td></tr>
+        <tr><td class="param-name">limit</td><td class="param-type">integer</td><td>20</td><td class="param-desc">페이지당 항목 수 (최대 100)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ===== 인증 섹션 ===== -->
+  <div class="section">
+    <div class="section-title"><span class="section-icon">🔑</span>인증 (Auth)</div>
+
+    <!-- 회원가입 -->
+    <div id="auth-register" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge POST">POST</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/auth/register</div>
+          <div class="endpoint-desc">신규 회원가입 (이메일 + 비밀번호)</div>
+          <div class="endpoint-tags"><span class="tag">Public</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <table class="param-table">
+            <thead><tr><th>필드</th><th>타입</th><th>필수</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">email</td><td class="param-type">string</td><td class="param-req">required</td><td class="param-desc">이메일 주소 (유효한 이메일 형식)</td></tr>
+              <tr><td class="param-name">password</td><td class="param-type">string</td><td class="param-req">required</td><td class="param-desc">비밀번호 (최소 8자)</td></tr>
+              <tr><td class="param-name">name</td><td class="param-type">string</td><td class="param-req">required</td><td class="param-desc">사용자 이름 (2~50자)</td></tr>
+              <tr><td class="param-name">account_type</td><td class="param-type">enum</td><td class="param-opt">optional</td><td class="param-desc"><code>personal</code> | <code>headhunter</code> (기본: personal)</td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Request 예시</div>
+          <div class="code-block">{
+  <span class="key">"email"</span>: <span class="str">"user@example.com"</span>,
+  <span class="key">"password"</span>: <span class="str">"securePass123"</span>,
+  <span class="key">"name"</span>: <span class="str">"홍길동"</span>,
+  <span class="key">"account_type"</span>: <span class="str">"personal"</span>
+}</div>
+          <div class="sub-title">Response 201 (성공)</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"user_id"</span>: <span class="num">42</span>,
+    <span class="key">"email"</span>: <span class="str">"user@example.com"</span>,
+    <span class="key">"verify_token"</span>: <span class="str">"a1b2c3d4-..."</span>  <span class="comment">// 개발 환경에서만 노출, 운영에서는 이메일 발송</span>
+  },
+  <span class="key">"message"</span>: <span class="str">"회원가입이 완료되었습니다. 이메일 인증을 진행해주세요."</span>
+}</div>
+          <div class="sub-title">Response 409 (이메일 중복)</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">false</span>,
+  <span class="key">"error"</span>: <span class="str">"이미 사용 중인 이메일입니다."</span>
+}</div>
+          <div class="info-box warning">⚠️ 운영 환경에서는 <code>verify_token</code>이 응답에서 제거되고 이메일로 발송됩니다.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 이메일 인증 -->
+    <div id="auth-verify" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge POST">POST</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/auth/verify-email</div>
+          <div class="endpoint-desc">이메일 인증 토큰 검증</div>
+          <div class="endpoint-tags"><span class="tag">Public</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <table class="param-table">
+            <thead><tr><th>필드</th><th>타입</th><th>필수</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">token</td><td class="param-type">string</td><td class="param-req">required</td><td class="param-desc">이메일로 받은 인증 토큰 (UUID)</td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Request 예시</div>
+          <div class="code-block">{
+  <span class="key">"token"</span>: <span class="str">"a1b2c3d4-e5f6-7890-abcd-ef1234567890"</span>
+}</div>
+          <div class="sub-title">Response 200 (성공)</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: <span class="null-val">null</span>,
+  <span class="key">"message"</span>: <span class="str">"이메일 인증이 완료되었습니다."</span>
+}</div>
+          <div class="sub-title">Response 400 (실패)</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">false</span>,
+  <span class="key">"error"</span>: <span class="str">"유효하지 않거나 만료된 인증 토큰입니다."</span>
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 로그인 -->
+    <div id="auth-login" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge POST">POST</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/auth/login</div>
+          <div class="endpoint-desc">이메일/비밀번호로 로그인 후 JWT 토큰 발급</div>
+          <div class="endpoint-tags"><span class="tag">Public</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <table class="param-table">
+            <thead><tr><th>필드</th><th>타입</th><th>필수</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">email</td><td class="param-type">string</td><td class="param-req">required</td><td class="param-desc">이메일 주소</td></tr>
+              <tr><td class="param-name">password</td><td class="param-type">string</td><td class="param-req">required</td><td class="param-desc">비밀번호</td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Request 예시</div>
+          <div class="code-block">{
+  <span class="key">"email"</span>: <span class="str">"user@example.com"</span>,
+  <span class="key">"password"</span>: <span class="str">"securePass123"</span>
+}</div>
+          <div class="sub-title">Response 200 (성공)</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"access_token"</span>: <span class="str">"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."</span>,
+    <span class="key">"refresh_token"</span>: <span class="str">"f47ac10b-58cc-4372-a567-0e02b2c3d479"</span>,
+    <span class="key">"token_type"</span>: <span class="str">"Bearer"</span>,
+    <span class="key">"user"</span>: {
+      <span class="key">"id"</span>: <span class="num">42</span>,
+      <span class="key">"email"</span>: <span class="str">"user@example.com"</span>,
+      <span class="key">"name"</span>: <span class="str">"홍길동"</span>,
+      <span class="key">"account_type"</span>: <span class="str">"personal"</span>,
+      <span class="key">"plan"</span>: <span class="str">"free"</span>
+    }
+  },
+  <span class="key">"message"</span>: <span class="str">"로그인 성공"</span>
+}</div>
+          <div class="sub-title">Response 401 (인증 실패)</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">false</span>,
+  <span class="key">"error"</span>: <span class="str">"이메일 또는 비밀번호가 올바르지 않습니다."</span>
+}</div>
+          <div class="sub-title">Response 403 (비활성 / 미인증)</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">false</span>,
+  <span class="key">"error"</span>: <span class="str">"이메일 인증이 완료되지 않았습니다. 인증 메일을 확인해주세요."</span>
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 토큰 갱신 -->
+    <div id="auth-refresh" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge POST">POST</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/auth/refresh</div>
+          <div class="endpoint-desc">Refresh Token으로 새 Access Token 발급 (Token Rotation)</div>
+          <div class="endpoint-tags"><span class="tag">Public</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <table class="param-table">
+            <thead><tr><th>필드</th><th>타입</th><th>필수</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">refresh_token</td><td class="param-type">string</td><td class="param-req">required</td><td class="param-desc">로그인 시 발급된 Refresh Token (UUID)</td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Response 200 (성공)</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"access_token"</span>: <span class="str">"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."</span>,
+    <span class="key">"refresh_token"</span>: <span class="str">"new-refresh-token-uuid"</span>,  <span class="comment">// 기존 토큰은 무효화됨</span>
+    <span class="key">"token_type"</span>: <span class="str">"Bearer"</span>
+  }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 로그아웃 -->
+    <div id="auth-logout" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge POST">POST</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/auth/logout</div>
+          <div class="endpoint-desc">로그아웃 (Refresh Token 무효화)</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body (optional)</div>
+          <div class="code-block">{
+  <span class="key">"refresh_token"</span>: <span class="str">"f47ac10b-58cc-4372-a567-0e02b2c3d479"</span>  <span class="comment">// 선택 사항</span>
+}</div>
+          <div class="sub-title">Response 200 (성공)</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: <span class="null-val">null</span>,
+  <span class="key">"message"</span>: <span class="str">"로그아웃되었습니다."</span>
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 비밀번호 찾기 -->
+    <div id="auth-forgot" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge POST">POST</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/auth/forgot-password</div>
+          <div class="endpoint-desc">비밀번호 재설정 이메일 발송</div>
+          <div class="endpoint-tags"><span class="tag">Public</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <div class="code-block">{
+  <span class="key">"email"</span>: <span class="str">"user@example.com"</span>
+}</div>
+          <div class="sub-title">Response 200 (성공 — 유저 존재 여부 무관하게 동일 응답)</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"reset_token"</span>: <span class="str">"b2c3d4e5-..."</span>  <span class="comment">// 개발 환경에서만 노출, 유효시간 1시간</span>
+  },
+  <span class="key">"message"</span>: <span class="str">"비밀번호 재설정 이메일이 발송되었습니다."</span>
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 비밀번호 재설정 -->
+    <div id="auth-reset" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge POST">POST</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/auth/reset-password</div>
+          <div class="endpoint-desc">비밀번호 재설정 (토큰 + 새 비밀번호)</div>
+          <div class="endpoint-tags"><span class="tag">Public</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <table class="param-table">
+            <thead><tr><th>필드</th><th>타입</th><th>필수</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">token</td><td class="param-type">string</td><td class="param-req">required</td><td class="param-desc">비밀번호 재설정 토큰</td></tr>
+              <tr><td class="param-name">password</td><td class="param-type">string</td><td class="param-req">required</td><td class="param-desc">새 비밀번호 (최소 8자)</td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Response 200 (성공)</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: <span class="null-val">null</span>,
+  <span class="key">"message"</span>: <span class="str">"비밀번호가 변경되었습니다."</span>
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 내 정보 -->
+    <div id="auth-me" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge GET">GET</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/auth/me</div>
+          <div class="endpoint-desc">현재 로그인 유저 정보 조회</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Response 200 (성공)</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"id"</span>: <span class="num">42</span>,
+    <span class="key">"email"</span>: <span class="str">"user@example.com"</span>,
+    <span class="key">"name"</span>: <span class="str">"홍길동"</span>,
+    <span class="key">"account_type"</span>: <span class="str">"personal"</span>,
+    <span class="key">"plan"</span>: <span class="str">"free"</span>,
+    <span class="key">"plan_expires_at"</span>: <span class="null-val">null</span>,
+    <span class="key">"avatar_url"</span>: <span class="null-val">null</span>,
+    <span class="key">"is_verified"</span>: <span class="num">1</span>,
+    <span class="key">"created_at"</span>: <span class="str">"2025-01-01T00:00:00.000Z"</span>
+  }
+}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 명함 섹션 ===== -->
+  <div class="section">
+    <div class="section-title"><span class="section-icon">🪪</span>명함 (Cards)</div>
+    <div class="info-box info">📦 플랜별 명함 생성 한도: <strong>Free 3개 / Pro 10개 / Business 무제한</strong></div>
+
+    <!-- 내 명함 목록 -->
+    <div id="cards-list" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge GET">GET</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/cards</div>
+          <div class="endpoint-desc">내 명함 목록 조회 (is_primary 우선 정렬)</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Query Parameters</div>
+          <table class="param-table">
+            <thead><tr><th>파라미터</th><th>타입</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">page</td><td class="param-type">integer</td><td class="param-desc">페이지 번호 (기본: 1)</td></tr>
+              <tr><td class="param-name">limit</td><td class="param-type">integer</td><td class="param-desc">페이지당 수 (기본: 20)</td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: [
+    {
+      <span class="key">"id"</span>: <span class="num">1</span>,
+      <span class="key">"user_id"</span>: <span class="num">42</span>,
+      <span class="key">"group_id"</span>: <span class="null-val">null</span>,
+      <span class="key">"card_type"</span>: <span class="str">"personal"</span>,
+      <span class="key">"name"</span>: <span class="str">"홍길동"</span>,
+      <span class="key">"title"</span>: <span class="str">"시니어 개발자"</span>,
+      <span class="key">"company"</span>: <span class="str">"METI Inc."</span>,
+      <span class="key">"email"</span>: <span class="str">"hong@meti.io"</span>,
+      <span class="key">"phone"</span>: <span class="str">"010-1234-5678"</span>,
+      <span class="key">"website"</span>: <span class="str">"https://meti.io"</span>,
+      <span class="key">"bio"</span>: <span class="str">"풀스택 개발자입니다."</span>,
+      <span class="key">"avatar_url"</span>: <span class="null-val">null</span>,
+      <span class="key">"template_id"</span>: <span class="str">"default"</span>,
+      <span class="key">"is_public"</span>: <span class="num">1</span>,
+      <span class="key">"is_primary"</span>: <span class="num">1</span>,
+      <span class="key">"is_active"</span>: <span class="num">1</span>,
+      <span class="key">"sns_count"</span>: <span class="num">3</span>,
+      <span class="key">"created_at"</span>: <span class="str">"2025-01-01T00:00:00.000Z"</span>,
+      <span class="key">"updated_at"</span>: <span class="str">"2025-01-10T00:00:00.000Z"</span>
+    }
+  ],
+  <span class="key">"pagination"</span>: { <span class="key">"page"</span>: <span class="num">1</span>, <span class="key">"limit"</span>: <span class="num">20</span>, <span class="key">"total"</span>: <span class="num">2</span>, <span class="key">"total_pages"</span>: <span class="num">1</span>, <span class="key">"has_next"</span>: <span class="bool">false</span>, <span class="key">"has_prev"</span>: <span class="bool">false</span> }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 명함 생성 -->
+    <div id="cards-create" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge POST">POST</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/cards</div>
+          <div class="endpoint-desc">새 명함 생성 (개인/그룹)</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span><span class="tag">플랜 제한</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <table class="param-table">
+            <thead><tr><th>필드</th><th>타입</th><th>필수</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">name</td><td class="param-type">string</td><td class="param-req">required</td><td class="param-desc">명함에 표시될 이름 (최대 100자)</td></tr>
+              <tr><td class="param-name">card_type</td><td class="param-type">enum</td><td class="param-opt">optional</td><td class="param-desc"><code>personal</code> | <code>group</code> (기본: personal)</td></tr>
+              <tr><td class="param-name">group_id</td><td class="param-type">integer</td><td class="param-opt">optional</td><td class="param-desc">그룹 명함일 때 그룹 ID (그룹 멤버여야 함)</td></tr>
+              <tr><td class="param-name">title</td><td class="param-type">string</td><td class="param-opt">optional</td><td class="param-desc">직함 (최대 100자)</td></tr>
+              <tr><td class="param-name">company</td><td class="param-type">string</td><td class="param-opt">optional</td><td class="param-desc">회사/단체명 (최대 100자)</td></tr>
+              <tr><td class="param-name">email</td><td class="param-type">string</td><td class="param-opt">optional</td><td class="param-desc">명함 이메일</td></tr>
+              <tr><td class="param-name">phone</td><td class="param-type">string</td><td class="param-opt">optional</td><td class="param-desc">전화번호 (최대 20자)</td></tr>
+              <tr><td class="param-name">website</td><td class="param-type">string</td><td class="param-opt">optional</td><td class="param-desc">웹사이트 URL</td></tr>
+              <tr><td class="param-name">bio</td><td class="param-type">string</td><td class="param-opt">optional</td><td class="param-desc">소개 (최대 500자)</td></tr>
+              <tr><td class="param-name">template_id</td><td class="param-type">string</td><td class="param-opt">optional</td><td class="param-desc">명함 디자인 템플릿 ID (기본: "default")</td></tr>
+              <tr><td class="param-name">is_public</td><td class="param-type">integer</td><td class="param-opt">optional</td><td class="param-desc"><code>1</code>: 공개, <code>0</code>: 비공개 (기본: 1)</td></tr>
+              <tr><td class="param-name">sns_links</td><td class="param-type">array</td><td class="param-opt">optional</td><td class="param-desc">SNS 링크 배열 (아래 참조)</td></tr>
+              <tr><td class="param-name">tags</td><td class="param-type">array</td><td class="param-opt">optional</td><td class="param-desc">태그 배열 (아래 참조)</td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">sns_links 구조</div>
+          <div class="code-block">[
+  { <span class="key">"platform"</span>: <span class="str">"linkedin"</span>, <span class="key">"url"</span>: <span class="str">"https://linkedin.com/in/hong"</span>, <span class="key">"sort_order"</span>: <span class="num">0</span> },
+  { <span class="key">"platform"</span>: <span class="str">"github"</span>, <span class="key">"url"</span>: <span class="str">"https://github.com/hong"</span>, <span class="key">"sort_order"</span>: <span class="num">1</span> },
+  { <span class="key">"platform"</span>: <span class="str">"instagram"</span>, <span class="key">"url"</span>: <span class="str">"https://instagram.com/hong"</span>, <span class="key">"sort_order"</span>: <span class="num">2</span> }
+]</div>
+          <div class="sub-title">tags 구조</div>
+          <div class="code-block">[
+  { <span class="key">"tag_type"</span>: <span class="str">"skill"</span>, <span class="key">"tag_value"</span>: <span class="str">"TypeScript"</span> },
+  { <span class="key">"tag_type"</span>: <span class="str">"industry"</span>, <span class="key">"tag_value"</span>: <span class="str">"IT"</span> }
+]</div>
+          <div class="sub-title">Request 예시</div>
+          <div class="code-block">{
+  <span class="key">"name"</span>: <span class="str">"홍길동"</span>,
+  <span class="key">"title"</span>: <span class="str">"시니어 풀스택 개발자"</span>,
+  <span class="key">"company"</span>: <span class="str">"METI Inc."</span>,
+  <span class="key">"email"</span>: <span class="str">"hong@meti.io"</span>,
+  <span class="key">"phone"</span>: <span class="str">"010-1234-5678"</span>,
+  <span class="key">"website"</span>: <span class="str">"https://meti.io"</span>,
+  <span class="key">"bio"</span>: <span class="str">"Cloudflare Workers로 확장 가능한 서비스를 만듭니다."</span>,
+  <span class="key">"template_id"</span>: <span class="str">"modern_dark"</span>,
+  <span class="key">"is_public"</span>: <span class="num">1</span>,
+  <span class="key">"sns_links"</span>: [
+    { <span class="key">"platform"</span>: <span class="str">"linkedin"</span>, <span class="key">"url"</span>: <span class="str">"https://linkedin.com/in/hong"</span>, <span class="key">"sort_order"</span>: <span class="num">0</span> }
+  ],
+  <span class="key">"tags"</span>: [{ <span class="key">"tag_type"</span>: <span class="str">"skill"</span>, <span class="key">"tag_value"</span>: <span class="str">"TypeScript"</span> }]
+}</div>
+          <div class="sub-title">Response 201 (성공)</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"id"</span>: <span class="num">15</span>,
+    <span class="key">"user_id"</span>: <span class="num">42</span>,
+    <span class="key">"card_type"</span>: <span class="str">"personal"</span>,
+    <span class="key">"name"</span>: <span class="str">"홍길동"</span>,
+    <span class="comment">/* ... 기타 필드 ... */</span>
+    <span class="key">"created_at"</span>: <span class="str">"2025-01-15T09:30:00.000Z"</span>
+  },
+  <span class="key">"message"</span>: <span class="str">"명함이 생성되었습니다."</span>
+}</div>
+          <div class="sub-title">Response 403 (플랜 한도 초과)</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">false</span>,
+  <span class="key">"error"</span>: <span class="str">"FREE 플랜의 명함 생성 한도(3개)에 도달했습니다."</span>,
+  <span class="key">"upgrade_required"</span>: <span class="bool">true</span>
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 공개 명함 조회 -->
+    <div id="cards-public" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge GET">GET</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/cards/public/:id</div>
+          <div class="endpoint-desc">공개 명함 조회 (인증 불필요 — 앱 미설치자 포함)</div>
+          <div class="endpoint-tags"><span class="tag">Public</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"id"</span>: <span class="num">1</span>,
+    <span class="key">"owner_name"</span>: <span class="str">"홍길동"</span>,
+    <span class="key">"name"</span>: <span class="str">"홍길동"</span>,
+    <span class="key">"title"</span>: <span class="str">"시니어 개발자"</span>,
+    <span class="key">"company"</span>: <span class="str">"METI Inc."</span>,
+    <span class="key">"email"</span>: <span class="str">"hong@meti.io"</span>,
+    <span class="key">"phone"</span>: <span class="str">"010-1234-5678"</span>,
+    <span class="key">"website"</span>: <span class="str">"https://meti.io"</span>,
+    <span class="key">"bio"</span>: <span class="str">"..."</span>,
+    <span class="key">"avatar_url"</span>: <span class="str">"https://r2.meti.io/avatars/42.jpg"</span>,
+    <span class="key">"template_id"</span>: <span class="str">"default"</span>,
+    <span class="key">"sns_links"</span>: [
+      { <span class="key">"platform"</span>: <span class="str">"linkedin"</span>, <span class="key">"url"</span>: <span class="str">"..."</span>, <span class="key">"sort_order"</span>: <span class="num">0</span> }
+    ],
+    <span class="key">"tags"</span>: [
+      { <span class="key">"tag_type"</span>: <span class="str">"skill"</span>, <span class="key">"tag_value"</span>: <span class="str">"TypeScript"</span> }
+    ]
+  }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 명함 상세 (인증) -->
+    <div id="cards-detail" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge GET">GET</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/cards/:id</div>
+          <div class="endpoint-desc">내 명함 상세 조회 (SNS 링크 + 태그 포함)</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: { <span class="comment">/* cards-public과 동일 + sns_links + tags */</span> }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 명함 수정 -->
+    <div id="cards-update" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge PATCH">PATCH</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/cards/:id</div>
+          <div class="endpoint-desc">명함 정보 부분 수정</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="info-box info">모든 필드는 선택 사항입니다. 전달된 필드만 업데이트됩니다.</div>
+          <div class="sub-title">Request Body (모든 필드 optional)</div>
+          <table class="param-table">
+            <thead><tr><th>필드</th><th>타입</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">name</td><td class="param-type">string</td><td class="param-desc">이름</td></tr>
+              <tr><td class="param-name">title</td><td class="param-type">string|null</td><td class="param-desc">직함</td></tr>
+              <tr><td class="param-name">company</td><td class="param-type">string|null</td><td class="param-desc">회사명</td></tr>
+              <tr><td class="param-name">email</td><td class="param-type">string|null</td><td class="param-desc">이메일</td></tr>
+              <tr><td class="param-name">phone</td><td class="param-type">string|null</td><td class="param-desc">전화번호</td></tr>
+              <tr><td class="param-name">website</td><td class="param-type">string|null</td><td class="param-desc">웹사이트</td></tr>
+              <tr><td class="param-name">bio</td><td class="param-type">string|null</td><td class="param-desc">소개</td></tr>
+              <tr><td class="param-name">template_id</td><td class="param-type">string</td><td class="param-desc">템플릿 ID</td></tr>
+              <tr><td class="param-name">is_public</td><td class="param-type">integer</td><td class="param-desc">공개 여부 (0|1)</td></tr>
+              <tr><td class="param-name">is_primary</td><td class="param-type">integer</td><td class="param-desc">대표 명함 여부 (0|1)</td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: { <span class="comment">/* 수정된 명함 전체 필드 */</span> },
+  <span class="key">"message"</span>: <span class="str">"명함이 수정되었습니다."</span>
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 명함 삭제 -->
+    <div id="cards-delete" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge DELETE">DELETE</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/cards/:id</div>
+          <div class="endpoint-desc">명함 소프트 삭제</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: <span class="null-val">null</span>,
+  <span class="key">"message"</span>: <span class="str">"명함이 삭제되었습니다."</span>
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QR 토큰 생성 -->
+    <div id="cards-qr-gen" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge POST">POST</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/cards/:id/qr-token</div>
+          <div class="endpoint-desc">명함 공유/행사 입장용 QR 토큰 생성 (유효시간 5분)</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <table class="param-table">
+            <thead><tr><th>필드</th><th>타입</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">purpose</td><td class="param-type">enum</td><td class="param-desc"><code>card_share</code> | <code>event_entry</code> (기본: card_share)</td></tr>
+              <tr><td class="param-name">event_id</td><td class="param-type">integer</td><td class="param-desc">행사 입장 목적일 때 행사 ID</td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Request 예시</div>
+          <div class="code-block">{
+  <span class="key">"purpose"</span>: <span class="str">"event_entry"</span>,
+  <span class="key">"event_id"</span>: <span class="num">5</span>
+}</div>
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"token"</span>: <span class="str">"c9d8e7f6-a5b4-3c2d-1e0f-..."</span>,
+    <span class="key">"expires_at"</span>: <span class="str">"2025-01-15T09:35:00.000Z"</span>,
+    <span class="key">"qr_url"</span>: <span class="str">"/cards/qr/c9d8e7f6-a5b4-3c2d-1e0f-..."</span>
+  }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QR 명함 조회 -->
+    <div id="cards-qr-get" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge GET">GET</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/cards/qr/:token</div>
+          <div class="endpoint-desc">QR 토큰으로 명함 정보 조회 (명함 교환 목적이면 1회 사용)</div>
+          <div class="endpoint-tags"><span class="tag">Public</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"user_id"</span>: <span class="num">42</span>,
+    <span class="key">"card_id"</span>: <span class="num">1</span>,
+    <span class="key">"purpose"</span>: <span class="str">"card_share"</span>,
+    <span class="key">"event_id"</span>: <span class="null-val">null</span>,
+    <span class="key">"name"</span>: <span class="str">"홍길동"</span>,
+    <span class="comment">/* ... 명함 전체 필드 ... */</span>
+    <span class="key">"sns_links"</span>: [ <span class="comment">/* ... */</span> ]
+  }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 명함첩 저장 -->
+    <div id="cards-save" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge POST">POST</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/cards/:id/save</div>
+          <div class="endpoint-desc">타인 명함을 내 명함첩에 저장</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <div class="code-block">{
+  <span class="key">"memo"</span>: <span class="str">"METI 행사에서 만남"</span>  <span class="comment">// 선택 사항</span>
+}</div>
+          <div class="sub-title">Response 201</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: <span class="null-val">null</span>,
+  <span class="key">"message"</span>: <span class="str">"명함첩에 저장되었습니다."</span>
+}</div>
+          <div class="sub-title">Response 400 (자신 명함)</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">false</span>,
+  <span class="key">"error"</span>: <span class="str">"자신의 명함은 저장할 수 없습니다."</span>
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 명함첩 목록 -->
+    <div id="cards-contacts" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge GET">GET</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/cards/contacts/list</div>
+          <div class="endpoint-desc">내 명함첩(받은 명함) 목록 조회</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Query Parameters</div>
+          <table class="param-table">
+            <thead><tr><th>파라미터</th><th>타입</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">page</td><td class="param-type">integer</td><td class="param-desc">페이지 번호</td></tr>
+              <tr><td class="param-name">limit</td><td class="param-type">integer</td><td class="param-desc">페이지당 수</td></tr>
+              <tr><td class="param-name">q</td><td class="param-type">string</td><td class="param-desc">검색어 (이름, 회사, 직함)</td></tr>
+              <tr><td class="param-name">favorite</td><td class="param-type">integer</td><td class="param-desc"><code>1</code>: 즐겨찾기만 조회</td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: [
+    {
+      <span class="key">"id"</span>: <span class="num">10</span>,
+      <span class="key">"owner_id"</span>: <span class="num">42</span>,
+      <span class="key">"card_id"</span>: <span class="num">7</span>,
+      <span class="key">"memo"</span>: <span class="str">"행사에서 만남"</span>,
+      <span class="key">"is_favorite"</span>: <span class="num">0</span>,
+      <span class="key">"received_at"</span>: <span class="str">"2025-01-10T00:00:00.000Z"</span>,
+      <span class="key">"name"</span>: <span class="str">"김철수"</span>,
+      <span class="key">"title"</span>: <span class="str">"UX 디자이너"</span>,
+      <span class="key">"company"</span>: <span class="str">"Design Studio"</span>,
+      <span class="key">"email"</span>: <span class="str">"kim@design.com"</span>,
+      <span class="key">"phone"</span>: <span class="str">"010-9876-5432"</span>,
+      <span class="key">"avatar_url"</span>: <span class="null-val">null</span>
+    }
+  ],
+  <span class="key">"pagination"</span>: { <span class="comment">/* ... */</span> }
+}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 그룹 섹션 ===== -->
+  <div class="section">
+    <div class="section-title"><span class="section-icon">👥</span>그룹 (Groups)</div>
+
+    <div id="groups-list" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge GET">GET</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/groups</div>
+          <div class="endpoint-desc">공개 그룹 목록 조회 (is_featured 우선)</div>
+          <div class="endpoint-tags"><span class="tag">Public</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Query Parameters</div>
+          <table class="param-table">
+            <thead><tr><th>파라미터</th><th>타입</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">page</td><td class="param-type">integer</td><td class="param-desc">페이지 번호</td></tr>
+              <tr><td class="param-name">limit</td><td class="param-type">integer</td><td class="param-desc">페이지당 수</td></tr>
+              <tr><td class="param-name">q</td><td class="param-type">string</td><td class="param-desc">검색어 (그룹명, 설명)</td></tr>
+              <tr><td class="param-name">category</td><td class="param-type">enum</td><td class="param-desc"><code>association</code> | <code>company</code> | <code>club</code> | <code>other</code></td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: [
+    {
+      <span class="key">"id"</span>: <span class="num">1</span>,
+      <span class="key">"name"</span>: <span class="str">"METI 개발자 모임"</span>,
+      <span class="key">"description"</span>: <span class="str">"Cloudflare Workers 개발자들의 모임"</span>,
+      <span class="key">"category"</span>: <span class="str">"club"</span>,
+      <span class="key">"visibility"</span>: <span class="str">"public"</span>,
+      <span class="key">"status"</span>: <span class="str">"active"</span>,
+      <span class="key">"admin_user_id"</span>: <span class="num">10</span>,
+      <span class="key">"admin_name"</span>: <span class="str">"이관리자"</span>,
+      <span class="key">"member_count"</span>: <span class="num">42</span>,
+      <span class="key">"is_featured"</span>: <span class="num">1</span>,
+      <span class="key">"logo_url"</span>: <span class="null-val">null</span>,
+      <span class="key">"created_at"</span>: <span class="str">"2025-01-01T00:00:00.000Z"</span>
+    }
+  ],
+  <span class="key">"pagination"</span>: { <span class="comment">/* ... */</span> }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="groups-create" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge POST">POST</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/groups</div>
+          <div class="endpoint-desc">그룹 개설 신청 (슈퍼 관리자 승인 필요)</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <table class="param-table">
+            <thead><tr><th>필드</th><th>타입</th><th>필수</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">name</td><td class="param-type">string</td><td class="param-req">required</td><td class="param-desc">그룹명 (2~100자)</td></tr>
+              <tr><td class="param-name">description</td><td class="param-type">string</td><td class="param-opt">optional</td><td class="param-desc">그룹 설명 (최대 1000자)</td></tr>
+              <tr><td class="param-name">category</td><td class="param-type">enum</td><td class="param-opt">optional</td><td class="param-desc"><code>association</code> | <code>company</code> | <code>club</code> | <code>other</code></td></tr>
+              <tr><td class="param-name">visibility</td><td class="param-type">enum</td><td class="param-opt">optional</td><td class="param-desc"><code>public</code> | <code>private</code> (기본: public)</td></tr>
+              <tr><td class="param-name">custom_join_fields</td><td class="param-type">string</td><td class="param-opt">optional</td><td class="param-desc">가입 신청 커스텀 필드 정의 (JSON 문자열)</td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Request 예시</div>
+          <div class="code-block">{
+  <span class="key">"name"</span>: <span class="str">"서울 스타트업 네트워크"</span>,
+  <span class="key">"description"</span>: <span class="str">"서울 지역 스타트업 창업가와 투자자의 네트워킹 그룹"</span>,
+  <span class="key">"category"</span>: <span class="str">"club"</span>,
+  <span class="key">"visibility"</span>: <span class="str">"public"</span>,
+  <span class="key">"custom_join_fields"</span>: <span class="str">"{\"fields\":[{\"name\":\"company\",\"label\":\"회사명\",\"required\":true}]}"</span>
+}</div>
+          <div class="sub-title">Response 201</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"group_id"</span>: <span class="num">7</span>,
+    <span class="key">"status"</span>: <span class="str">"pending"</span>,
+    <span class="key">"message"</span>: <span class="str">"그룹 개설 신청이 완료되었습니다. 슈퍼관리자 승인 후 활성화됩니다."</span>
+  }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="groups-detail" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge GET">GET</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/groups/:id</div>
+          <div class="endpoint-desc">그룹 상세 정보 조회 (사진 포함)</div>
+          <div class="endpoint-tags"><span class="tag">Public</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"id"</span>: <span class="num">1</span>,
+    <span class="key">"name"</span>: <span class="str">"METI 개발자 모임"</span>,
+    <span class="key">"description"</span>: <span class="str">"..."</span>,
+    <span class="key">"category"</span>: <span class="str">"club"</span>,
+    <span class="key">"visibility"</span>: <span class="str">"public"</span>,
+    <span class="key">"status"</span>: <span class="str">"active"</span>,
+    <span class="key">"admin_user_id"</span>: <span class="num">10</span>,
+    <span class="key">"admin_name"</span>: <span class="str">"이관리자"</span>,
+    <span class="key">"member_count"</span>: <span class="num">42</span>,
+    <span class="key">"max_members"</span>: <span class="null-val">null</span>,
+    <span class="key">"is_featured"</span>: <span class="num">0</span>,
+    <span class="key">"logo_url"</span>: <span class="null-val">null</span>,
+    <span class="key">"custom_join_fields"</span>: <span class="null-val">null</span>,
+    <span class="key">"approved_at"</span>: <span class="str">"2025-01-02T00:00:00.000Z"</span>,
+    <span class="key">"created_at"</span>: <span class="str">"2025-01-01T00:00:00.000Z"</span>,
+    <span class="key">"photos"</span>: [
+      { <span class="key">"id"</span>: <span class="num">1</span>, <span class="key">"photo_url"</span>: <span class="str">"https://r2.meti.io/groups/1/photo1.jpg"</span>, <span class="key">"sort_order"</span>: <span class="num">0</span> }
+    ]
+  }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="groups-join" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge POST">POST</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/groups/:id/join</div>
+          <div class="endpoint-desc">그룹 가입 신청 (관리자 승인 필요)</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <div class="code-block">{
+  <span class="key">"join_fields"</span>: {
+    <span class="key">"company"</span>: <span class="str">"METI Inc."</span>,
+    <span class="key">"job_title"</span>: <span class="str">"CTO"</span>
+    <span class="comment">// 그룹의 custom_join_fields에 따라 유동적</span>
+  }
+}</div>
+          <div class="sub-title">Response 201</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"group_id"</span>: <span class="num">1</span>,
+    <span class="key">"status"</span>: <span class="str">"pending"</span>,
+    <span class="key">"message"</span>: <span class="str">"가입 신청이 완료되었습니다. 관리자 승인을 기다려주세요."</span>
+  }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="groups-leave" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge DELETE">DELETE</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/groups/:id/leave</div>
+          <div class="endpoint-desc">그룹 탈퇴 (관리자는 권한 이임 후 탈퇴 가능)</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="info-box warning">⚠️ 탈퇴 시 해당 그룹의 그룹 명함이 비활성화됩니다.</div>
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: <span class="null-val">null</span>,
+  <span class="key">"message"</span>: <span class="str">"그룹에서 탈퇴했습니다."</span>
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="groups-members" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge GET">GET</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/groups/:id/members</div>
+          <div class="endpoint-desc">그룹 멤버 목록 (관리자/부관리자만 조회 가능)</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span><span class="tag">그룹 관리자</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Query Parameters</div>
+          <table class="param-table">
+            <thead><tr><th>파라미터</th><th>타입</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">status</td><td class="param-type">enum</td><td class="param-desc"><code>active</code> | <code>pending</code> | <code>rejected</code> (기본: active)</td></tr>
+              <tr><td class="param-name">page, limit</td><td class="param-type">integer</td><td class="param-desc">페이지네이션</td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: [
+    {
+      <span class="key">"id"</span>: <span class="num">100</span>,
+      <span class="key">"group_id"</span>: <span class="num">1</span>,
+      <span class="key">"user_id"</span>: <span class="num">42</span>,
+      <span class="key">"role"</span>: <span class="str">"member"</span>,
+      <span class="key">"status"</span>: <span class="str">"active"</span>,
+      <span class="key">"join_fields"</span>: <span class="str">"{\"company\":\"METI\"}"</span>,
+      <span class="key">"joined_at"</span>: <span class="str">"2025-01-05T00:00:00.000Z"</span>,
+      <span class="key">"name"</span>: <span class="str">"홍길동"</span>,
+      <span class="key">"email"</span>: <span class="str">"hong@meti.io"</span>,
+      <span class="key">"avatar_url"</span>: <span class="null-val">null</span>,
+      <span class="key">"account_type"</span>: <span class="str">"personal"</span>
+    }
+  ],
+  <span class="key">"pagination"</span>: { <span class="comment">/* ... */</span> }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="groups-member-action" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge PATCH">PATCH</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/groups/:id/members/:userId</div>
+          <div class="endpoint-desc">멤버 승인/거절/강제탈퇴 (그룹 관리자 전용)</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span><span class="tag">그룹 관리자</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <table class="param-table">
+            <thead><tr><th>필드</th><th>타입</th><th>필수</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">action</td><td class="param-type">enum</td><td class="param-req">required</td><td class="param-desc"><code>approve</code> | <code>reject</code> | <code>kick</code></td></tr>
+              <tr><td class="param-name">role</td><td class="param-type">string</td><td class="param-opt">optional</td><td class="param-desc">승인 시 역할 지정 (<code>member</code>, <code>sub_admin</code>, <code>executive</code>)</td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Request 예시</div>
+          <div class="code-block">{
+  <span class="key">"action"</span>: <span class="str">"approve"</span>,
+  <span class="key">"role"</span>: <span class="str">"member"</span>
+}</div>
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: <span class="null-val">null</span>,
+  <span class="key">"message"</span>: <span class="str">"멤버를 승인했습니다."</span>
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="groups-notices" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge GET">GET</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/groups/:id/notices</div>
+          <div class="endpoint-desc">그룹 공지사항 목록 (is_pinned 우선)</div>
+          <div class="endpoint-tags"><span class="tag">Public</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: [
+    {
+      <span class="key">"id"</span>: <span class="num">1</span>,
+      <span class="key">"group_id"</span>: <span class="num">1</span>,
+      <span class="key">"author_id"</span>: <span class="num">10</span>,
+      <span class="key">"author_name"</span>: <span class="str">"이관리자"</span>,
+      <span class="key">"title"</span>: <span class="str">"2025년 1월 정기 모임 안내"</span>,
+      <span class="key">"content"</span>: <span class="str">"다음 달 15일에 정기 모임이 있습니다..."</span>,
+      <span class="key">"is_pinned"</span>: <span class="num">1</span>,
+      <span class="key">"created_at"</span>: <span class="str">"2025-01-10T00:00:00.000Z"</span>
+    }
+  ],
+  <span class="key">"pagination"</span>: { <span class="comment">/* ... */</span> }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="groups-notice-create" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge POST">POST</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/groups/:id/notices</div>
+          <div class="endpoint-desc">공지사항 작성 (관리자/부관리자/임원)</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span><span class="tag">그룹 관리자</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <table class="param-table">
+            <thead><tr><th>필드</th><th>타입</th><th>필수</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">title</td><td class="param-type">string</td><td class="param-req">required</td><td class="param-desc">제목 (최대 200자)</td></tr>
+              <tr><td class="param-name">content</td><td class="param-type">string</td><td class="param-req">required</td><td class="param-desc">본문 내용</td></tr>
+              <tr><td class="param-name">is_pinned</td><td class="param-type">integer</td><td class="param-opt">optional</td><td class="param-desc"><code>1</code>: 상단 고정 (기본: 0)</td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Response 201</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: { <span class="key">"notice_id"</span>: <span class="num">5</span> },
+  <span class="key">"message"</span>: <span class="str">"공지사항이 등록되었습니다."</span>
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="groups-transfer" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge POST">POST</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/groups/:id/transfer-admin</div>
+          <div class="endpoint-desc">그룹 관리자 권한 이임 요청 (7일 유효)</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span><span class="tag">그룹 관리자</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <div class="code-block">{
+  <span class="key">"to_user_id"</span>: <span class="num">99</span>  <span class="comment">// 이임 대상 유저 ID (그룹 멤버여야 함)</span>
+}</div>
+          <div class="sub-title">Response 201</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: <span class="null-val">null</span>,
+  <span class="key">"message"</span>: <span class="str">"관리자 권한 이임 요청을 발송했습니다. 대상자의 수락을 기다려주세요."</span>
+}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 행사 섹션 ===== -->
+  <div class="section">
+    <div class="section-title"><span class="section-icon">📅</span>행사 (Events)</div>
+
+    <div id="events-list" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge GET">GET</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/events</div>
+          <div class="endpoint-desc">공개 행사 목록 (시작일 오름차순)</div>
+          <div class="endpoint-tags"><span class="tag">Public</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Query Parameters</div>
+          <table class="param-table">
+            <thead><tr><th>파라미터</th><th>타입</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">status</td><td class="param-type">enum</td><td class="param-desc"><code>upcoming</code>(기본) | <code>ongoing</code> | <code>ended</code> | <code>cancelled</code></td></tr>
+              <tr><td class="param-name">group_id</td><td class="param-type">integer</td><td class="param-desc">특정 그룹의 행사만 필터</td></tr>
+              <tr><td class="param-name">page, limit</td><td class="param-type">integer</td><td class="param-desc">페이지네이션</td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: [
+    {
+      <span class="key">"id"</span>: <span class="num">1</span>,
+      <span class="key">"group_id"</span>: <span class="num">1</span>,
+      <span class="key">"group_name"</span>: <span class="str">"METI 개발자 모임"</span>,
+      <span class="key">"organizer_id"</span>: <span class="num">10</span>,
+      <span class="key">"organizer_name"</span>: <span class="str">"이관리자"</span>,
+      <span class="key">"title"</span>: <span class="str">"2025 METI 개발자 컨퍼런스"</span>,
+      <span class="key">"description"</span>: <span class="str">"..."</span>,
+      <span class="key">"thumbnail_url"</span>: <span class="null-val">null</span>,
+      <span class="key">"location"</span>: <span class="str">"서울 강남구 테헤란로 123"</span>,
+      <span class="key">"starts_at"</span>: <span class="str">"2025-03-15T10:00:00.000Z"</span>,
+      <span class="key">"ends_at"</span>: <span class="str">"2025-03-15T18:00:00.000Z"</span>,
+      <span class="key">"status"</span>: <span class="str">"upcoming"</span>,
+      <span class="key">"visibility"</span>: <span class="str">"public"</span>,
+      <span class="key">"registration_type"</span>: <span class="str">"pre_required"</span>,
+      <span class="key">"entry_method"</span>: <span class="str">"nfc_qr"</span>,
+      <span class="key">"max_participants"</span>: <span class="num">200</span>,
+      <span class="key">"participant_count"</span>: <span class="num">87</span>
+    }
+  ],
+  <span class="key">"pagination"</span>: { <span class="comment">/* ... */</span> }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="events-create" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge POST">POST</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/events</div>
+          <div class="endpoint-desc">행사 생성 (그룹 관리자/부관리자 전용)</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span><span class="tag">그룹 관리자</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <table class="param-table">
+            <thead><tr><th>필드</th><th>타입</th><th>필수</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">group_id</td><td class="param-type">integer</td><td class="param-req">required</td><td class="param-desc">주최 그룹 ID</td></tr>
+              <tr><td class="param-name">title</td><td class="param-type">string</td><td class="param-req">required</td><td class="param-desc">행사명 (2~200자)</td></tr>
+              <tr><td class="param-name">description</td><td class="param-type">string</td><td class="param-opt">optional</td><td class="param-desc">행사 설명</td></tr>
+              <tr><td class="param-name">thumbnail_url</td><td class="param-type">string</td><td class="param-opt">optional</td><td class="param-desc">썸네일 이미지 URL</td></tr>
+              <tr><td class="param-name">location</td><td class="param-type">string</td><td class="param-opt">optional</td><td class="param-desc">장소 (최대 200자)</td></tr>
+              <tr><td class="param-name">starts_at</td><td class="param-type">string</td><td class="param-req">required</td><td class="param-desc">시작 일시 (ISO 8601)</td></tr>
+              <tr><td class="param-name">ends_at</td><td class="param-type">string</td><td class="param-opt">optional</td><td class="param-desc">종료 일시 (ISO 8601)</td></tr>
+              <tr><td class="param-name">visibility</td><td class="param-type">enum</td><td class="param-opt">optional</td><td class="param-desc"><code>public</code> | <code>group_only</code></td></tr>
+              <tr><td class="param-name">registration_type</td><td class="param-type">enum</td><td class="param-opt">optional</td><td class="param-desc"><code>free</code> | <code>pre_required</code></td></tr>
+              <tr><td class="param-name">entry_method</td><td class="param-type">enum</td><td class="param-opt">optional</td><td class="param-desc"><code>nfc_qr</code> | <code>qr</code> | <code>manual</code></td></tr>
+              <tr><td class="param-name">max_participants</td><td class="param-type">integer</td><td class="param-opt">optional</td><td class="param-desc">최대 참가 인원</td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Response 201</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: { <span class="key">"event_id"</span>: <span class="num">15</span> },
+  <span class="key">"message"</span>: <span class="str">"행사가 생성되었습니다."</span>
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="events-detail" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge GET">GET</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/events/:id</div>
+          <div class="endpoint-desc">행사 상세 조회</div>
+          <div class="endpoint-tags"><span class="tag">Public</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: { <span class="comment">/* events-list 단건과 동일 */</span> }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="events-join" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge POST">POST</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/events/:id/join</div>
+          <div class="endpoint-desc">행사 참가 신청</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <div class="code-block"><span class="comment">// Body 없음</span></div>
+          <div class="sub-title">Response 201</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: <span class="null-val">null</span>,
+  <span class="key">"message"</span>: <span class="str">"행사 참가 신청이 완료되었습니다."</span>
+}</div>
+          <div class="sub-title">Response 409 (정원 초과)</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">false</span>,
+  <span class="key">"error"</span>: <span class="str">"행사 정원이 가득 찼습니다."</span>
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="events-checkin" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge POST">POST</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/events/:id/checkin</div>
+          <div class="endpoint-desc">행사 입장 처리 — QR 또는 수동 (그룹 관리자)</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span><span class="tag">그룹 관리자</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <table class="param-table">
+            <thead><tr><th>필드</th><th>타입</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">qr_token</td><td class="param-type">string</td><td class="param-desc">QR 토큰 (qr_token 또는 user_id 중 하나 필수)</td></tr>
+              <tr><td class="param-name">user_id</td><td class="param-type">integer</td><td class="param-desc">수동 입장 시 참가자 유저 ID</td></tr>
+              <tr><td class="param-name">entry_method</td><td class="param-type">enum</td><td class="param-desc"><code>nfc</code> | <code>qr</code> | <code>manual</code></td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"user"</span>: { <span class="key">"id"</span>: <span class="num">42</span>, <span class="key">"name"</span>: <span class="str">"홍길동"</span>, <span class="key">"email"</span>: <span class="str">"hong@meti.io"</span> },
+    <span class="key">"checked_in"</span>: <span class="bool">true</span>
+  },
+  <span class="key">"message"</span>: <span class="str">"입장 처리가 완료되었습니다."</span>
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="events-participants" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge GET">GET</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/events/:id/participants</div>
+          <div class="endpoint-desc">행사 참가자 목록 (그룹 관리자 전용)</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span><span class="tag">그룹 관리자</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Query Parameters</div>
+          <table class="param-table">
+            <thead><tr><th>파라미터</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">status</td><td class="param-desc"><code>registered</code> | <code>checked_in</code> | <code>cancelled</code></td></tr>
+              <tr><td class="param-name">page, limit</td><td class="param-desc">페이지네이션</td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: [
+    {
+      <span class="key">"event_id"</span>: <span class="num">1</span>,
+      <span class="key">"user_id"</span>: <span class="num">42</span>,
+      <span class="key">"status"</span>: <span class="str">"checked_in"</span>,
+      <span class="key">"checked_in_at"</span>: <span class="str">"2025-03-15T10:05:00.000Z"</span>,
+      <span class="key">"entry_method"</span>: <span class="str">"qr"</span>,
+      <span class="key">"name"</span>: <span class="str">"홍길동"</span>,
+      <span class="key">"email"</span>: <span class="str">"hong@meti.io"</span>,
+      <span class="key">"avatar_url"</span>: <span class="null-val">null</span>
+    }
+  ],
+  <span class="key">"pagination"</span>: { <span class="comment">/* ... */</span> }
+}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 채팅 섹션 ===== -->
+  <div class="section">
+    <div class="section-title"><span class="section-icon">💬</span>채팅 (Chat)</div>
+    <div class="info-box warning">⚠️ <strong>Free 플랜</strong>: 메시지가 다음날 자정에 자동 만료됩니다. 채팅은 명함을 교환한 상대방과만 가능합니다.</div>
+
+    <div id="chat-rooms" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge GET">GET</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/chat</div>
+          <div class="endpoint-desc">내 채팅방 목록 (최근 메시지 순, 안읽은 수 포함)</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: [
+    {
+      <span class="key">"id"</span>: <span class="num">5</span>,
+      <span class="key">"room_type"</span>: <span class="str">"direct"</span>,
+      <span class="key">"name"</span>: <span class="null-val">null</span>,
+      <span class="key">"is_active"</span>: <span class="num">1</span>,
+      <span class="key">"last_read_at"</span>: <span class="str">"2025-01-10T08:00:00.000Z"</span>,
+      <span class="key">"unread_count"</span>: <span class="num">3</span>,
+      <span class="key">"last_message"</span>: <span class="str">"안녕하세요!"</span>,
+      <span class="key">"last_message_at"</span>: <span class="str">"2025-01-10T09:30:00.000Z"</span>
+    }
+  ]
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="chat-direct" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge POST">POST</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/chat/direct</div>
+          <div class="endpoint-desc">1:1 채팅방 시작 또는 기존 채팅방 조회</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <div class="code-block">{
+  <span class="key">"target_user_id"</span>: <span class="num">99</span>  <span class="comment">// 채팅 대상 유저 ID (명함 교환 필수)</span>
+}</div>
+          <div class="sub-title">Response 200 (기존 채팅방)</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: { <span class="key">"room_id"</span>: <span class="num">5</span>, <span class="key">"is_new"</span>: <span class="bool">false</span> }
+}</div>
+          <div class="sub-title">Response 201 (새 채팅방)</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: { <span class="key">"room_id"</span>: <span class="num">12</span>, <span class="key">"is_new"</span>: <span class="bool">true</span> }
+}</div>
+          <div class="sub-title">Response 403 (명함 미교환)</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">false</span>,
+  <span class="key">"error"</span>: <span class="str">"명함을 교환한 상대방과만 채팅할 수 있습니다."</span>
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="chat-messages" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge GET">GET</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/chat/:roomId/messages</div>
+          <div class="endpoint-desc">채팅방 메시지 목록 (조회 시 읽음 처리)</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: [
+    {
+      <span class="key">"id"</span>: <span class="num">100</span>,
+      <span class="key">"room_id"</span>: <span class="num">5</span>,
+      <span class="key">"sender_id"</span>: <span class="num">99</span>,
+      <span class="key">"sender_name"</span>: <span class="str">"김철수"</span>,
+      <span class="key">"sender_avatar"</span>: <span class="null-val">null</span>,
+      <span class="key">"message_type"</span>: <span class="str">"text"</span>,
+      <span class="key">"content"</span>: <span class="str">"안녕하세요! 명함 잘 받았습니다."</span>,
+      <span class="key">"file_url"</span>: <span class="null-val">null</span>,
+      <span class="key">"card_id"</span>: <span class="null-val">null</span>,
+      <span class="key">"expires_at"</span>: <span class="null-val">null</span>,
+      <span class="key">"is_deleted"</span>: <span class="num">0</span>,
+      <span class="key">"created_at"</span>: <span class="str">"2025-01-10T09:30:00.000Z"</span>
+    }
+  ],
+  <span class="key">"pagination"</span>: { <span class="comment">/* ... */</span> }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="chat-send" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge POST">POST</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/chat/:roomId/messages</div>
+          <div class="endpoint-desc">메시지 전송 (텍스트/이미지/파일/명함)</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <table class="param-table">
+            <thead><tr><th>필드</th><th>타입</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">message_type</td><td class="param-type">enum</td><td class="param-desc"><code>text</code>(기본) | <code>image</code> | <code>file</code> | <code>card</code></td></tr>
+              <tr><td class="param-name">content</td><td class="param-type">string</td><td class="param-desc">텍스트 메시지 (최대 5000자)</td></tr>
+              <tr><td class="param-name">file_url</td><td class="param-type">string</td><td class="param-desc">이미지/파일 URL (R2 업로드 후 전달)</td></tr>
+              <tr><td class="param-name">card_id</td><td class="param-type">integer</td><td class="param-desc">공유할 명함 ID</td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Request 예시 (텍스트)</div>
+          <div class="code-block">{
+  <span class="key">"message_type"</span>: <span class="str">"text"</span>,
+  <span class="key">"content"</span>: <span class="str">"반갑습니다! 협업하고 싶습니다."</span>
+}</div>
+          <div class="sub-title">Request 예시 (명함 공유)</div>
+          <div class="code-block">{
+  <span class="key">"message_type"</span>: <span class="str">"card"</span>,
+  <span class="key">"card_id"</span>: <span class="num">1</span>
+}</div>
+          <div class="sub-title">Response 201</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"id"</span>: <span class="num">101</span>,
+    <span class="key">"room_id"</span>: <span class="num">5</span>,
+    <span class="key">"sender_id"</span>: <span class="num">42</span>,
+    <span class="key">"message_type"</span>: <span class="str">"text"</span>,
+    <span class="key">"content"</span>: <span class="str">"반갑습니다! 협업하고 싶습니다."</span>,
+    <span class="key">"expires_at"</span>: <span class="str">"2025-01-11T00:00:00.000Z"</span>,  <span class="comment">// Free 플랜: 다음날 자정 만료</span>
+    <span class="key">"created_at"</span>: <span class="str">"2025-01-10T09:35:00.000Z"</span>
+  }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="chat-delete" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge DELETE">DELETE</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/chat/:roomId/messages/:msgId</div>
+          <div class="endpoint-desc">내 메시지 삭제 (소프트 삭제)</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: <span class="null-val">null</span>,
+  <span class="key">"message"</span>: <span class="str">"메시지가 삭제되었습니다."</span>
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="chat-report" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge POST">POST</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/chat/report</div>
+          <div class="endpoint-desc">유저/메시지/명함/그룹 신고</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <table class="param-table">
+            <thead><tr><th>필드</th><th>타입</th><th>필수</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">target_type</td><td class="param-type">enum</td><td class="param-req">required</td><td class="param-desc"><code>user</code> | <code>message</code> | <code>card</code> | <code>group</code></td></tr>
+              <tr><td class="param-name">target_id</td><td class="param-type">integer</td><td class="param-req">required</td><td class="param-desc">신고 대상 ID</td></tr>
+              <tr><td class="param-name">reason</td><td class="param-type">string</td><td class="param-req">required</td><td class="param-desc">신고 사유 (최대 200자)</td></tr>
+              <tr><td class="param-name">description</td><td class="param-type">string</td><td class="param-opt">optional</td><td class="param-desc">상세 설명 (최대 1000자)</td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Request 예시</div>
+          <div class="code-block">{
+  <span class="key">"target_type"</span>: <span class="str">"user"</span>,
+  <span class="key">"target_id"</span>: <span class="num">99</span>,
+  <span class="key">"reason"</span>: <span class="str">"스팸/광고"</span>,
+  <span class="key">"description"</span>: <span class="str">"채팅에서 반복적인 광고 메시지를 보냅니다."</span>
+}</div>
+          <div class="sub-title">Response 201</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: <span class="null-val">null</span>,
+  <span class="key">"message"</span>: <span class="str">"신고가 접수되었습니다."</span>
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="chat-block" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge POST">POST</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/chat/block</div>
+          <div class="endpoint-desc">유저 차단</div>
+          <div class="endpoint-tags"><span class="tag tag-auth">🔐 Auth Required</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <div class="code-block">{
+  <span class="key">"blocked_user_id"</span>: <span class="num">99</span>
+}</div>
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: <span class="null-val">null</span>,
+  <span class="key">"message"</span>: <span class="str">"차단되었습니다."</span>
+}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 파트너 API 섹션 ===== -->
+  <div class="section">
+    <div class="section-title"><span class="section-icon">🤝</span>파트너 API (Partner)</div>
+    <div class="info-box info">
+      파트너 전용 API입니다. <strong>X-Partner-API-Key</strong> 헤더로 인증합니다.<br>
+      API 키는 METI 슈퍼 관리자가 발급합니다. 서버 간(Server-to-Server) 통신에만 사용하세요.
+    </div>
+
+    <div id="partner-usermap" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge POST">POST</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/partner/user-map</div>
+          <div class="endpoint-desc">METI 유저 → 파트너 외부 키 매핑 생성/조회</div>
+          <div class="endpoint-tags"><span class="tag tag-partner">🔑 Partner API Key</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Header</div>
+          <div class="code-block"><span class="key">X-Partner-API-Key</span>: meti_partner_abc123def456...</div>
+          <div class="sub-title">Request Body</div>
+          <div class="code-block">{
+  <span class="key">"meti_user_id"</span>: <span class="num">42</span>
+}</div>
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"external_user_key"</span>: <span class="str">"a3f8b2c1d0e9f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3"</span>
+    <span class="comment">// SHA-256 기반 결정론적 해시값 (partnerId + metiUserId)</span>
+  }
+}</div>
+          <div class="info-box info">
+            <strong>흐름:</strong> 앱 → 파트너 웹뷰 → 파트너 서버 → POST /partner/user-map 호출 → external_user_key 저장 → 이후 리워드 지급 시 사용
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="partner-reward" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge POST">POST</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/partner/reward</div>
+          <div class="endpoint-desc">파트너 액션 완료 후 유저에게 리워드 포인트 지급</div>
+          <div class="endpoint-tags"><span class="tag tag-partner">🔑 Partner API Key</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <table class="param-table">
+            <thead><tr><th>필드</th><th>타입</th><th>필수</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">external_user_key</td><td class="param-type">string</td><td class="param-req">required</td><td class="param-desc">user-map에서 받은 외부 키</td></tr>
+              <tr><td class="param-name">event_type</td><td class="param-type">string</td><td class="param-req">required</td><td class="param-desc">이벤트 유형 (예: <code>signup</code>, <code>purchase</code>, <code>visit</code>)</td></tr>
+              <tr><td class="param-name">points</td><td class="param-type">integer</td><td class="param-req">required</td><td class="param-desc">지급할 포인트 (1~10,000)</td></tr>
+              <tr><td class="param-name">description</td><td class="param-type">string</td><td class="param-opt">optional</td><td class="param-desc">지급 사유 설명</td></tr>
+              <tr><td class="param-name">payload</td><td class="param-type">object</td><td class="param-opt">optional</td><td class="param-desc">추가 메타데이터 (자유 형식)</td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Request 예시</div>
+          <div class="code-block">{
+  <span class="key">"external_user_key"</span>: <span class="str">"a3f8b2c1d0e9f7a6..."</span>,
+  <span class="key">"event_type"</span>: <span class="str">"happytree_signup"</span>,
+  <span class="key">"points"</span>: <span class="num">500</span>,
+  <span class="key">"description"</span>: <span class="str">"해피트리 회원가입 완료 보상"</span>,
+  <span class="key">"payload"</span>: {
+    <span class="key">"order_id"</span>: <span class="str">"HT-2025-001234"</span>,
+    <span class="key">"action"</span>: <span class="str">"signup"</span>
+  }
+}</div>
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"user_id"</span>: <span class="num">42</span>,
+    <span class="key">"points_awarded"</span>: <span class="num">500</span>,
+    <span class="key">"new_balance"</span>: <span class="num">1500</span>
+  },
+  <span class="key">"message"</span>: <span class="str">"리워드가 지급되었습니다."</span>
+}</div>
+          <div class="info-box success">✅ 리워드 지급과 동시에 유저에게 앱 내 알림이 발송됩니다.</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="partner-balance" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge GET">GET</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/partner/user-balance</div>
+          <div class="endpoint-desc">유저 리워드 잔액 조회</div>
+          <div class="endpoint-tags"><span class="tag tag-partner">🔑 Partner API Key</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Query Parameters</div>
+          <div class="code-block">GET /api/v1/partner/user-balance?external_user_key=a3f8b2c1...</div>
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"points"</span>: <span class="num">1500</span>
+  }
+}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 어드민 섹션 ===== -->
+  <div class="section">
+    <div class="section-title"><span class="section-icon">⚙️</span>어드민 API (Admin)</div>
+    <div class="info-box warning">⚠️ 모든 어드민 API는 <strong>슈퍼 관리자 권한</strong>이 필요합니다 (JWT + account_type = 'admin').</div>
+
+    <div id="admin-dashboard" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge GET">GET</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/admin/dashboard</div>
+          <div class="endpoint-desc">대시보드 통계 (유저/그룹/행사/신고)</div>
+          <div class="endpoint-tags"><span class="tag tag-admin">👑 Super Admin</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"users"</span>: {
+      <span class="key">"total"</span>: <span class="num">1234</span>,
+      <span class="key">"today"</span>: <span class="num">12</span>,
+      <span class="key">"free_plan"</span>: <span class="num">1000</span>,
+      <span class="key">"pro_plan"</span>: <span class="num">200</span>,
+      <span class="key">"business_plan"</span>: <span class="num">34</span>
+    },
+    <span class="key">"groups"</span>: {
+      <span class="key">"total"</span>: <span class="num">87</span>,
+      <span class="key">"pending"</span>: <span class="num">5</span>,
+      <span class="key">"active"</span>: <span class="num">82</span>
+    },
+    <span class="key">"events"</span>: {
+      <span class="key">"total"</span>: <span class="num">156</span>,
+      <span class="key">"upcoming"</span>: <span class="num">23</span>
+    },
+    <span class="key">"reports"</span>: {
+      <span class="key">"total"</span>: <span class="num">45</span>,
+      <span class="key">"pending"</span>: <span class="num">8</span>
+    }
+  }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="admin-users" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge GET">GET</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/admin/users</div>
+          <div class="endpoint-desc">전체 유저 목록 (검색/플랜 필터)</div>
+          <div class="endpoint-tags"><span class="tag tag-admin">👑 Super Admin</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Query Parameters</div>
+          <table class="param-table">
+            <thead><tr><th>파라미터</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">q</td><td class="param-desc">검색어 (이름, 이메일)</td></tr>
+              <tr><td class="param-name">plan</td><td class="param-desc"><code>free</code> | <code>pro</code> | <code>business</code></td></tr>
+              <tr><td class="param-name">page, limit</td><td class="param-desc">페이지네이션</td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: [
+    {
+      <span class="key">"id"</span>: <span class="num">42</span>,
+      <span class="key">"email"</span>: <span class="str">"user@example.com"</span>,
+      <span class="key">"name"</span>: <span class="str">"홍길동"</span>,
+      <span class="key">"account_type"</span>: <span class="str">"personal"</span>,
+      <span class="key">"plan"</span>: <span class="str">"free"</span>,
+      <span class="key">"is_verified"</span>: <span class="num">1</span>,
+      <span class="key">"is_active"</span>: <span class="num">1</span>,
+      <span class="key">"created_at"</span>: <span class="str">"2025-01-01T00:00:00.000Z"</span>
+    }
+  ],
+  <span class="key">"pagination"</span>: { <span class="comment">/* ... */</span> }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="admin-user-update" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge PATCH">PATCH</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/admin/users/:id</div>
+          <div class="endpoint-desc">유저 활성화/비활성화, 플랜 변경</div>
+          <div class="endpoint-tags"><span class="tag tag-admin">👑 Super Admin</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <table class="param-table">
+            <thead><tr><th>필드</th><th>타입</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">is_active</td><td class="param-type">integer</td><td class="param-desc"><code>1</code>: 활성, <code>0</code>: 비활성화</td></tr>
+              <tr><td class="param-name">plan</td><td class="param-type">enum</td><td class="param-desc"><code>free</code> | <code>pro</code> | <code>business</code></td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Request 예시</div>
+          <div class="code-block">{
+  <span class="key">"is_active"</span>: <span class="num">0</span>  <span class="comment">// 유저 비활성화</span>
+}
+<span class="comment">// 또는</span>
+{
+  <span class="key">"plan"</span>: <span class="str">"pro"</span>  <span class="comment">// 플랜 강제 변경</span>
+}</div>
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: <span class="null-val">null</span>,
+  <span class="key">"message"</span>: <span class="str">"유저 정보가 수정되었습니다."</span>
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="admin-groups" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge GET">GET</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/admin/groups</div>
+          <div class="endpoint-desc">그룹 목록 (상태별 필터)</div>
+          <div class="endpoint-tags"><span class="tag tag-admin">👑 Super Admin</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Query Parameters</div>
+          <table class="param-table">
+            <thead><tr><th>파라미터</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">status</td><td class="param-desc"><code>pending</code>(기본) | <code>active</code> | <code>suspended</code></td></tr>
+              <tr><td class="param-name">page, limit</td><td class="param-desc">페이지네이션</td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: [
+    {
+      <span class="key">"id"</span>: <span class="num">7</span>,
+      <span class="key">"name"</span>: <span class="str">"서울 스타트업 네트워크"</span>,
+      <span class="key">"category"</span>: <span class="str">"club"</span>,
+      <span class="key">"status"</span>: <span class="str">"pending"</span>,
+      <span class="key">"admin_user_id"</span>: <span class="num">42</span>,
+      <span class="key">"admin_name"</span>: <span class="str">"홍길동"</span>,
+      <span class="key">"admin_email"</span>: <span class="str">"hong@meti.io"</span>,
+      <span class="key">"created_at"</span>: <span class="str">"2025-01-14T00:00:00.000Z"</span>
+    }
+  ],
+  <span class="key">"pagination"</span>: { <span class="comment">/* ... */</span> }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="admin-group-action" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge PATCH">PATCH</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/admin/groups/:id</div>
+          <div class="endpoint-desc">그룹 승인/거절/정지/활성화, 추천 설정</div>
+          <div class="endpoint-tags"><span class="tag tag-admin">👑 Super Admin</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <table class="param-table">
+            <thead><tr><th>필드</th><th>타입</th><th>필수</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">action</td><td class="param-type">enum</td><td class="param-req">required</td><td class="param-desc"><code>approve</code> | <code>reject</code> | <code>suspend</code> | <code>activate</code></td></tr>
+              <tr><td class="param-name">is_featured</td><td class="param-type">integer</td><td class="param-opt">optional</td><td class="param-desc"><code>1</code>: 추천 그룹 설정</td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Request 예시</div>
+          <div class="code-block">{
+  <span class="key">"action"</span>: <span class="str">"approve"</span>,
+  <span class="key">"is_featured"</span>: <span class="num">1</span>
+}</div>
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: <span class="null-val">null</span>,
+  <span class="key">"message"</span>: <span class="str">"그룹이 승인되었습니다."</span>
+}</div>
+          <div class="info-box success">✅ 승인 시 신청자가 자동으로 그룹 관리자(admin)로 등록됩니다.</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="admin-reports" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge GET">GET</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/admin/reports</div>
+          <div class="endpoint-desc">신고 목록 (상태별 필터)</div>
+          <div class="endpoint-tags"><span class="tag tag-admin">👑 Super Admin</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Query Parameters</div>
+          <table class="param-table">
+            <thead><tr><th>파라미터</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">status</td><td class="param-desc"><code>pending</code>(기본) | <code>reviewed</code> | <code>resolved</code> | <code>dismissed</code></td></tr>
+              <tr><td class="param-name">page, limit</td><td class="param-desc">페이지네이션</td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: [
+    {
+      <span class="key">"id"</span>: <span class="num">20</span>,
+      <span class="key">"reporter_id"</span>: <span class="num">42</span>,
+      <span class="key">"reporter_name"</span>: <span class="str">"홍길동"</span>,
+      <span class="key">"reporter_email"</span>: <span class="str">"hong@meti.io"</span>,
+      <span class="key">"target_type"</span>: <span class="str">"user"</span>,
+      <span class="key">"target_id"</span>: <span class="num">99</span>,
+      <span class="key">"reason"</span>: <span class="str">"스팸/광고"</span>,
+      <span class="key">"description"</span>: <span class="str">"..."</span>,
+      <span class="key">"status"</span>: <span class="str">"pending"</span>,
+      <span class="key">"created_at"</span>: <span class="str">"2025-01-12T00:00:00.000Z"</span>
+    }
+  ],
+  <span class="key">"pagination"</span>: { <span class="comment">/* ... */</span> }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="admin-report-action" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge PATCH">PATCH</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/admin/reports/:id</div>
+          <div class="endpoint-desc">신고 상태 처리</div>
+          <div class="endpoint-tags"><span class="tag tag-admin">👑 Super Admin</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <div class="code-block">{
+  <span class="key">"status"</span>: <span class="str">"resolved"</span>  <span class="comment">// reviewed | resolved | dismissed</span>
+}</div>
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: <span class="null-val">null</span>,
+  <span class="key">"message"</span>: <span class="str">"신고가 처리되었습니다."</span>
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="admin-partners" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge GET">GET</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/admin/partners</div>
+          <div class="endpoint-desc">파트너 서비스 목록</div>
+          <div class="endpoint-tags"><span class="tag tag-admin">👑 Super Admin</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: [
+    {
+      <span class="key">"id"</span>: <span class="num">1</span>,
+      <span class="key">"name"</span>: <span class="str">"해피트리"</span>,
+      <span class="key">"description"</span>: <span class="str">"제휴 쇼핑몰 서비스"</span>,
+      <span class="key">"status"</span>: <span class="str">"active"</span>,
+      <span class="key">"created_at"</span>: <span class="str">"2025-01-01T00:00:00.000Z"</span>
+    }
+  ]
+}</div>
+          <div class="info-box warning">⚠️ 보안상 API 키는 생성 시에만 응답에 포함됩니다. 목록 조회에는 포함되지 않습니다.</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="admin-partner-create" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge POST">POST</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/admin/partners</div>
+          <div class="endpoint-desc">파트너 서비스 등록 및 API 키 발급</div>
+          <div class="endpoint-tags"><span class="tag tag-admin">👑 Super Admin</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <div class="code-block">{
+  <span class="key">"name"</span>: <span class="str">"해피트리"</span>,
+  <span class="key">"description"</span>: <span class="str">"METI 제휴 쇼핑몰 서비스"</span>
+}</div>
+          <div class="sub-title">Response 201</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"id"</span>: <span class="num">3</span>,
+    <span class="key">"name"</span>: <span class="str">"해피트리"</span>,
+    <span class="key">"api_key"</span>: <span class="str">"meti_partner_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"</span>
+    <span class="comment">// ⚠️ 이 API 키는 다시 조회 불가. 안전한 곳에 보관하세요.</span>
+  },
+  <span class="key">"message"</span>: <span class="str">"파트너 서비스가 등록되었습니다."</span>
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="admin-rewards" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge GET">GET</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/admin/rewards</div>
+          <div class="endpoint-desc">리워드 지급 이력 전체 조회</div>
+          <div class="endpoint-tags"><span class="tag tag-admin">👑 Super Admin</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: [
+    {
+      <span class="key">"id"</span>: <span class="num">500</span>,
+      <span class="key">"user_id"</span>: <span class="num">42</span>,
+      <span class="key">"name"</span>: <span class="str">"홍길동"</span>,
+      <span class="key">"email"</span>: <span class="str">"hong@meti.io"</span>,
+      <span class="key">"type"</span>: <span class="str">"partner"</span>,
+      <span class="key">"source"</span>: <span class="str">"partner"</span>,
+      <span class="key">"partner_id"</span>: <span class="num">1</span>,
+      <span class="key">"partner_name"</span>: <span class="str">"해피트리"</span>,
+      <span class="key">"points"</span>: <span class="num">500</span>,
+      <span class="key">"description"</span>: <span class="str">"해피트리 회원가입 완료 보상"</span>,
+      <span class="key">"created_at"</span>: <span class="str">"2025-01-10T00:00:00.000Z"</span>
+    }
+  ],
+  <span class="key">"pagination"</span>: { <span class="comment">/* ... */</span> }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="admin-nfc" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge GET">GET</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/admin/nfc-cards</div>
+          <div class="endpoint-desc">NFC 실물 카드 신청 목록</div>
+          <div class="endpoint-tags"><span class="tag tag-admin">👑 Super Admin</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Query Parameters</div>
+          <table class="param-table">
+            <thead><tr><th>파라미터</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">status</td><td class="param-desc"><code>pending</code>(기본) | <code>approved</code> | <code>issued</code> | <code>deactivated</code></td></tr>
+              <tr><td class="param-name">page, limit</td><td class="param-desc">페이지네이션</td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: [
+    {
+      <span class="key">"id"</span>: <span class="num">10</span>,
+      <span class="key">"user_id"</span>: <span class="num">42</span>,
+      <span class="key">"user_name"</span>: <span class="str">"홍길동"</span>,
+      <span class="key">"user_email"</span>: <span class="str">"hong@meti.io"</span>,
+      <span class="key">"group_id"</span>: <span class="null-val">null</span>,
+      <span class="key">"group_name"</span>: <span class="null-val">null</span>,
+      <span class="key">"nfc_uid"</span>: <span class="null-val">null</span>,
+      <span class="key">"serial_no"</span>: <span class="null-val">null</span>,
+      <span class="key">"status"</span>: <span class="str">"pending"</span>,
+      <span class="key">"applied_at"</span>: <span class="str">"2025-01-13T00:00:00.000Z"</span>
+    }
+  ],
+  <span class="key">"pagination"</span>: { <span class="comment">/* ... */</span> }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="admin-nfc-action" class="endpoint">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge PATCH">PATCH</span>
+        <div class="endpoint-meta">
+          <div class="endpoint-path">/api/v1/admin/nfc-cards/:id</div>
+          <div class="endpoint-desc">NFC 카드 상태 변경 (승인/발급/거절/비활성화)</div>
+          <div class="endpoint-tags"><span class="tag tag-admin">👑 Super Admin</span></div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="endpoint-body-inner">
+          <div class="sub-title">Request Body</div>
+          <table class="param-table">
+            <thead><tr><th>필드</th><th>타입</th><th>필수</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td class="param-name">action</td><td class="param-type">enum</td><td class="param-req">required</td><td class="param-desc"><code>approve</code> | <code>issue</code> | <code>reject</code> | <code>deactivate</code></td></tr>
+              <tr><td class="param-name">nfc_uid</td><td class="param-type">string</td><td class="param-opt">optional</td><td class="param-desc">NFC UID (issue 액션 시 입력)</td></tr>
+              <tr><td class="param-name">serial_no</td><td class="param-type">string</td><td class="param-opt">optional</td><td class="param-desc">시리얼 번호 (issue 액션 시 입력)</td></tr>
+            </tbody>
+          </table>
+          <div class="sub-title">Request 예시 (발급)</div>
+          <div class="code-block">{
+  <span class="key">"action"</span>: <span class="str">"issue"</span>,
+  <span class="key">"nfc_uid"</span>: <span class="str">"04:A3:B2:C1:D0:E9"</span>,
+  <span class="key">"serial_no"</span>: <span class="str">"METI-NFC-2025-001234"</span>
+}</div>
+          <div class="sub-title">Response 200</div>
+          <div class="code-block">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: <span class="null-val">null</span>,
+  <span class="key">"message"</span>: <span class="str">"NFC 카드 상태가 변경되었습니다."</span>
+}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 하단 여백 -->
+  <div style="height:80px"></div>
+
+</main>
+
+<script>
+function toggle(header) {
+  const endpoint = header.parentElement;
+  endpoint.classList.toggle('open');
+}
+
+// 현재 스크롤 위치에 따라 사이드바 링크 활성화
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+      const id = entry.target.id;
+      const link = document.querySelector(`.sidebar-link[href="#${id}"]`);
+      if (link) link.classList.add('active');
+    }
+  });
+}, { threshold: 0.5 });
+
+document.querySelectorAll('[id]').forEach(el => {
+  if (el.tagName !== 'HTML') observer.observe(el);
+});
+</script>
+
+</body>
+</html>
