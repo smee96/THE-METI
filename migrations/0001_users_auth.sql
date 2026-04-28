@@ -58,3 +58,6 @@ CREATE INDEX IF NOT EXISTS idx_email_verifications_token ON email_verifications(
 CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets(token);
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token ON refresh_tokens(token);
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);
+
+-- role 컬럼 (super_admin / group_admin / user)
+-- ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'; -- 이미 생성된 경우 스킵
