@@ -14,15 +14,16 @@ groups.get('/', async (c) => {
   const category = c.req.query('category')
 
   let query = `
-    SELECT g.*, u.name as admin_name,
+    SELECT g.id, g.name, g.description, g.purpose, g.logo_url, g.visibility,
+      g.status, g.max_members, g.has_minor, g.is_featured, g.created_at,
+      u.name as admin_name,
       (SELECT COUNT(*) FROM group_members WHERE group_id = g.id AND status = 'active') as member_count
     FROM groups g
     LEFT JOIN users u ON u.id = g.admin_user_id
     WHERE g.status = 'active' AND g.is_deleted = 0 AND g.visibility = 'public'
   `
   const params: unknown[] = []
-  if (search) { query += ` AND (g.name LIKE ? OR g.description LIKE ?)`; params.push(`%${search}%`, `%${search}%`) }
-  if (category) { query += ` AND g.category = ?`; params.push(category) }
+  if (search) { query += ` AND (g.name LIKE ? OR g.description LIKE ? OR g.purpose LIKE ?)`; params.push(`%${search}%`, `%${search}%`, `%${search}%`) }
   query += ` ORDER BY g.is_featured DESC, g.created_at DESC LIMIT ? OFFSET ?`
   params.push(limit, offset)
 
@@ -35,29 +36,34 @@ groups.get('/', async (c) => {
 })
 
 // ── 그룹 개설 신청 ────────────────────────────────────
+// 누구나 신청 가능. 카테고리 없음, 용도(purpose)로 관리자가 심사.
+// 미성년자 포함 여부는 관리자가 심사 후 승인 시 has_minor를 직접 체크.
 groups.post(
   '/',
   authMiddleware,
   zValidator('json', z.object({
-    name: z.string().min(2).max(100),
+    name: z.string().min(2, '그룹 이름은 2자 이상이어야 합니다.').max(100),
     description: z.string().max(1000).optional(),
-    category: z.enum(['association', 'company', 'club', 'other']).default('other'),
+    purpose: z.string().min(5, '그룹 용도를 5자 이상 입력해주세요.').max(500),  // 관리자 심사용
     visibility: z.enum(['public', 'private']).default('public'),
-    custom_join_fields: z.string().optional()  // JSON 문자열
+    max_members: z.number().int().positive().optional()
   })),
   async (c) => {
     const userId = c.get('userId')
     const body = c.req.valid('json')
 
     const result = await c.env.DB.prepare(`
-      INSERT INTO groups (name, description, category, visibility, status, admin_user_id, custom_join_fields)
+      INSERT INTO groups (name, description, purpose, visibility, status, admin_user_id, max_members)
       VALUES (?, ?, ?, ?, 'pending', ?, ?)
-    `).bind(body.name, body.description ?? null, body.category, body.visibility, userId, body.custom_join_fields ?? null).run()
+    `).bind(
+      body.name, body.description ?? null, body.purpose,
+      body.visibility, userId, body.max_members ?? null
+    ).run()
 
     return c.json(ok({
       group_id: result.meta.last_row_id,
       status: 'pending',
-      message: '그룹 개설 신청이 완료되었습니다. 슈퍼관리자 승인 후 활성화됩니다.'
+      message: '그룹 개설 신청이 완료되었습니다. 관리자 심사 후 활성화됩니다.'
     }), 201)
   }
 )
@@ -84,52 +90,70 @@ groups.get('/:id', async (c) => {
 })
 
 // ── 그룹 가입 신청 ────────────────────────────────────
-groups.post('/:id/join', authMiddleware, async (c) => {
-  const userId = c.get('userId')
-  const groupId = parseInt(c.req.param('id'))
-  const body = await c.req.json().catch(() => ({}))
+// public 그룹: 바로 pending → 관리자 승인 대기
+// 초대링크 가입: POST /api/v1/auth/invite/:token/join 사용 → 즉시 active
+groups.post(
+  '/:id/join',
+  authMiddleware,
+  zValidator('json', z.object({
+    // 레슨·스포츠 그룹 가입 시 생년월일 선택 입력 (미성년자 여부 판단)
+    birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD 형식').optional()
+  })),
+  async (c) => {
+    const userId = c.get('userId')
+    const groupId = parseInt(c.req.param('id'))
+    const { birth_date } = c.req.valid('json')
 
-  const group = await c.env.DB.prepare(
-    `SELECT id, visibility, status, max_members FROM groups WHERE id = ? AND is_deleted = 0`
-  ).bind(groupId).first<{ id: number; visibility: string; status: string; max_members: number | null }>()
+    const group = await c.env.DB.prepare(
+      `SELECT id, visibility, status, max_members FROM groups WHERE id = ? AND is_deleted = 0`
+    ).bind(groupId).first<{ id: number; visibility: string; status: string; max_members: number | null }>()
 
-  if (!group || group.status !== 'active') {
-    return c.json(fail('그룹을 찾을 수 없거나 활성 상태가 아닙니다.'), 404)
-  }
-
-  // 이미 가입 여부 확인
-  const existing = await c.env.DB.prepare(
-    'SELECT status FROM group_members WHERE group_id = ? AND user_id = ?'
-  ).bind(groupId, userId).first<{ status: string }>()
-
-  if (existing) {
-    if (existing.status === 'active') return c.json(fail('이미 가입된 그룹입니다.'), 409)
-    if (existing.status === 'pending') return c.json(fail('이미 가입 신청 중입니다.'), 409)
-  }
-
-  // 최대 멤버 수 확인
-  if (group.max_members) {
-    const memberCount = await c.env.DB.prepare(
-      `SELECT COUNT(*) as cnt FROM group_members WHERE group_id = ? AND status = 'active'`
-    ).bind(groupId).first<{ cnt: number }>()
-    if ((memberCount?.cnt ?? 0) >= group.max_members) {
-      return c.json(fail('그룹 정원이 가득 찼습니다.'), 409)
+    if (!group || group.status !== 'active') {
+      return c.json(fail('그룹을 찾을 수 없거나 활성 상태가 아닙니다.'), 404)
     }
+
+    // 이미 가입 여부 확인
+    const existing = await c.env.DB.prepare(
+      'SELECT status FROM group_members WHERE group_id = ? AND user_id = ?'
+    ).bind(groupId, userId).first<{ status: string }>()
+
+    if (existing) {
+      if (existing.status === 'active') return c.json(fail('이미 가입된 그룹입니다.'), 409)
+      if (existing.status === 'pending') return c.json(fail('이미 가입 신청 중입니다.'), 409)
+    }
+
+    // 최대 멤버 수 확인
+    if (group.max_members) {
+      const memberCount = await c.env.DB.prepare(
+        `SELECT COUNT(*) as cnt FROM group_members WHERE group_id = ? AND status = 'active'`
+      ).bind(groupId).first<{ cnt: number }>()
+      if ((memberCount?.cnt ?? 0) >= group.max_members) {
+        return c.json(fail('그룹 정원이 가득 찼습니다.'), 409)
+      }
+    }
+
+    // 생년월일 입력 시 미성년자 여부 계산
+    let isMinor: number | null = null
+    if (birth_date) {
+      const [by, bm, bd] = birth_date.split('-').map(Number)
+      const today = new Date()
+      let age = today.getFullYear() - by
+      if (today.getMonth() + 1 < bm || (today.getMonth() + 1 === bm && today.getDate() < bd)) age--
+      isMinor = age < 19 ? 1 : 0
+    }
+
+    await c.env.DB.prepare(`
+      INSERT OR REPLACE INTO group_members (group_id, user_id, status, role, is_minor, birth_date)
+      VALUES (?, ?, 'pending', 'member', ?, ?)
+    `).bind(groupId, userId, isMinor, birth_date ?? null).run()
+
+    return c.json(ok({
+      group_id: groupId,
+      status: 'pending',
+      message: '가입 신청이 완료되었습니다. 관리자 승인을 기다려주세요.'
+    }), 201)
   }
-
-  const status = group.visibility === 'public' ? 'pending' : 'pending'
-
-  await c.env.DB.prepare(`
-    INSERT OR REPLACE INTO group_members (group_id, user_id, status, join_fields)
-    VALUES (?, ?, ?, ?)
-  `).bind(groupId, userId, status, JSON.stringify(body.join_fields ?? {})).run()
-
-  return c.json(ok({
-    group_id: groupId,
-    status,
-    message: '가입 신청이 완료되었습니다. 관리자 승인을 기다려주세요.'
-  }), 201)
-})
+)
 
 // ── 그룹 탈퇴 ────────────────────────────────────────
 groups.delete('/:id/leave', authMiddleware, async (c) => {

@@ -82,27 +82,29 @@ admin.patch(
 )
 
 // ── 그룹 직접 생성 (슈퍼어드민) ─────────────────────
+// 슈퍼어드민은 신청 없이 즉시 그룹 생성 가능
 admin.post(
   '/groups',
   zValidator('json', z.object({
     name: z.string().min(2).max(100),
     description: z.string().max(1000).optional(),
-    category: z.enum(['association', 'company', 'club', 'other']).default('other'),
+    purpose: z.string().max(500).optional(),           // 그룹 용도 설명
     visibility: z.enum(['public', 'private']).default('public'),
-    max_members: z.number().int().positive().optional()
+    max_members: z.number().int().positive().optional(),
+    has_minor: z.number().int().min(0).max(1).optional()  // 0=성인만, 1=미성년자 포함
   })),
   async (c) => {
     const adminId = c.get('userId')
     const body = c.req.valid('json')
 
-    // 그룹 생성 (즉시 active)
     const result = await c.env.DB.prepare(`
-      INSERT INTO groups (name, description, category, visibility, status,
-        admin_user_id, approved_by, approved_at, max_members)
-      VALUES (?, ?, ?, ?, 'active', ?, ?, datetime('now'), ?)
+      INSERT INTO groups (name, description, purpose, visibility, status,
+        admin_user_id, approved_by, approved_at, max_members, has_minor)
+      VALUES (?, ?, ?, ?, 'active', ?, ?, datetime('now'), ?, ?)
     `).bind(
-      body.name, body.description ?? null, body.category,
-      body.visibility, adminId, adminId, body.max_members ?? null
+      body.name, body.description ?? null, body.purpose ?? null,
+      body.visibility, adminId, adminId,
+      body.max_members ?? null, body.has_minor ?? null
     ).run()
 
     const groupId = result.meta.last_row_id
@@ -124,7 +126,9 @@ admin.get('/groups', async (c) => {
 
   const [rows, countRow] = await Promise.all([
     c.env.DB.prepare(`
-      SELECT g.*, u.name as admin_name, u.email as admin_email
+      SELECT g.id, g.name, g.description, g.purpose, g.visibility, g.status,
+        g.max_members, g.has_minor, g.is_featured, g.created_at,
+        u.name as admin_name, u.email as admin_email
       FROM groups g
       LEFT JOIN users u ON u.id = g.admin_user_id
       WHERE g.status = ? AND g.is_deleted = 0
@@ -140,15 +144,18 @@ admin.patch(
   '/groups/:id',
   zValidator('json', z.object({
     action: z.enum(['approve', 'reject', 'suspend', 'activate']),
-    is_featured: z.number().int().min(0).max(1).optional()
+    is_featured: z.number().int().min(0).max(1).optional(),
+    // 승인 시 미성년자 포함 여부 체크 (관리자가 용도 심사 후 직접 판단)
+    // null = 미판단, 0 = 성인만, 1 = 미성년자 포함
+    has_minor: z.number().int().min(0).max(1).nullable().optional()
   })),
   async (c) => {
     const adminId = c.get('userId')
     const groupId = c.req.param('id')
-    const { action, is_featured } = c.req.valid('json')
+    const { action, is_featured, has_minor } = c.req.valid('json')
 
     const statusMap: Record<string, string> = {
-      approve: 'active', reject: 'suspended', suspend: 'suspended', activate: 'active'
+      approve: 'active', reject: 'rejected', suspend: 'suspended', activate: 'active'
     }
 
     const updates: string[] = [`status = '${statusMap[action]}'`]
@@ -158,6 +165,8 @@ admin.patch(
       updates.push(`approved_by = ${adminId}`, `approved_at = datetime('now')`)
     }
     if (is_featured !== undefined) { updates.push(`is_featured = ?`); values.push(is_featured) }
+    // 미성년자 포함 여부: 승인 시 관리자가 용도 확인 후 체크
+    if (has_minor !== undefined) { updates.push(`has_minor = ?`); values.push(has_minor) }
     updates.push(`updated_at = datetime('now')`)
     values.push(groupId)
 
@@ -177,7 +186,10 @@ admin.patch(
       }
     }
 
-    return c.json(ok(null, `그룹이 ${action === 'approve' ? '승인' : action === 'reject' ? '거절' : '상태 변경'}되었습니다.`))
+    const actionMsg: Record<string, string> = {
+      approve: '승인', reject: '거절', suspend: '정지', activate: '활성화'
+    }
+    return c.json(ok(null, `그룹이 ${actionMsg[action]}되었습니다.`))
   }
 )
 

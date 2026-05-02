@@ -13,7 +13,6 @@ import chatRoutes from './routes/chat'
 import partnerRoutes from './routes/partner'
 import adminRoutes from './routes/admin'
 import lessonsRoutes from './routes/lessons'
-import { minorAccessMiddleware } from './middleware/auth'
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -40,12 +39,6 @@ app.route('/api/v1/chat', chatRoutes)
 app.route('/api/v1/partner', partnerRoutes)
 app.route('/api/v1/admin', adminRoutes)
 app.route('/api/v1/lessons', lessonsRoutes)
-
-// ── 미성년자 접근 제어 (MINOR 계정은 groups/lessons/auth 외 차단) ─────
-app.use('/api/v1/cards/*', minorAccessMiddleware)
-app.use('/api/v1/events/*', minorAccessMiddleware)
-app.use('/api/v1/chat/*', minorAccessMiddleware)
-app.use('/api/v1/partner/*', minorAccessMiddleware)
 
 // ── 헬스체크 ──────────────────────────────────────────
 app.get('/health', (c) => c.json({ status: 'ok', service: 'METI Backend', version: '1.0.0' }))

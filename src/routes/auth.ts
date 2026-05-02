@@ -21,7 +21,7 @@ async function comparePassword(password: string, hash: string): Promise<boolean>
   return inputHash === hash
 }
 
-// Web Crypto API 기반 HS256 JWT 서명 (hono/jwt 대체)
+// Web Crypto API 기반 HS256 JWT 서명
 async function signJWT(payload: Record<string, unknown>, secret: string): Promise<string> {
   const encoder = new TextEncoder()
   const header = { alg: 'HS256', typ: 'JWT' }
@@ -70,15 +70,11 @@ auth.post(
     email: z.string().email('유효한 이메일을 입력해주세요.'),
     password: z.string().min(8, '비밀번호는 8자 이상이어야 합니다.'),
     name: z.string().min(2, '이름은 2자 이상이어야 합니다.').max(50),
-    account_type: z.enum(['personal', 'headhunter']).default('personal'),
-    user_type: z.enum(['ADULT', 'MINOR']).default('ADULT'),
-    birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-    phone: z.string().max(30).optional()
+    account_type: z.enum(['personal', 'headhunter']).default('personal')
   })),
   async (c) => {
-    const { email, password, name, account_type, user_type, birth_date, phone } = c.req.valid('json')
+    const { email, password, name, account_type } = c.req.valid('json')
 
-    // 이메일 중복 확인
     const existing = await c.env.DB.prepare(
       'SELECT id FROM users WHERE email = ? AND is_deleted = 0'
     ).bind(email).first()
@@ -89,16 +85,13 @@ auth.post(
 
     const passwordHash = await hashPassword(password)
 
-    // 미성년자는 기본 visibility 제한 적용 (앱 레이어 정책)
-    // 유저 생성
     const result = await c.env.DB.prepare(`
-      INSERT INTO users (email, password_hash, name, account_type, plan, is_verified, user_type, birth_date, phone)
-      VALUES (?, ?, ?, ?, 'free', 0, ?, ?, ?)
-    `).bind(email, passwordHash, name, account_type, user_type, birth_date ?? null, phone ?? null).run()
+      INSERT INTO users (email, password_hash, name, account_type, plan, is_verified)
+      VALUES (?, ?, ?, ?, 'free', 0)
+    `).bind(email, passwordHash, name, account_type).run()
 
     const userId = result.meta.last_row_id as number
 
-    // 이메일 인증 토큰 생성
     const verifyToken = crypto.randomUUID()
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
 
@@ -107,14 +100,11 @@ auth.post(
       VALUES (?, ?, ?)
     `).bind(userId, verifyToken, expiresAt).run()
 
-    // 리워드 잔액 초기화
     await c.env.DB.prepare(
       'INSERT INTO reward_balances (user_id, points) VALUES (?, 0)'
     ).bind(userId).run()
 
     // TODO: 이메일 발송 (추후 이메일 서비스 연동)
-    // 현재는 토큰을 응답에 포함 (개발용)
-
     return c.json(ok({
       user_id: userId,
       email,
@@ -162,12 +152,12 @@ auth.post(
     const { email, password } = c.req.valid('json')
 
     const user = await c.env.DB.prepare(`
-      SELECT id, email, password_hash, name, account_type, plan, is_verified, is_active, user_type, role
+      SELECT id, email, password_hash, name, account_type, plan, is_verified, is_active, role
       FROM users WHERE email = ? AND is_deleted = 0
     `).bind(email).first<{
       id: number; email: string; password_hash: string; name: string;
       account_type: string; plan: string; is_verified: number; is_active: number;
-      user_type: string; role: string
+      role: string
     }>()
 
     if (!user) {
@@ -191,7 +181,6 @@ auth.post(
       user.id, user.email, user.plan, user.account_type, c.env.JWT_SECRET
     )
 
-    // Refresh Token 저장
     const rtExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
     await c.env.DB.prepare(`
       INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, ?)
@@ -207,7 +196,6 @@ auth.post(
         name: user.name,
         account_type: user.account_type,
         plan: user.plan,
-        user_type: user.user_type ?? 'ADULT',
         role: user.role ?? 'user'
       }
     }, '로그인 성공'))
@@ -240,7 +228,6 @@ auth.post(
       record.user_id, record.email, record.plan, record.account_type, c.env.JWT_SECRET
     )
 
-    // 기존 토큰 폐기 + 새 토큰 저장
     const rtExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
     await c.env.DB.batch([
       c.env.DB.prepare('UPDATE refresh_tokens SET revoked_at = datetime(\'now\') WHERE token = ?').bind(refresh_token),
@@ -282,20 +269,18 @@ auth.post(
       'SELECT id FROM users WHERE email = ? AND is_deleted = 0'
     ).bind(email).first<{ id: number }>()
 
-    // 보안상 유저 존재 여부 노출 안 함
     if (!user) {
       return c.json(ok(null, '비밀번호 재설정 이메일이 발송되었습니다.'))
     }
 
     const resetToken = crypto.randomUUID()
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString() // 1시간
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString()
 
     await c.env.DB.prepare(`
       INSERT INTO password_resets (user_id, token, expires_at) VALUES (?, ?, ?)
     `).bind(user.id, resetToken, expiresAt).run()
 
     // TODO: 이메일 발송
-
     return c.json(ok({
       reset_token: resetToken  // TODO: 운영에서 제거
     }, '비밀번호 재설정 이메일이 발송되었습니다.'))
@@ -338,7 +323,7 @@ auth.get('/me', authMiddleware, async (c) => {
 
   const user = await c.env.DB.prepare(`
     SELECT id, email, name, account_type, plan, plan_expires_at, avatar_url,
-           is_verified, user_type, role, created_at
+           is_verified, role, created_at
     FROM users WHERE id = ? AND is_deleted = 0
   `).bind(userId).first()
 
@@ -380,7 +365,7 @@ auth.put(
 )
 
 // ── GET /api/v1/auth/invite/:token ───────────────────
-// 초대 링크 정보 사전 조회 (가입 전 그룹 정보 확인용)
+// 초대 링크로 그룹 정보 미리보기 (로그인 전/후 모두 가능, Public)
 auth.get('/invite/:token', async (c) => {
   const token = c.req.param('token')
 
@@ -389,8 +374,8 @@ auth.get('/invite/:token', async (c) => {
       gil.id, gil.token, gil.label, gil.max_uses, gil.used_count,
       gil.expires_at, gil.is_active,
       g.id as group_id, g.name as group_name, g.description as group_description,
-      g.logo_url, g.group_type, g.lesson_config, g.status as group_status,
-      u.name as instructor_name
+      g.logo_url, g.purpose, g.has_minor, g.status as group_status,
+      u.name as creator_name
     FROM group_invite_links gil
     JOIN groups g ON g.id = gil.group_id AND g.is_deleted = 0
     JOIN users u ON u.id = gil.created_by
@@ -400,8 +385,8 @@ auth.get('/invite/:token', async (c) => {
     max_uses: number | null; used_count: number
     expires_at: string | null; is_active: number
     group_id: number; group_name: string; group_description: string | null
-    logo_url: string | null; group_type: string; lesson_config: string | null
-    group_status: string; instructor_name: string
+    logo_url: string | null; purpose: string | null; has_minor: number | null
+    group_status: string; creator_name: string
   }>()
 
   if (!invite) return c.json(fail('유효하지 않은 초대 링크입니다.'), 404)
@@ -424,33 +409,29 @@ auth.get('/invite/:token', async (c) => {
       name: invite.group_name,
       description: invite.group_description,
       logo_url: invite.logo_url,
-      group_type: invite.group_type,
-      lesson_config: invite.lesson_config ? JSON.parse(invite.lesson_config) : null,
-      instructor_name: invite.instructor_name
+      purpose: invite.purpose,
+      has_minor: invite.has_minor,
+      creator_name: invite.creator_name
     }
   }))
 })
 
 // ── POST /api/v1/auth/invite/:token/join ─────────────
-// 초대 링크로 가입 (미성년자 Lite 계정 전용)
-// - 이메일 인증 없음
-// - 최소 정보만 입력 (이름 + 생년월일 + PIN)
-// - 가입 즉시 해당 그룹 멤버로 등록
-// - user_type = MINOR 자동 설정
+// 초대 링크로 그룹 즉시 가입 (로그인된 일반 유저 전용)
+// 흐름: 앱에서 초대링크 클릭 → 로그인/회원가입 → 이 API 호출 → 그룹 자동 active 가입
+// - 생년월일은 선택입력 (미성년자 판단 목적, 레슨/스포츠 그룹에서 권장)
 auth.post(
   '/invite/:token/join',
+  authMiddleware,
   zValidator('json', z.object({
-    name: z.string().min(1, '이름을 입력해주세요.').max(50),
-    birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD 형식으로 입력해주세요.'),
-    pin: z.string().min(4, 'PIN은 4자리 이상이어야 합니다.').max(8),
-    // 선택: 보호자/강사가 나중에 연락할 수 있는 연락처 (없어도 됨)
-    contact: z.string().max(100).optional()  // 전화번호 또는 부모 연락처
+    birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD 형식').optional()
   })),
   async (c) => {
+    const userId = c.get('userId')
     const token = c.req.param('token')
-    const { name, birth_date, pin, contact } = c.req.valid('json')
+    const { birth_date } = c.req.valid('json')
 
-    // 초대 링크 유효성 확인
+    // 초대 링크 + 그룹 유효성 확인
     const invite = await c.env.DB.prepare(`
       SELECT
         gil.id, gil.group_id, gil.max_uses, gil.used_count,
@@ -478,6 +459,12 @@ auth.post(
       return c.json(fail('현재 가입할 수 없는 그룹입니다.'), 410)
     }
 
+    // 이미 가입 여부 확인
+    const existing = await c.env.DB.prepare(
+      `SELECT status FROM group_members WHERE group_id = ? AND user_id = ?`
+    ).bind(invite.group_id, userId).first<{ status: string }>()
+    if (existing?.status === 'active') return c.json(fail('이미 가입된 그룹입니다.'), 409)
+
     // 그룹 정원 확인
     if (invite.max_members) {
       const memberCount = await c.env.DB.prepare(
@@ -488,139 +475,33 @@ auth.post(
       }
     }
 
-    // 생년월일로 미성년자 여부 자동 판별
-    // (만 19세 미만 → MINOR, 이상 → ADULT)
-    const birthYear = parseInt(birth_date.split('-')[0])
-    const birthMonth = parseInt(birth_date.split('-')[1])
-    const birthDay = parseInt(birth_date.split('-')[2])
-    const today = new Date()
-    let age = today.getFullYear() - birthYear
-    if (
-      today.getMonth() + 1 < birthMonth ||
-      (today.getMonth() + 1 === birthMonth && today.getDate() < birthDay)
-    ) {
-      age--
+    // 생년월일 입력 시 미성년자 여부 계산 (만 19세 미만 = 미성년)
+    let isMinor: number | null = null
+    if (birth_date) {
+      const [by, bm, bd] = birth_date.split('-').map(Number)
+      const today = new Date()
+      let age = today.getFullYear() - by
+      if (today.getMonth() + 1 < bm || (today.getMonth() + 1 === bm && today.getDate() < bd)) age--
+      isMinor = age < 19 ? 1 : 0
     }
-    const userType = age < 19 ? 'MINOR' : 'ADULT'
 
-    // 내부 식별용 이메일 생성 (로그인에 사용 안 함)
-    // 초대 링크 토큰 + 타임스탬프 기반으로 유니크하게
-    const fakeEmail = `invite_${token.slice(0, 8)}_${Date.now()}@meti.internal`
-    const pinHash = await hashPassword(pin)
-
-    // 유저 생성 (is_verified = 1, 이메일 인증 불필요)
-    const userResult = await c.env.DB.prepare(`
-      INSERT INTO users
-        (email, password_hash, name, account_type, plan, is_verified, is_active,
-         user_type, birth_date, phone, invited_via_token)
-      VALUES (?, ?, ?, 'personal', 'free', 1, 1, ?, ?, ?, ?)
-    `).bind(
-      fakeEmail, pinHash, name,
-      userType, birth_date, contact ?? null, token
-    ).run()
-
-    const userId = userResult.meta.last_row_id as number
-
-    // 리워드 잔액 초기화
-    await c.env.DB.prepare(
-      'INSERT INTO reward_balances (user_id, points) VALUES (?, 0)'
-    ).bind(userId).run()
-
-    // 그룹 멤버로 즉시 등록 (승인 불필요 - 초대 링크로 가입이므로 바로 active)
+    // 초대 링크 가입 → 즉시 active (별도 승인 불필요)
     await c.env.DB.prepare(`
-      INSERT INTO group_members (group_id, user_id, status, role, joined_at)
-      VALUES (?, ?, 'active', 'member', datetime('now'))
-    `).bind(invite.group_id, userId).run()
+      INSERT OR REPLACE INTO group_members
+        (group_id, user_id, status, role, joined_at, is_minor, birth_date)
+      VALUES (?, ?, 'active', 'member', datetime('now'), ?, ?)
+    `).bind(invite.group_id, userId, isMinor, birth_date ?? null).run()
 
     // 초대 링크 사용 횟수 증가
     await c.env.DB.prepare(`
-      UPDATE group_invite_links
-      SET used_count = used_count + 1, updated_at = datetime('now')
+      UPDATE group_invite_links SET used_count = used_count + 1, updated_at = datetime('now')
       WHERE id = ?
     `).bind(invite.id).run()
 
-    // JWT 발급 (초대 가입자도 앱 로그인 가능)
-    const { accessToken, refreshToken } = await generateTokens(
-      userId, fakeEmail, 'free', 'personal', c.env.JWT_SECRET
-    )
-
-    const rtExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-    await c.env.DB.prepare(
-      'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, ?)'
-    ).bind(userId, refreshToken, rtExpiresAt).run()
-
     return c.json(ok({
-      access_token: accessToken,
-      refresh_token: refreshToken,
-      token_type: 'Bearer',
-      user: {
-        id: userId,
-        name,
-        user_type: userType,
-        group_id: invite.group_id,
-        plan: 'free',
-        role: 'user'
-      }
-    }, `${name}님, 환영합니다! 그룹에 참여되었습니다.`), 201)
-  }
-)
-
-// ── POST /api/v1/auth/invite/:token/login ────────────
-// 초대 링크 가입자 PIN 로그인
-// (이메일 없이 이름 + 그룹 ID + PIN으로 로그인)
-auth.post(
-  '/invite/:token/login',
-  zValidator('json', z.object({
-    name: z.string().min(1).max(50),
-    pin: z.string().min(4).max(8)
-  })),
-  async (c) => {
-    const token = c.req.param('token')
-    const { name, pin } = c.req.valid('json')
-
-    // 해당 초대 토큰으로 가입한 유저 조회
-    const user = await c.env.DB.prepare(`
-      SELECT u.id, u.name, u.password_hash, u.user_type, u.is_active,
-             gm.group_id
-      FROM users u
-      JOIN group_members gm ON gm.user_id = u.id AND gm.status = 'active'
-      JOIN group_invite_links gil ON gil.token = u.invited_via_token AND gil.group_id = gm.group_id
-      WHERE u.invited_via_token = ? AND u.name = ? AND u.is_deleted = 0
-      LIMIT 1
-    `).bind(token, name).first<{
-      id: number; name: string; password_hash: string
-      user_type: string; is_active: number; group_id: number
-    }>()
-
-    if (!user) return c.json(fail('이름 또는 PIN이 올바르지 않습니다.'), 401)
-    if (!user.is_active) return c.json(fail('비활성화된 계정입니다.'), 403)
-
-    const isValid = await comparePassword(pin, user.password_hash)
-    if (!isValid) return c.json(fail('이름 또는 PIN이 올바르지 않습니다.'), 401)
-
-    const fakeEmail = `invite_${token.slice(0, 8)}_${user.id}@meti.internal`
-    const { accessToken, refreshToken } = await generateTokens(
-      user.id, fakeEmail, 'free', 'personal', c.env.JWT_SECRET
-    )
-
-    const rtExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-    await c.env.DB.prepare(
-      'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, ?)'
-    ).bind(user.id, refreshToken, rtExpiresAt).run()
-
-    return c.json(ok({
-      access_token: accessToken,
-      refresh_token: refreshToken,
-      token_type: 'Bearer',
-      user: {
-        id: user.id,
-        name: user.name,
-        user_type: user.user_type,
-        group_id: user.group_id,
-        plan: 'free',
-        role: 'user'
-      }
-    }, '로그인 성공'))
+      group_id: invite.group_id,
+      is_minor: isMinor
+    }, '그룹에 참여했습니다.'), 201)
   }
 )
 
