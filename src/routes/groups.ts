@@ -324,4 +324,133 @@ groups.post(
   }
 )
 
+// ── 그룹 초대 링크 생성 (관리자) ─────────────────────
+groups.post(
+  '/:id/invite-links',
+  authMiddleware,
+  zValidator('json', z.object({
+    label: z.string().max(100).optional(),          // 링크 구분 라벨 (예: "2026 봄 수영반")
+    max_uses: z.number().int().positive().optional(), // 최대 사용 횟수 (미입력 = 무제한)
+    expires_days: z.number().int().min(1).max(365).optional() // 만료 일수 (미입력 = 무기한)
+  })),
+  async (c) => {
+    const userId = c.get('userId')
+    const groupId = parseInt(c.req.param('id'))
+    const body = c.req.valid('json')
+
+    // 그룹 관리자 또는 super_admin 확인
+    const member = await c.env.DB.prepare(
+      `SELECT role FROM group_members WHERE group_id = ? AND user_id = ? AND status = 'active'`
+    ).bind(groupId, userId).first<{ role: string }>()
+
+    const userRole = await c.env.DB.prepare(
+      `SELECT role FROM users WHERE id = ?`
+    ).bind(userId).first<{ role: string }>()
+
+    const isSuperAdmin = userRole?.role === 'super_admin'
+    const isGroupAdmin = member && ['admin', 'sub_admin'].includes(member.role)
+
+    if (!isSuperAdmin && !isGroupAdmin) {
+      return c.json(fail('그룹 관리자만 초대 링크를 생성할 수 있습니다.'), 403)
+    }
+
+    // 그룹 존재 및 활성 확인
+    const group = await c.env.DB.prepare(
+      `SELECT id FROM groups WHERE id = ? AND status = 'active' AND is_deleted = 0`
+    ).bind(groupId).first()
+    if (!group) return c.json(fail('활성 상태의 그룹을 찾을 수 없습니다.'), 404)
+
+    const token = crypto.randomUUID()
+    const expiresAt = body.expires_days
+      ? new Date(Date.now() + body.expires_days * 24 * 60 * 60 * 1000).toISOString()
+      : null
+
+    await c.env.DB.prepare(`
+      INSERT INTO group_invite_links (token, group_id, created_by, label, max_uses, expires_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).bind(token, groupId, userId, body.label ?? null, body.max_uses ?? null, expiresAt).run()
+
+    return c.json(ok({
+      token,
+      invite_url: `https://the-meti.pages.dev/invite/${token}`,  // 앱 딥링크 or 웹 URL
+      label: body.label ?? null,
+      max_uses: body.max_uses ?? null,
+      expires_at: expiresAt
+    }, '초대 링크가 생성되었습니다.'), 201)
+  }
+)
+
+// ── 그룹 초대 링크 목록 조회 (관리자) ────────────────
+groups.get('/:id/invite-links', authMiddleware, async (c) => {
+  const userId = c.get('userId')
+  const groupId = parseInt(c.req.param('id'))
+
+  const member = await c.env.DB.prepare(
+    `SELECT role FROM group_members WHERE group_id = ? AND user_id = ? AND status = 'active'`
+  ).bind(groupId, userId).first<{ role: string }>()
+
+  const userRole = await c.env.DB.prepare(
+    `SELECT role FROM users WHERE id = ?`
+  ).bind(userId).first<{ role: string }>()
+
+  if (userRole?.role !== 'super_admin' && (!member || !['admin', 'sub_admin'].includes(member.role))) {
+    return c.json(fail('권한이 없습니다.'), 403)
+  }
+
+  const rows = await c.env.DB.prepare(`
+    SELECT
+      gil.id, gil.token, gil.label, gil.max_uses, gil.used_count,
+      gil.expires_at, gil.is_active, gil.created_at,
+      u.name as created_by_name
+    FROM group_invite_links gil
+    JOIN users u ON u.id = gil.created_by
+    WHERE gil.group_id = ?
+    ORDER BY gil.created_at DESC
+  `).bind(groupId).all()
+
+  // 각 링크에 invite_url 추가
+  const links = rows.results.map((row: Record<string, unknown>) => ({
+    ...row,
+    invite_url: `https://the-meti.pages.dev/invite/${row.token}`
+  }))
+
+  return c.json(ok(links))
+})
+
+// ── 그룹 초대 링크 비활성화 (관리자) ─────────────────
+groups.patch(
+  '/:id/invite-links/:linkId/deactivate',
+  authMiddleware,
+  async (c) => {
+    const userId = c.get('userId')
+    const groupId = parseInt(c.req.param('id'))
+    const linkId = parseInt(c.req.param('linkId'))
+
+    const member = await c.env.DB.prepare(
+      `SELECT role FROM group_members WHERE group_id = ? AND user_id = ? AND status = 'active'`
+    ).bind(groupId, userId).first<{ role: string }>()
+
+    const userRole = await c.env.DB.prepare(
+      `SELECT role FROM users WHERE id = ?`
+    ).bind(userId).first<{ role: string }>()
+
+    if (userRole?.role !== 'super_admin' && (!member || !['admin', 'sub_admin'].includes(member.role))) {
+      return c.json(fail('권한이 없습니다.'), 403)
+    }
+
+    const link = await c.env.DB.prepare(
+      `SELECT id FROM group_invite_links WHERE id = ? AND group_id = ?`
+    ).bind(linkId, groupId).first()
+    if (!link) return c.json(fail('초대 링크를 찾을 수 없습니다.'), 404)
+
+    await c.env.DB.prepare(`
+      UPDATE group_invite_links
+      SET is_active = 0, updated_at = datetime('now')
+      WHERE id = ?
+    `).bind(linkId).run()
+
+    return c.json(ok(null, '초대 링크가 비활성화되었습니다.'))
+  }
+)
+
 export default groups

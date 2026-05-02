@@ -1,14 +1,19 @@
-# METI 네이티브 앱 개발 에이전트 시작 프롬프트
+# METI 네이티브 앱 개발 에이전트 가이드 v2.0
+
+> **업데이트**: 미성년자(Minor) 보호 정책 + 그룹 레슨 기능 추가 반영 (2026-05-02)
+
+---
 
 ## 📌 서비스 개요
 
 **METI(메티)**는 디지털 명함 기반의 글로벌 비즈니스 네트워킹 플랫폼입니다.
 
-- **주요 기능**: 디지털 명함 생성/공유, 그룹 커뮤니티, 이벤트, 1:1 채팅, 리워드
-- **타겟**: 글로벌 비즈니스 사용자 (이메일 인증 기반, 소셜 로그인 없음)
+- **주요 기능**: 디지털 명함 생성/공유, 그룹 커뮤니티, 이벤트, 1:1 채팅, 리워드, **그룹 레슨/스터디**
+- **타겟**: 글로벌 비즈니스 사용자 + **학생/레슨 참여자 (미성년자 포함)**
 - **플랫폼**: iOS / Android 네이티브 앱
-- **백엔드**: 이미 완성된 REST API 서버 (Cloudflare Workers + Hono + D1)
-- **인증**: JWT (Access Token 1시간, Refresh Token 7일, Token Rotation 방식)
+- **백엔드**: 완성된 REST API (Cloudflare Workers + Hono + D1 SQLite)
+- **Base URL**: `https://the-meti.pages.dev/api/v1`
+- **인증**: JWT (Access Token 7일, Refresh Token 30일, Token Rotation)
 
 ---
 
@@ -17,12 +22,11 @@
 ```
 [iOS / Android 앱]
         ↓  REST API (JSON)
-[METI Backend API]  ← 이미 완성됨
-  Base URL: https://<배포도메인>/api/v1
+[METI Backend API]  https://the-meti.pages.dev/api/v1
         ↓
-[Cloudflare D1 (SQLite)]
+[Cloudflare D1 (SQLite) - the-meti-production]
         ↓
-[HappyTree 제휴서비스] ← 파트너 서버-투-서버 연동
+[파트너 서버] ← 서버-투-서버 연동 (X-Partner-API-Key)
 ```
 
 ---
@@ -31,8 +35,8 @@
 
 ### JWT Token 구조
 ```
-Access Token  : 유효시간 1시간 (모든 인증 API 요청 헤더에 첨부)
-Refresh Token : 유효시간 7일  (Token Rotation - 갱신 시 기존 토큰 무효화)
+Access Token  : 7일 (모든 인증 API 요청 헤더)
+Refresh Token : 30일 (Token Rotation — 갱신 시 기존 토큰 무효화)
 ```
 
 ### 요청 헤더
@@ -42,9 +46,9 @@ Content-Type: application/json
 ```
 
 ### 토큰 갱신 흐름
-1. API 요청 → 401 응답 수신
-2. `POST /api/v1/auth/refresh` 호출 (refresh_token 전송)
-3. 새 access_token + refresh_token 수신 → 로컬 저장
+1. API 요청 → `401` 수신
+2. `POST /auth/refresh` 호출
+3. 새 `access_token` + `refresh_token` 수신 → 로컬 저장
 4. 원래 요청 재시도
 
 ---
@@ -53,29 +57,16 @@ Content-Type: application/json
 
 ```json
 // 성공
-{
-  "success": true,
-  "data": { ... },
-  "message": "선택적 메시지"
-}
+{ "success": true, "data": { ... }, "message": "선택적 메시지" }
 
 // 실패
-{
-  "success": false,
-  "error": "오류 메시지"
-}
+{ "success": false, "error": "오류 메시지" }
 
-// 페이지네이션 포함
+// 페이지네이션
 {
   "success": true,
   "data": [ ... ],
-  "pagination": {
-    "page": 1,
-    "limit": 20,
-    "total": 100,
-    "total_pages": 5,
-    "has_next": true
-  }
+  "pagination": { "page": 1, "limit": 20, "total": 100, "total_pages": 5, "has_next": true }
 }
 ```
 
@@ -84,28 +75,92 @@ Content-Type: application/json
 ## 🗂️ 플랜 체계
 
 | 플랜 | 명함 수 | 그룹 가입 | 채팅 | 비고 |
-|------|---------|----------|------|------|
-| free | 1장 | 가능 | 가능 | 기본 플랜 |
-| pro | 무제한 | 가능 | 가능 | 유료 |
+|------|--------|----------|------|------|
+| free | **3장** | 가능 | 가능 | 기본 플랜 |
+| pro | 10장 | 가능 | 가능 | 유료 |
 | business | 무제한 | 가능 | 가능 | 유료 |
 
 ---
 
-## 👤 사용자 역할
+## 👤 사용자 유형 및 역할
 
-| 역할 | 설명 |
-|------|------|
-| user | 일반 사용자 |
-| super_admin | 플랫폼 전체 관리자 |
-| group admin | 특정 그룹의 관리자 (group_members.role = 'admin') |
+### user_type (신규)
+| 값 | 설명 |
+|----|------|
+| `ADULT` | 성인 (기본값) |
+| `MINOR` | 미성년자 — 보호 대상, 별도 접근 제어 적용 |
+
+### 플랫폼 역할 (role)
+| 값 | 설명 |
+|----|------|
+| `user` | 일반 사용자 |
+| `super_admin` | 플랫폼 전체 관리자 |
+
+### 그룹 내 역할 (group_members.role)
+| 값 | 설명 |
+|----|------|
+| `admin` | 그룹 관리자 / 레슨 강사 |
+| `sub_admin` | 부관리자 |
+| `executive` | 임원 |
+| `member` | 일반 멤버 |
+| `minor` | 미성년자 멤버 (보호 대상 식별용) |
+
+---
+
+## 🔒 미성년자(Minor) 보호 정책
+
+> **핵심 원칙**: 미성년자는 일반 유저가 아니라 보호 대상입니다.
+
+### 데이터 노출 제한
+- 전화번호(`phone`) 및 이메일 — **그룹 외부 노출 금지**
+- 프로필 조회 — **같은 그룹 내에서만 가능**
+- 공개 명함(`/cards/public/:id`) — MINOR 계정은 **발급 불가** (앱 레이어 차단)
+- QR/NFC 외부 공유 — **제한**
+
+### 보호자(Guardian) 연결 정책
+- 미성년자는 `user_guardians` 테이블을 통해 보호자/강사와 연결
+- `relation`: `parent`(학부모) | `teacher`(강사)
+- 보호자 연결 없이는 **레슨 그룹 참여 불가** (앱 레이어 강제)
+- 보호자는 담당 학생의 레슨 출석 현황 조회 가능
+
+### 리워드 정책
+- 미성년자 계정 **직접 리워드 지급 제한**
+- 보호자 계정으로 대리 지급 (파트너 API 레이어)
+
+### 앱 개발 시 필수 체크
+```
+회원가입 시 user_type = 'MINOR' 선택 → 보호자 연결 흐름 안내
+미성년자 프로필 → 전화번호/이메일 항상 마스킹 처리
+채팅 상대가 MINOR → 그룹 내 관계자(강사/보호자)만 허용
+```
+
+---
+
+## 🏫 그룹 유형 (group_type)
+
+| 값 | 설명 |
+|----|------|
+| `NORMAL` | 일반 협회/동호회/기업 그룹 (기본값) |
+| `LESSON` | 레슨/스터디 그룹 — 미성년자 참여 가능, 출석 관리 포함 |
+
+### LESSON 그룹 lesson_config (JSON)
+```json
+{
+  "allow_minor": true,
+  "require_guardian": true,
+  "subject": "피아노",
+  "schedule": "매주 화/목 오후 3시",
+  "lesson_fee": 0
+}
+```
 
 ---
 
 # 📋 전체 API 명세
 
-> **Base URL**: `https://<배포도메인>/api/v1`
+> **Base URL**: `https://the-meti.pages.dev/api/v1`
 > **로컬 개발**: `http://localhost:3000/api/v1`
-> **실제 테스트 완료** ✅ (로컬 D1 SQLite 기반 검증 완료)
+> **🔐** = JWT 인증 필요 (`Authorization: Bearer <token>`)
 
 ---
 
@@ -116,27 +171,23 @@ Content-Type: application/json
 POST /auth/register
 권한: Public
 ```
-
-**Request Body**
 ```json
 {
-  "email": "user@example.com",       // required, 이메일 형식
-  "password": "Test1234!",           // required, 8자 이상
-  "name": "홍길동",                   // required, 2~50자
-  "account_type": "personal"         // optional, "personal" | "headhunter" (기본: personal)
+  "email": "user@example.com",     // required
+  "password": "Test1234!",         // required, 8자 이상
+  "name": "홍길동",                 // required, 2~50자
+  "account_type": "personal",      // optional: "personal" | "headhunter"
+  "user_type": "ADULT",            // optional: "ADULT" | "MINOR" (기본: ADULT)
+  "birth_date": "2010-03-15",      // optional: YYYY-MM-DD (미성년자 권장)
+  "phone": "010-1234-5678"         // optional
 }
 ```
-
 **Response 201**
 ```json
 {
   "success": true,
-  "data": {
-    "user_id": 2,
-    "email": "user@example.com",
-    "verify_token": "uuid-..."        // 개발환경에서만 노출, 운영은 이메일 발송
-  },
-  "message": "회원가입이 완료되었습니다. 이메일을 확인해주세요."
+  "data": { "user_id": 1, "email": "...", "verify_token": "uuid..." },
+  "message": "회원가입이 완료되었습니다. 이메일 인증을 진행해주세요."
 }
 ```
 
@@ -147,21 +198,8 @@ POST /auth/register
 POST /auth/verify-email
 권한: Public
 ```
-
-**Request Body**
 ```json
-{
-  "token": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"  // required, UUID
-}
-```
-
-**Response 200**
-```json
-{
-  "success": true,
-  "data": null,
-  "message": "이메일 인증이 완료되었습니다."
-}
+{ "token": "uuid-..." }
 ```
 
 ---
@@ -171,15 +209,9 @@ POST /auth/verify-email
 POST /auth/login
 권한: Public
 ```
-
-**Request Body**
 ```json
-{
-  "email": "user@example.com",   // required
-  "password": "Test1234!"        // required
-}
+{ "email": "user@example.com", "password": "Test1234!" }
 ```
-
 **Response 200**
 ```json
 {
@@ -189,148 +221,54 @@ POST /auth/login
     "refresh_token": "uuid-...",
     "token_type": "Bearer",
     "user": {
-      "id": 2,
-      "email": "user@example.com",
-      "name": "홍길동",
-      "account_type": "personal",
-      "plan": "free"
+      "id": 1, "email": "...", "name": "홍길동",
+      "account_type": "personal", "plan": "free",
+      "user_type": "ADULT",    // ★ 신규
+      "role": "user"           // ★ 신규
     }
-  },
-  "message": "로그인 성공"
-}
-```
-
-**오류 응답**
-- `401`: 이메일 또는 비밀번호 불일치
-- `403`: 이메일 인증 미완료
-
----
-
-### 1-4. 토큰 갱신 (Token Rotation)
-```
-POST /auth/refresh
-권한: Public
-```
-
-**Request Body**
-```json
-{
-  "refresh_token": "uuid-..."   // required
-}
-```
-
-**Response 200**
-```json
-{
-  "success": true,
-  "data": {
-    "access_token": "eyJhbGci...",
-    "refresh_token": "new-uuid-...",   // 기존 토큰 무효화됨
-    "token_type": "Bearer"
   }
 }
 ```
 
 ---
 
+### 1-4. 토큰 갱신
+```
+POST /auth/refresh
+```
+```json
+{ "refresh_token": "uuid-..." }
+```
+
 ### 1-5. 로그아웃
 ```
-POST /auth/logout
-권한: 🔐 Auth Required
+POST /auth/logout   🔐
 ```
-
-**Request Body** (선택)
 ```json
-{
-  "refresh_token": "uuid-..."
-}
+{ "refresh_token": "uuid-..." }
 ```
-
-**Response 200**
-```json
-{
-  "success": true,
-  "data": null,
-  "message": "로그아웃되었습니다."
-}
-```
-
----
 
 ### 1-6. 비밀번호 재설정 요청
 ```
 POST /auth/forgot-password
-권한: Public
 ```
-
-**Request Body**
 ```json
-{
-  "email": "user@example.com"
-}
+{ "email": "user@example.com" }
 ```
-
-**Response 200**
-```json
-{
-  "success": true,
-  "data": {
-    "reset_token": "uuid-..."    // 개발환경에서만 노출
-  },
-  "message": "비밀번호 재설정 이메일이 발송되었습니다."
-}
-```
-
----
 
 ### 1-7. 비밀번호 재설정
 ```
 POST /auth/reset-password
-권한: Public
 ```
-
-**Request Body**
 ```json
-{
-  "token": "uuid-...",          // required, 재설정 토큰
-  "password": "NewPass1234!"    // required, 8자 이상
-}
+{ "token": "uuid-...", "password": "NewPass1234!" }
 ```
-
-**Response 200**
-```json
-{
-  "success": true,
-  "data": null,
-  "message": "비밀번호가 변경되었습니다."
-}
-```
-
----
 
 ### 1-8. 내 프로필 조회
 ```
-GET /auth/me
-권한: 🔐 Auth Required
+GET /auth/me   🔐
 ```
-
-**Response 200**
-```json
-{
-  "success": true,
-  "data": {
-    "id": 2,
-    "email": "user@example.com",
-    "name": "홍길동",
-    "account_type": "personal",
-    "plan": "free",
-    "plan_expires_at": null,
-    "avatar_url": null,
-    "is_verified": 1,
-    "created_at": "2026-04-28 04:55:28"
-  }
-}
-```
+**Response** — `user_type`, `role`, `birth_date`, `phone` 포함하여 반환
 
 ---
 
@@ -338,315 +276,102 @@ GET /auth/me
 
 ### 2-1. 내 명함 목록
 ```
-GET /cards
-권한: 🔐 Auth Required
+GET /cards   🔐
 ```
-
-**Query Parameters**
-```
-page  : number (기본: 1)
-limit : number (기본: 20)
-```
-
-**Response 200**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": 1,
-      "user_id": 2,
-      "group_id": null,
-      "card_type": "personal",
-      "name": "홍길동",
-      "title": "시니어 개발자",
-      "company": "METI Corp",
-      "email": "user@example.com",
-      "phone": "010-1234-5678",
-      "website": "https://meti.app",
-      "bio": "자기소개",
-      "avatar_url": null,
-      "template_id": "modern_blue",
-      "is_primary": 0,
-      "is_public": 1,
-      "is_active": 1,
-      "created_at": "2026-04-28 04:58:44",
-      "updated_at": "2026-04-28 04:58:44",
-      "sns_count": 1
-    }
-  ],
-  "pagination": { "page": 1, "limit": 20, "total": 1, "total_pages": 1, "has_next": false }
-}
-```
-
----
 
 ### 2-2. 명함 생성
 ```
-POST /cards
-권한: 🔐 Auth Required
-⚠️  Free 플랜: 명함 1장 제한
+POST /cards   🔐
+⚠️  Free: 3장 제한 / MINOR 계정: 공개 명함 생성 제한 (앱 레이어)
 ```
-
-**Request Body**
 ```json
 {
-  "name": "홍길동",                  // required, 1~100자
-  "card_type": "personal",          // optional, "personal" | "group" (기본: personal)
-  "group_id": null,                 // optional, 그룹 명함인 경우
-  "title": "시니어 개발자",           // optional, 직책
-  "company": "METI Corp",           // optional, 회사명
-  "email": "user@example.com",      // optional
-  "phone": "010-1234-5678",         // optional
-  "website": "https://meti.app",    // optional, URL 형식
-  "bio": "자기소개 (500자 이내)",     // optional
-  "template_id": "modern_blue",     // optional (기본: "default")
-  "is_public": 1,                   // optional, 0 | 1 (기본: 1)
-  "sns_links": [                    // optional
-    {
-      "platform": "linkedin",
-      "url": "https://linkedin.com/in/...",
-      "sort_order": 0
-    }
-  ],
-  "tags": [                         // optional
-    {
-      "tag_type": "skill",
-      "tag_value": "TypeScript"
-    }
-  ]
+  "name": "홍길동",
+  "card_type": "personal",      // "personal" | "group"
+  "group_id": null,
+  "title": "시니어 개발자",
+  "company": "METI Corp",
+  "email": "user@example.com",
+  "phone": "010-1234-5678",
+  "website": "https://meti.app",
+  "bio": "자기소개 (500자 이내)",
+  "template_id": "modern_blue",
+  "is_public": 1,
+  "sns_links": [{ "platform": "linkedin", "url": "https://...", "sort_order": 0 }],
+  "tags": [{ "tag_type": "skill", "tag_value": "TypeScript" }]
 }
 ```
 
-**Response 201**
-```json
-{
-  "success": true,
-  "data": { "id": 1, "user_id": 2, "card_type": "personal", "name": "홍길동", ... },
-  "message": "명함이 생성되었습니다."
-}
+### 2-3. 명함 상세 조회
 ```
-
----
-
-### 2-3. 명함 상세 조회 (인증 필요)
+GET /cards/:id   🔐
 ```
-GET /cards/:id
-권한: 🔐 Auth Required
-```
-
-**Response 200**
-```json
-{
-  "success": true,
-  "data": {
-    "id": 1,
-    ...모든 필드...,
-    "sns_links": [{ "id": 1, "platform": "linkedin", "url": "...", "sort_order": 0 }],
-    "tags": []
-  }
-}
-```
-
----
 
 ### 2-4. 공개 명함 조회 (인증 불필요)
 ```
 GET /cards/public/:id
-권한: Public
+⚠️  MINOR 계정 명함은 공개 조회 불가 (앱 레이어 차단)
 ```
-
----
 
 ### 2-5. 명함 수정
 ```
-PATCH /cards/:id
-권한: 🔐 Auth Required (소유자만)
+PATCH /cards/:id   🔐 (소유자만)
 ```
-
-**Request Body** (모든 필드 optional)
-```json
-{
-  "name": "홍길동 수정",
-  "title": "테크 리드",
-  "company": "METI",
-  "email": "new@email.com",
-  "phone": "010-9999-8888",
-  "website": "https://new-site.com",
-  "bio": "수정된 자기소개",
-  "template_id": "classic",
-  "is_public": 0,
-  "is_primary": 1
-}
-```
-
----
 
 ### 2-6. 명함 삭제
 ```
-DELETE /cards/:id
-권한: 🔐 Auth Required (소유자만)
+DELETE /cards/:id   🔐 (소유자만)
 ```
 
-**Response 200**
-```json
-{
-  "success": true,
-  "data": null,
-  "message": "명함이 삭제되었습니다."
-}
+### 2-7. QR 토큰 생성 (24시간 유효)
 ```
-
----
-
-### 2-7. QR 토큰 생성
+POST /cards/:id/qr-token   🔐
 ```
-POST /cards/:id/qr-token
-권한: 🔐 Auth Required (소유자만)
-```
-
-**Response 200**
-```json
-{
-  "success": true,
-  "data": {
-    "token": "uuid-...",
-    "expires_at": "2026-04-29T05:03:55.826Z",   // 24시간 유효
-    "qr_url": "/cards/qr/uuid-..."
-  }
-}
-```
-
----
 
 ### 2-8. QR 토큰으로 명함 조회
 ```
 GET /cards/qr/:token
-권한: Public
 ```
-
-**Response 200**
-```json
-{
-  "success": true,
-  "data": {
-    "token": "uuid-...",
-    "expires_at": "...",
-    "name": "홍길동",
-    "title": "시니어 개발자",
-    "company": "METI Corp",
-    ...모든 명함 필드...,
-    "sns_links": [...]
-  }
-}
-```
-
----
 
 ### 2-9. 명함 저장 (명함첩)
 ```
-POST /cards/:id/save
-권한: 🔐 Auth Required
-⚠️  채팅 사용 전 상대방 명함을 반드시 저장해야 함
+POST /cards/:id/save   🔐
+⚠️  채팅 시작 전 필수
 ```
 
-**Response 200**
-```json
-{
-  "success": true,
-  "data": null,
-  "message": "명함첩에 저장되었습니다."
-}
+### 2-10. 저장된 명함 목록
 ```
-
----
-
-### 2-10. 저장된 명함 목록 (명함첩)
-```
-GET /cards/contacts/list
-권한: 🔐 Auth Required
-```
-
-**Query Parameters**
-```
-page  : number (기본: 1)
-limit : number (기본: 20)
+GET /cards/contacts/list   🔐
 ```
 
 ---
 
 ## 3. 그룹 (Groups)
 
-> 그룹 생성 시 슈퍼어드민 승인 필요 (status: pending → active)
-
 ### 3-1. 그룹 목록
 ```
 GET /groups
-권한: Public
 ```
+**Query**: `page`, `limit`, `q`(검색), `category`(`association`|`company`|`club`|`other`), `group_type`(`NORMAL`|`LESSON`)
 
-**Query Parameters**
-```
-page     : number (기본: 1)
-limit    : number (기본: 20)
-q        : string (그룹명 검색)
-category : "association" | "company" | "club" | "other"
-```
-
-**Response 200**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": 1,
-      "name": "METI 개발자 모임",
-      "description": "...",
-      "logo_url": null,
-      "category": "club",
-      "visibility": "public",
-      "status": "active",
-      "plan": "free",
-      "max_members": null,
-      "admin_user_id": 2,
-      "admin_name": "홍길동",
-      "member_count": 1,
-      "created_at": "..."
-    }
-  ],
-  "pagination": { ... }
-}
-```
+**Response** — `group_type`, `lesson_config` 포함하여 반환
 
 ---
 
 ### 3-2. 그룹 생성 신청
 ```
-POST /groups
-권한: 🔐 Auth Required
+POST /groups   🔐
 ⚠️  슈퍼어드민 승인 후 활성화
 ```
-
-**Request Body**
 ```json
 {
-  "name": "METI 개발자 모임",          // required, 그룹명 (고유)
-  "description": "그룹 설명",          // optional
-  "category": "club",                  // optional, "association"|"company"|"club"|"other"
-  "visibility": "public",             // optional, "public"|"private" (기본: public)
-  "custom_join_fields": null          // optional, JSON 문자열 (가입 시 추가 입력 필드)
-}
-```
-
-**Response 201**
-```json
-{
-  "success": true,
-  "data": {
-    "group_id": 1,
-    "status": "pending",
-    "message": "그룹 개설 신청이 완료되었습니다. 슈퍼관리자 승인 후 활성화됩니다."
-  }
+  "name": "피아노 레슨반 A",
+  "description": "초등학생 대상 피아노 레슨",
+  "category": "club",
+  "visibility": "private",
+  "group_type": "LESSON",             // ★ 신규: "NORMAL" | "LESSON"
+  "lesson_config": "{\"allow_minor\":true,\"require_guardian\":true,\"subject\":\"피아노\"}",
+  "custom_join_fields": null
 }
 ```
 
@@ -655,169 +380,53 @@ POST /groups
 ### 3-3. 그룹 상세 조회
 ```
 GET /groups/:id
-권한: Public (공개) / 🔐 Auth Required (비공개)
 ```
-
-**Response 200**
-```json
-{
-  "success": true,
-  "data": {
-    "id": 1,
-    "name": "METI 개발자 모임",
-    "description": "...",
-    "logo_url": null,
-    "category": "club",
-    "visibility": "public",
-    "status": "active",
-    "plan": "free",
-    "max_members": null,
-    "admin_user_id": 2,
-    "admin_name": "홍길동",
-    "member_count": 1,
-    "photos": [],
-    "created_at": "..."
-  }
-}
-```
-
----
 
 ### 3-4. 그룹 가입 신청
 ```
-POST /groups/:id/join
-권한: 🔐 Auth Required
+POST /groups/:id/join   🔐
 ```
-
-**Response 200**
-```json
-{
-  "success": true,
-  "data": null,
-  "message": "그룹 가입이 완료되었습니다." // 또는 "가입 신청이 완료되었습니다. 승인 대기 중입니다."
-}
-```
-
----
+> LESSON 그룹 + MINOR 유저: 보호자 연결이 없으면 앱에서 사전 차단 권장
 
 ### 3-5. 그룹 탈퇴
 ```
-DELETE /groups/:id/leave
-권한: 🔐 Auth Required
+DELETE /groups/:id/leave   🔐
 ```
 
----
+### 3-6. 그룹 멤버 목록 (어드민)
+```
+GET /groups/:id/members   🔐
+```
+**Query**: `status`(`active`|`pending`)
 
-### 3-6. 그룹 멤버 목록
-```
-GET /groups/:id/members
-권한: 🔐 Auth Required (그룹 어드민)
-```
-
-**Query Parameters**
-```
-page   : number
-limit  : number
-status : "active" | "pending" | "banned"
-```
-
-**Response 200**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": 1,
-      "group_id": 1,
-      "user_id": 2,
-      "role": "admin",             // "admin" | "member"
-      "status": "active",
-      "joined_at": "...",
-      "name": "홍길동",
-      "email": "user@example.com",
-      "avatar_url": null,
-      "account_type": "personal"
-    }
-  ],
-  "pagination": { ... }
-}
-```
-
----
+**Response** — `user_type`, `guardian_user_id`, `guardian_name` 포함
 
 ### 3-7. 멤버 상태/역할 변경
 ```
-PATCH /groups/:id/members/:userId
-권한: 🔐 Auth Required (그룹 어드민)
+PATCH /groups/:id/members/:userId   🔐 (그룹 어드민)
 ```
-
-**Request Body**
 ```json
-{
-  "status": "approved",    // optional, "approved" | "rejected" | "banned"
-  "role": "admin"          // optional, "admin" | "member"
-}
+{ "action": "approve", "role": "minor" }
+// action: "approve" | "reject" | "kick"
+// role: "admin" | "sub_admin" | "executive" | "member" | "minor"
 ```
-
----
 
 ### 3-8. 그룹 공지 목록
 ```
 GET /groups/:id/notices
-권한: Public
 ```
-
-**Response 200**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": 1,
-      "group_id": 1,
-      "author_id": 2,
-      "title": "첫 번째 공지",
-      "content": "공지 내용",
-      "is_pinned": 0,
-      "created_at": "...",
-      "author_name": "홍길동"
-    }
-  ],
-  "pagination": { ... }
-}
-```
-
----
 
 ### 3-9. 그룹 공지 작성
 ```
-POST /groups/:id/notices
-권한: 🔐 Auth Required (그룹 어드민)
+POST /groups/:id/notices   🔐 (어드민)
 ```
-
-**Request Body**
 ```json
-{
-  "title": "공지 제목",     // required
-  "content": "공지 내용"   // required
-}
+{ "title": "공지 제목", "content": "공지 내용", "is_pinned": 0 }
 ```
-
-**Response 201**
-```json
-{
-  "success": true,
-  "data": { "notice_id": 1 },
-  "message": "공지사항이 등록되었습니다."
-}
-```
-
----
 
 ### 3-10. 어드민 권한 이전 신청
 ```
-POST /groups/:id/transfer-admin
-권한: 🔐 Auth Required (그룹 어드민)
+POST /groups/:id/transfer-admin   🔐
 ```
 
 ---
@@ -827,145 +436,172 @@ POST /groups/:id/transfer-admin
 ### 4-1. 이벤트 목록
 ```
 GET /events
-권한: Public
 ```
+**Query**: `page`, `limit`, `group_id`, `status`(`upcoming`|`ongoing`|`ended`)
 
-**Query Parameters**
+### 4-2. 이벤트 생성 (그룹 어드민 / 슈퍼어드민)
 ```
-page     : number (기본: 1)
-limit    : number (기본: 20)
-group_id : number (특정 그룹 이벤트만)
-status   : "upcoming" | "ongoing" | "ended"
+POST /events   🔐
 ```
-
-**Response 200**
 ```json
 {
-  "success": true,
-  "data": [
-    {
-      "id": 1,
-      "group_id": 1,
-      "organizer_id": 2,
-      "title": "METI 네트워킹 밋업",
-      "description": "...",
-      "thumbnail_url": null,
-      "location": "서울 강남구",
-      "starts_at": "2026-05-15T18:00:00Z",
-      "ends_at": "2026-05-15T21:00:00Z",
-      "visibility": "public",
-      "registration_type": "free",
-      "entry_method": "qr",
-      "max_participants": 50,
-      "status": "upcoming",
-      "group_name": "METI 개발자 모임",
-      "organizer_name": "홍길동",
-      "participant_count": 0,
-      "created_at": "..."
-    }
-  ],
-  "pagination": { ... }
+  "group_id": 1,
+  "title": "METI 네트워킹 밋업",
+  "description": "이벤트 설명",
+  "location": "서울 강남구",
+  "starts_at": "2026-06-15T18:00:00Z",
+  "ends_at": "2026-06-15T21:00:00Z",
+  "visibility": "public",
+  "registration_type": "free",
+  "entry_method": "qr",
+  "max_participants": 50
 }
 ```
 
----
-
-### 4-2. 이벤트 생성
-```
-POST /events
-권한: 🔐 Auth Required (그룹 어드민 / 슈퍼어드민)
-```
-
-**Request Body**
-```json
-{
-  "group_id": 1,                        // required
-  "title": "METI 네트워킹 밋업",          // required, 2~200자
-  "description": "이벤트 설명",           // optional
-  "thumbnail_url": null,                // optional, URL 형식
-  "location": "서울 강남구",             // optional
-  "starts_at": "2026-05-15T18:00:00Z", // required, ISO 8601
-  "ends_at": "2026-05-15T21:00:00Z",   // optional, ISO 8601
-  "visibility": "public",              // optional, "public" | "group_only"
-  "registration_type": "free",         // optional, "free" | "pre_required"
-  "entry_method": "qr",               // optional, "nfc_qr" | "qr" | "manual"
-  "max_participants": 50               // optional
-}
-```
-
----
-
-### 4-3. 이벤트 상세 조회
+### 4-3. 이벤트 상세
 ```
 GET /events/:id
-권한: Public
 ```
-
----
 
 ### 4-4. 이벤트 참가 신청
 ```
-POST /events/:id/join
-권한: 🔐 Auth Required
+POST /events/:id/join   🔐
 ```
-
-**Response 200**
-```json
-{
-  "success": true,
-  "data": null,
-  "message": "행사 참가 신청이 완료되었습니다."
-}
-```
-
----
 
 ### 4-5. 이벤트 체크인 (QR/NFC)
 ```
-POST /events/:id/checkin
-권한: 🔐 Auth Required (이벤트 어드민)
+POST /events/:id/checkin   🔐 (이벤트 어드민)
 ```
-
-**Request Body**
 ```json
-{
-  "user_id": 3,       // optional (직접 지정)
-  "qr_token": "uuid-..." // optional (QR 스캔)
-}
+{ "user_id": 3, "qr_token": "uuid-...", "entry_method": "qr" }
 ```
 
----
-
-### 4-6. 이벤트 참가자 목록
+### 4-6. 참가자 목록
 ```
-GET /events/:id/participants
-권한: 🔐 Auth Required
+GET /events/:id/participants   🔐
 ```
 
 ---
 
 ## 5. 채팅 (Chat)
 
-> ⚠️ **중요**: 명함을 저장(`POST /cards/:id/save`)한 상대방과만 채팅 가능
+> ⚠️ 명함 저장 후에만 채팅 가능 / **MINOR 상대와의 채팅은 그룹 내 관계자만 허용**
 
 ### 5-1. 채팅방 목록
 ```
-GET /chat
-권한: 🔐 Auth Required
+GET /chat   🔐
 ```
 
-**Response 200**
+### 5-2. 1:1 채팅방 생성
+```
+POST /chat/direct   🔐
+```
+```json
+{ "target_user_id": 3 }
+```
+
+### 5-3. 메시지 목록 (커서 기반)
+```
+GET /chat/:roomId/messages   🔐
+```
+**Query**: `before`(cursor), `limit`
+
+### 5-4. 메시지 전송
+```
+POST /chat/:roomId/messages   🔐
+```
+```json
+{ "content": "안녕하세요!", "message_type": "text" }
+```
+
+### 5-5. 메시지 삭제
+```
+DELETE /chat/:roomId/messages/:msgId   🔐 (발신자)
+```
+
+### 5-6. 신고
+```
+POST /chat/report   🔐
+```
+```json
+{
+  "target_type": "user",   // "user"|"message"|"card"|"group"
+  "target_id": 3,
+  "reason": "부적절한 메시지",
+  "description": "상세 설명"
+}
+```
+
+### 5-7. 사용자 차단
+```
+POST /chat/block   🔐
+```
+```json
+{ "blocked_user_id": 3 }
+```
+
+---
+
+## 6. 보호자 (Guardians)  ★ 신규
+
+> 미성년자-보호자(학부모/강사) 연결 관리
+
+### 6-1. 보호자 연결 요청
+```
+POST /guardians/link   🔐
+```
+```json
+{
+  "minor_user_id": 5,          // minor_user_id 또는 minor_email 중 하나 필수
+  "minor_email": "student@example.com",
+  "relation": "teacher",       // "parent" | "teacher"
+  "group_id": 2                // optional: 해당 그룹 멤버에 보호자 자동 연결
+}
+```
+**Response 201**
+```json
+{
+  "success": true,
+  "data": { "minor_user_id": 5, "guardian_user_id": 3, "relation": "teacher", "status": "pending" },
+  "message": "보호자 연결 요청이 발송되었습니다."
+}
+```
+
+---
+
+### 6-2. 보호자 연결 수락
+```
+POST /guardians/link/:requestId/accept   🔐 (학생 본인 또는 super_admin)
+```
+
+---
+
+### 6-3. 보호자 연결 거절
+```
+POST /guardians/link/:requestId/reject   🔐 (학생 본인)
+```
+
+---
+
+### 6-4. 보호자/학생 목록 조회
+```
+GET /guardians   🔐
+```
+**Query**: `role`
+- `role=mine` (기본): 내 보호자 목록 (학생 입장)
+- `role=students`: 내가 담당하는 학생 목록 (보호자/강사 입장)
+
+**Response (role=students)**
 ```json
 {
   "success": true,
   "data": [
     {
-      "id": 1,
-      "room_type": "direct",
-      "last_message": "안녕하세요!",
-      "last_message_at": "...",
-      "unread_count": 0,
-      "members": [...]
+      "id": 1, "relation": "teacher", "status": "active",
+      "student_id": 5, "student_name": "김학생",
+      "student_email": "student@example.com",
+      "user_type": "MINOR", "birth_date": "2012-04-10",
+      "avatar_url": null
     }
   ]
 }
@@ -973,311 +609,308 @@ GET /chat
 
 ---
 
-### 5-2. 1:1 채팅방 생성/조회
+### 6-5. 대기 중인 연결 요청 목록
 ```
-POST /chat/direct
-권한: 🔐 Auth Required
-⚠️  명함 교환(저장) 선행 필요
-```
-
-**Request Body**
-```json
-{
-  "target_user_id": 3    // required
-}
-```
-
-**Response 200**
-```json
-{
-  "success": true,
-  "data": {
-    "room_id": 1,
-    "is_new": true     // true: 새로 생성, false: 기존 방 반환
-  }
-}
+GET /guardians/pending   🔐 (학생 본인)
 ```
 
 ---
 
-### 5-3. 메시지 목록 (커서 기반 페이지네이션)
+### 6-6. 보호자 연결 해제
 ```
-GET /chat/:roomId/messages
-권한: 🔐 Auth Required (채팅방 참여자)
-```
-
-**Query Parameters**
-```
-before : number (이 ID 이전 메시지 조회, 커서)
-limit  : number (기본: 20)
+DELETE /guardians/:guardianUserId   🔐 (학생 본인)
 ```
 
-**Response 200**
+---
+
+### 6-7. 내 학생들의 레슨 그룹 목록
+```
+GET /guardians/lesson-groups   🔐 (보호자/강사)
+```
+
+---
+
+## 7. 레슨 (Lessons)  ★ 신규
+
+> LESSON 타입 그룹 전용 — 일정 관리 + 출석 처리
+
+### 7-1. 레슨 일정 목록
+```
+GET /lessons/:groupId/schedules   🔐
+```
+**Query**: `page`, `limit`, `status`(`scheduled`|`ongoing`|`completed`|`cancelled`)
+
+**Response**
 ```json
 {
   "success": true,
   "data": [
     {
-      "id": 1,
-      "room_id": 1,
-      "sender_id": 2,
-      "message_type": "text",
-      "content": "안녕하세요!",
-      "file_url": null,
-      "card_id": null,
-      "is_pinned": 0,
-      "is_deleted": 0,
-      "expires_at": "2026-04-29T00:00:00.000Z",
-      "created_at": "...",
-      "sender_name": "홍길동",
-      "sender_avatar": null
+      "id": 1, "group_id": 2, "title": "3월 1주차 피아노 레슨",
+      "instructor_id": 3, "instructor_name": "김강사",
+      "starts_at": "2026-03-04T15:00:00Z", "ends_at": "2026-03-04T16:00:00Z",
+      "location": "음악실 201호",
+      "status": "scheduled",
+      "present_count": 0, "total_students": 5
     }
-  ],
-  "pagination": { ... }
+  ]
 }
 ```
 
 ---
 
-### 5-4. 메시지 전송
+### 7-2. 레슨 일정 생성
 ```
-POST /chat/:roomId/messages
-권한: 🔐 Auth Required (채팅방 참여자)
+POST /lessons/:groupId/schedules   🔐 (그룹 admin/sub_admin — 강사)
+⚠️  LESSON 타입 그룹에서만 가능
 ```
-
-**Request Body**
 ```json
 {
-  "content": "안녕하세요!",     // optional (text/card 타입)
-  "message_type": "text",      // optional, "text"|"image"|"file"|"card" (기본: text)
-  "file_url": null,             // optional, 파일/이미지 URL
-  "card_id": null               // optional, 명함 공유 시
+  "title": "3월 1주차 피아노 레슨",   // required
+  "description": "바이엘 50번 연습",  // optional
+  "starts_at": "2026-03-04T15:00:00Z", // required, ISO 8601
+  "ends_at": "2026-03-04T16:00:00Z",   // optional
+  "location": "음악실 201호",          // optional
+  "max_students": 10                   // optional
 }
 ```
-
 **Response 201**
 ```json
+{ "success": true, "data": { "schedule_id": 1 }, "message": "레슨 일정이 생성되었습니다." }
+```
+
+---
+
+### 7-3. 레슨 일정 상세 + 출석 현황
+```
+GET /lessons/:groupId/schedules/:scheduleId   🔐
+```
+- **강사/관리자**: 전체 학생 출석 현황 반환
+- **보호자**: 담당 학생들의 출석만 반환
+
+**Response**
+```json
 {
   "success": true,
   "data": {
-    "id": 1,
-    "room_id": 1,
-    "sender_id": 2,
-    "message_type": "text",
-    "content": "안녕하세요!",
-    "expires_at": "2026-04-29T00:00:00.000Z",
-    "created_at": "..."
+    "id": 1, "title": "3월 1주차 피아노 레슨",
+    "instructor_name": "김강사",
+    "starts_at": "...", "status": "completed",
+    "attendances": [
+      {
+        "student_id": 5, "name": "김학생",
+        "user_type": "MINOR",
+        "status": "present",    // "present"|"absent"|"late"|"excused"
+        "checked_at": "2026-03-04T15:05:00Z",
+        "note": null
+      }
+    ]
   }
 }
 ```
 
 ---
 
-### 5-5. 메시지 삭제
+### 7-4. 출석 처리 (배치)
 ```
-DELETE /chat/:roomId/messages/:msgId
-권한: 🔐 Auth Required (발신자만)
+POST /lessons/:groupId/schedules/:scheduleId/attendance   🔐 (강사)
+```
+```json
+{
+  "attendances": [
+    { "student_id": 5, "status": "present", "note": null },
+    { "student_id": 6, "status": "absent",  "note": "사전 연락" },
+    { "student_id": 7, "status": "late",    "note": "10분 지각" }
+  ]
+}
+```
+**Response**
+```json
+{ "success": true, "data": { "processed": 3 }, "message": "출석이 처리되었습니다." }
 ```
 
 ---
 
-### 5-6. 신고
+### 7-5. 학생 목록 조회 (강사 전용)
 ```
-POST /chat/report
-권한: 🔐 Auth Required
+GET /lessons/:groupId/students   🔐 (강사)
 ```
-
-**Request Body**
+**Response** — 보호자 정보, 출석률 포함
 ```json
 {
-  "target_type": "message",    // required, "user"|"message"|"card"|"group"
-  "target_id": 1,              // required
-  "reason": "스팸 메시지",      // required, 1~200자
-  "description": "상세 설명"   // optional, ~1000자
+  "success": true,
+  "data": [
+    {
+      "id": 5, "name": "김학생", "user_type": "MINOR",
+      "birth_date": "2012-04-10", "avatar_url": null,
+      "guardian_user_id": 3,
+      "guardian_name": "김보호자", "guardian_email": "parent@example.com",
+      "guardian_relation": "parent",
+      "present_count": 8, "total_lessons": 10
+    }
+  ]
 }
 ```
 
 ---
 
-### 5-7. 사용자 차단
-```
-POST /chat/block
-권한: 🔐 Auth Required
-```
+## 8. 파트너 연동 (Partner)
 
-**Request Body**
-```json
-{
-  "blocked_user_id": 3    // required
-}
-```
+> ⚠️ **서버-투-서버(S2S) 전용** — 앱에서 직접 호출 금지
+> 헤더: `X-Partner-API-Key: <key>`
 
----
-
-## 6. 파트너 연동 (Partner)
-
-> ⚠️ **서버-투-서버(S2S) 전용** — 앱에서 직접 호출하지 않음
-> 파트너 API Key는 어드민이 발급, 헤더에 `X-Partner-API-Key` 첨부
-
-### 6-1. 사용자 매핑
+### 8-1. 사용자 매핑
 ```
 POST /partner/user-map
-권한: X-Partner-API-Key
 ```
-
-**Request Body**
 ```json
-{
-  "meti_user_id": 2    // required, METI 사용자 ID
-}
+{ "meti_user_id": 2 }
 ```
 
-**Response 200**
-```json
-{
-  "success": true,
-  "data": {
-    "external_user_key": "hash-string..."    // 파트너 시스템에서 사용할 키
-  }
-}
-```
-
----
-
-### 6-2. 리워드 지급
+### 8-2. 리워드 지급
 ```
 POST /partner/reward
-권한: X-Partner-API-Key
+⚠️  MINOR 계정에는 지급 불가 — 보호자 계정 ID 사용
 ```
-
-**Request Body**
 ```json
 {
-  "external_user_key": "hash-string...",   // required, 매핑된 키
-  "event_type": "first_login",             // required, 이벤트 유형
-  "points": 500,                           // required, 1~10000
-  "payload": {}                            // optional, 추가 데이터
+  "external_user_key": "hash...",
+  "event_type": "lesson_complete",
+  "points": 500,
+  "payload": {}
 }
 ```
 
-**Response 200**
-```json
-{
-  "success": true,
-  "data": {
-    "user_id": 2,
-    "points_awarded": 500,
-    "new_balance": 1000
-  },
-  "message": "리워드가 지급되었습니다."
-}
-```
-
----
-
-### 6-3. 리워드 잔액 조회
+### 8-3. 리워드 잔액 조회
 ```
 GET /partner/user-balance?external_user_key=<key>
-권한: X-Partner-API-Key
-```
-
-**Response 200**
-```json
-{
-  "success": true,
-  "data": {
-    "points": 1000
-  }
-}
 ```
 
 ---
 
-## 7. 공통 에러 코드
+## 9. 공통 에러 코드
 
-| HTTP 상태 | 설명 |
-|-----------|------|
+| HTTP | 설명 |
+|------|------|
 | 400 | 요청 형식 오류, 필수 파라미터 누락 |
-| 401 | Authorization 헤더 없음 또는 토큰 만료/무효 |
-| 403 | 권한 없음 (이메일 미인증, 플랜 제한, 역할 부족) |
-| 404 | 요청한 리소스 없음 |
+| 401 | 토큰 없음 또는 만료 |
+| 403 | 권한 없음 (플랜 제한, 역할 부족, **미성년자 접근 제한**) |
+| 404 | 리소스 없음 |
 | 409 | 충돌 (중복 이메일, 이미 가입된 그룹 등) |
-| 422 | 유효성 검사 실패 (Zod 오류) |
+| 422 | 유효성 검사 실패 |
 | 500 | 서버 내부 오류 |
 
 ---
 
-## 8. 앱 화면 구성 제안
+## 10. 앱 화면 구성
 
 ### 인증 플로우
 ```
-스플래시 → 온보딩 → 로그인 / 회원가입 → 이메일 인증 대기 → 메인 홈
+스플래시 → 온보딩 → 로그인 / 회원가입
+  → [MINOR 선택 시] 보호자 연결 요청 안내
+  → 이메일 인증 → 메인 홈
 ```
 
-### 메인 탭 구성 (하단 네비게이션)
+### 메인 탭 (하단 네비게이션)
 ```
-🏠 홈       - 내 명함, 최근 저장된 명함, 빠른 QR 공유
-👥 그룹     - 그룹 탐색, 내 그룹 목록
-📅 이벤트   - 이벤트 목록, 참가 중인 이벤트
-💬 채팅     - 채팅방 목록, 메시지
-👤 마이     - 프로필, 설정, 리워드 잔액, 플랜
+🏠 홈      — 내 명함, 최근 저장 명함, QR 공유
+👥 그룹    — NORMAL 그룹 탐색 / LESSON 그룹 탐색
+📅 이벤트  — 이벤트 목록, 참가 중인 이벤트
+💬 채팅    — 채팅방 목록
+👤 마이    — 프로필, 설정, 리워드, 플랜
 ```
 
 ### 주요 화면 목록
+
 | 화면 | 설명 |
 |------|------|
-| 명함 목록 | 내 명함들 + 생성 버튼 |
-| 명함 생성/편집 | 템플릿 선택, 정보 입력, SNS 링크 추가 |
-| QR 코드 표시 | 명함 QR 코드 전체 화면 표시 |
-| QR 스캔 | 카메라로 상대방 QR 스캔 → 명함 상세 → 저장 |
+| 명함 목록 | 내 명함 + 생성 버튼 (MINOR: 제한 안내) |
+| 명함 생성/편집 | 템플릿 선택, SNS 링크 |
+| QR 코드 표시 | 전체화면 QR |
+| QR 스캔 | 카메라 스캔 → 명함 저장 |
 | NFC 공유 | NFC 탭으로 명함 공유 |
-| 명함첩 | 저장된 명함 목록 + 검색 |
-| 그룹 탐색 | 카테고리별 그룹 검색 |
-| 그룹 상세 | 그룹 정보, 공지, 멤버, 이벤트 |
-| 이벤트 체크인 | QR 스캔으로 이벤트 입장 |
-| 채팅 | 메시지 목록, 전송, 명함 공유 |
+| 명함첩 | 저장된 명함 목록 |
+| 그룹 탐색 | 카테고리/타입별 검색 |
+| 그룹 상세 | 정보, 공지, 멤버, 이벤트 |
+| **레슨 그룹 홈** ★ | 레슨 일정, 출석 현황, 학생 목록 |
+| **보호자 연결** ★ | 연결 요청 목록, 수락/거절 |
+| **레슨 일정 상세** ★ | 출석 처리 (강사), 출석 확인 (보호자) |
+| 이벤트 체크인 | QR 스캔으로 입장 |
+| 채팅 | 메시지, 명함 공유 |
 | 리워드 | 포인트 잔액, 내역 |
 
 ---
 
-## 9. 개발 시 주의사항
+## 11. 개발 시 주의사항
 
 ### ⚠️ 필수 로직
-1. **토큰 자동 갱신**: 401 응답 시 자동으로 `POST /auth/refresh` 호출 후 재시도
-2. **명함 저장 선행**: 채팅 시작 전 반드시 상대방 명함 저장 필요
-3. **그룹 승인 대기**: 그룹 생성 후 `status: pending` → 어드민 승인 전까지 비활성
-4. **Free 플랜 제한**: 명함 1장만 생성 가능 (추가 시 403 응답)
-5. **이벤트 필드명**: `event_date` ❌ → `starts_at` ✅ (ISO 8601)
+1. **토큰 자동 갱신**: 401 → `POST /auth/refresh` → 재시도
+2. **명함 저장 선행**: 채팅 전 반드시 상대 명함 저장
+3. **그룹 승인 대기**: 생성 후 `status: pending` → 어드민 승인 필요
+4. **Free 플랜 제한**: 명함 3장 초과 시 403
+5. **이벤트 필드명**: `starts_at` / `ends_at` (ISO 8601) ✅
 
-### 📱 네이티브 앱 특화 기능
-- **NFC**: 명함 공유 시 NFC 태그 지원 (`entry_method: "nfc_qr"`)
-- **QR 스캔**: `GET /cards/qr/:token` 로 명함 조회
-- **이벤트 체크인**: `POST /events/:id/checkin` 으로 QR/NFC 스캔 체크인
-- **푸시 알림**: 채팅 메시지, 그룹 공지, 이벤트 알림 (별도 FCM/APNs 연동 필요)
+### 🛡️ MINOR 보호 필수 로직
+6. **로그인 응답의 `user_type` 확인** → MINOR 여부 판별 후 UI 제한 적용
+7. **MINOR 프로필 조회 시** 전화번호/이메일 마스킹 (`***-***-****`)
+8. **MINOR의 공개 명함 생성** → 앱에서 `is_public = 0` 강제
+9. **LESSON 그룹 가입 시** → 보호자 연결 여부 확인 후 미연결 시 연결 흐름 선행
+10. **보호자 없는 MINOR 채팅** → 그룹 내 강사/보호자로 대상 제한
+
+### 📱 네이티브 앱 특화
+- **NFC**: 명함 공유 시 NFC 태그 지원
+- **QR 스캔**: `GET /cards/qr/:token`
+- **이벤트 체크인**: `POST /events/:id/checkin`
+- **레슨 출석 QR**: 강사 기기에서 학생 QR 스캔 → 자동 출석 처리
+- **푸시 알림**: 채팅, 공지, 이벤트, **레슨 알림**, **보호자 연결 요청** (FCM/APNs 연동 필요)
 
 ### 🔒 보안
-- Access Token과 Refresh Token은 안전한 로컬 저장소 사용 (Keychain/Keystore)
-- 앱 백그라운드 전환 시 민감 화면 가리기
-- 생체인증(Face ID / 지문) 앱 잠금 옵션 권장
+- Access/Refresh Token → 안전한 저장소 (Keychain/Keystore)
+- 백그라운드 전환 시 민감 화면 가리기
+- 생체인증(Face ID/지문) 앱 잠금 옵션 권장
+- **MINOR 관련 API 응답은 절대 로컬 캐시에 원문 저장 금지**
 
 ---
 
-## 10. 백엔드 현황
+## 12. DB 스키마 요약 (주요 테이블)
+
+| 테이블 | 설명 |
+|--------|------|
+| `users` | 사용자 (`user_type`, `birth_date`, `phone` 포함) |
+| `user_guardians` | 보호자-학생 연결 (`relation`: parent/teacher) |
+| `guardian_invitations` | 보호자 초대 토큰 |
+| `groups` | 그룹 (`group_type`: NORMAL/LESSON, `lesson_config` JSON) |
+| `group_members` | 멤버 (`role`: admin/sub_admin/executive/member/minor, `guardian_user_id`) |
+| `lesson_schedules` | 레슨 일정 |
+| `lesson_attendances` | 레슨 출석 (`status`: present/absent/late/excused) |
+| `minor_activity_logs` | 미성년자 활동 감사 로그 |
+| `cards` | 디지털 명함 |
+| `events` | 이벤트/행사 |
+| `chat_rooms` | 채팅방 |
+| `messages` | 채팅 메시지 |
+| `rewards` | 리워드 내역 |
+| `partner_services` | 파트너 서비스 |
+
+---
+
+## 13. 백엔드 현황
 
 | 항목 | 상태 |
 |------|------|
-| DB 설계 | ✅ 완료 (9개 마이그레이션 파일) |
-| 인증 API | ✅ 완료 및 테스트 통과 |
-| 명함 API | ✅ 완료 및 테스트 통과 |
-| 그룹 API | ✅ 완료 및 테스트 통과 |
-| 이벤트 API | ✅ 완료 및 테스트 통과 |
-| 채팅 API | ✅ 완료 및 테스트 통과 |
-| 파트너 API | ✅ 완료 및 테스트 통과 |
-| 어드민 API | ✅ 완료 및 테스트 통과 |
-| Cloudflare 배포 | 🔜 진행 예정 |
-| Admin Web UI | 🔜 진행 예정 |
+| DB 설계 (마이그레이션) | ✅ 완료 (0001~0010) |
+| 인증 API | ✅ 완료 (user_type 지원) |
+| 명함 API | ✅ 완료 |
+| 그룹 API | ✅ 완료 (group_type 지원) |
+| 이벤트 API | ✅ 완료 |
+| 채팅 API | ✅ 완료 |
+| 파트너 API | ✅ 완료 |
+| **보호자(Guardian) API** | ✅ 완료 (신규) |
+| **레슨(Lesson) API** | ✅ 완료 (신규) |
+| 어드민 API | ✅ 완료 |
+| Cloudflare 배포 | ✅ 완료 (`https://the-meti.pages.dev`) |
+| Admin Web UI | ✅ 완료 (`https://the-meti.pages.dev/admin`) |
 
 ---
 
-*본 문서는 METI 백엔드 실제 구현 코드 기반으로 로컬 테스트 완료 후 작성되었습니다.*
-*작성일: 2026-04-28*
+*본 문서는 METI 백엔드 실제 구현 코드 기반 + 원격 D1 마이그레이션 적용 완료 후 작성되었습니다.*
+*v2.0 — Minor/Guardian/Lesson 기능 추가 (2026-05-02)*

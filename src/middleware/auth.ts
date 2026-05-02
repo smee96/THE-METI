@@ -126,3 +126,53 @@ export const requirePlan = (minPlan: 'free' | 'pro' | 'business') => {
     }
   )
 }
+
+// ── 미성년자(MINOR) 접근 제어 미들웨어 ───────────────────
+// MINOR 계정은 그룹/레슨 관련 API 외에 모든 기능 차단
+// 허용 경로 패턴: /api/v1/groups/*, /api/v1/lessons/*, /api/v1/auth/*
+export const minorAccessMiddleware = createMiddleware<{
+  Bindings: Bindings
+  Variables: Variables
+}>(async (c, next) => {
+  const userId = c.get('userId')
+  if (!userId) return await next()
+
+  // DB에서 user_type 확인
+  const user = await c.env.DB.prepare(
+    `SELECT user_type FROM users WHERE id = ? AND is_deleted = 0`
+  ).bind(userId).first<{ user_type: string }>()
+
+  if (!user || user.user_type !== 'MINOR') {
+    // 성인이면 그냥 통과
+    return await next()
+  }
+
+  // MINOR인 경우 허용 경로 체크
+  const path = new URL(c.req.url).pathname
+
+  // 허용 경로:
+  // - /api/v1/auth/* (로그인, 토큰 갱신, 내 정보)
+  // - /api/v1/groups/:id (그룹 상세 조회)
+  // - /api/v1/groups/:id/notices (공지 조회)
+  // - /api/v1/groups/:id/leave (그룹 탈퇴)
+  // - /api/v1/lessons/* (레슨 일정/출석 조회)
+  const allowedPatterns = [
+    /^\/api\/v1\/auth\//,
+    /^\/api\/v1\/groups\/\d+$/,
+    /^\/api\/v1\/groups\/\d+\/notices/,
+    /^\/api\/v1\/groups\/\d+\/leave/,
+    /^\/api\/v1\/lessons\//,
+  ]
+
+  const isAllowed = allowedPatterns.some(pattern => pattern.test(path))
+
+  if (!isAllowed) {
+    return c.json({
+      success: false,
+      error: '미성년자 계정은 그룹 및 레슨 기능만 이용할 수 있습니다.',
+      minor_restricted: true
+    }, 403)
+  }
+
+  return await next()
+})
