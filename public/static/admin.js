@@ -266,10 +266,16 @@ async function loadUsers(page = 1, search = '') {
                   <td class="px-6 py-4">${u.is_active ? '<span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">활성</span>' : '<span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">비활성</span>'}</td>
                   <td class="px-6 py-4 text-sm text-gray-500">${formatDate(u.created_at)}</td>
                   <td class="px-6 py-4">
-                    <button onclick="toggleUserActive(${u.id}, ${u.is_active})"
-                      class="text-xs px-3 py-1 border rounded-lg hover:bg-gray-50 ${u.is_active ? 'text-red-600 border-red-200' : 'text-green-600 border-green-200'}">
-                      ${u.is_active ? '비활성화' : '활성화'}
-                    </button>
+                    <div class="flex gap-1 flex-wrap">
+                      <button onclick="toggleUserActive(${u.id}, ${u.is_active})"
+                        class="text-xs px-2 py-1 border rounded-lg hover:bg-gray-50 ${u.is_active ? 'text-red-600 border-red-200' : 'text-green-600 border-green-200'}">
+                        ${u.is_active ? '비활성화' : '활성화'}
+                      </button>
+                      <button onclick="changeUserPlan(${u.id}, '${u.plan}')"
+                        class="text-xs px-2 py-1 border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50">
+                        플랜변경
+                      </button>
+                    </div>
                   </td>
                 </tr>
               `).join('')}
@@ -522,9 +528,26 @@ async function toggleUserActive(userId, currentStatus) {
   try {
     await axios.patch(`/admin/users/${userId}`, { is_active: currentStatus ? 0 : 1 });
     showToast('변경되었습니다.', 'success');
-    loadUsers();
+    loadUsers(1, document.getElementById('user-search')?.value || '');
   } catch (err) {
     showToast('오류가 발생했습니다.', 'error');
+  }
+}
+
+async function changeUserPlan(userId, currentPlan) {
+  const plans = ['free', 'pro', 'business'];
+  const labels = { free: 'Free', pro: 'Pro', business: 'Business' };
+  const options = plans.filter(p => p !== currentPlan).map(p => labels[p]).join(' / ');
+  const choice = prompt(`현재 플랜: ${labels[currentPlan]}\n변경할 플랜을 입력하세요:\n${options}\n(free / pro / business)`);
+  if (!choice) return;
+  const plan = choice.trim().toLowerCase();
+  if (!plans.includes(plan)) { showToast('올바른 플랜을 입력하세요.', 'error'); return; }
+  try {
+    await axios.patch(`/admin/users/${userId}`, { plan });
+    showToast(`플랜이 ${labels[plan]}으로 변경되었습니다.`, 'success');
+    loadUsers(1, document.getElementById('user-search')?.value || '');
+  } catch (err) {
+    showToast('플랜 변경에 실패했습니다.', 'error');
   }
 }
 

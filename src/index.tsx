@@ -18,7 +18,7 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 // ── 글로벌 미들웨어 ───────────────────────────────────
 app.use('*', logger())
 app.use('/api/*', cors({
-  origin: ['https://meti.io', 'https://admin.meti.io', 'http://localhost:3000', 'http://localhost:5173'],
+  origin: ['https://meti.io', 'https://admin.meti.io', 'https://the-meti.pages.dev', 'https://www.the-meti.pages.dev', 'http://localhost:3000', 'http://localhost:5173'],
   allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'X-Partner-API-Key'],
   exposeHeaders: ['X-Total-Count'],

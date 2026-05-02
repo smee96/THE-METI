@@ -1,5 +1,4 @@
 import { Hono } from 'hono'
-import { sign, verify } from 'hono/jwt'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import type { Bindings, Variables } from '../types'
@@ -22,6 +21,25 @@ async function comparePassword(password: string, hash: string): Promise<boolean>
   return inputHash === hash
 }
 
+// Web Crypto API 기반 HS256 JWT 서명 (hono/jwt 대체)
+async function signJWT(payload: Record<string, unknown>, secret: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const header = { alg: 'HS256', typ: 'JWT' }
+  const b64url = (obj: unknown) =>
+    btoa(JSON.stringify(obj)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+  const headerB64 = b64url(header)
+  const payloadB64 = b64url(payload)
+  const data = `${headerB64}.${payloadB64}`
+  const keyData = encoder.encode(secret)
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  )
+  const sigBuffer = await crypto.subtle.sign('HMAC', cryptoKey, encoder.encode(data))
+  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sigBuffer)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+  return `${data}.${sigB64}`
+}
+
 async function generateTokens(
   userId: number,
   email: string,
@@ -30,7 +48,7 @@ async function generateTokens(
   jwtSecret: string
 ) {
   const now = Math.floor(Date.now() / 1000)
-  const accessToken = await sign(
+  const accessToken = await signJWT(
     {
       sub: String(userId),
       email,

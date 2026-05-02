@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "meti-backend",
+  "name": "the-meti",
   "compatibility_date": "2026-04-13",
   "pages_build_output_dir": "./dist",
   "compatibility_flags": ["nodejs_compat"],
@@ -9,18 +9,13 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "meti-production",
-      "database_id": "placeholder-will-be-set-after-cf-login"
+      "database_name": "the-meti-production",
+      "database_id": "0556e138-ceb8-41c9-9bd4-bc3a7d28bcb4"
     }
   ],
 
-  // R2 Storage (이미지, 파일 업로드용)
-  "r2_buckets": [
-    {
-      "binding": "STORAGE",
-      "bucket_name": "meti-storage"
-    }
-  ],
+  // R2 Storage - 파일 업로드 기능 추가 시 활성화
+  // "r2_buckets": [{ "binding": "STORAGE", "bucket_name": "meti-storage" }],
 
   // 환경 변수 (비민감)
   "vars": {
