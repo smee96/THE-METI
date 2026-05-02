@@ -81,6 +81,42 @@ admin.patch(
   }
 )
 
+// ── 그룹 직접 생성 (슈퍼어드민) ─────────────────────
+admin.post(
+  '/groups',
+  zValidator('json', z.object({
+    name: z.string().min(2).max(100),
+    description: z.string().max(1000).optional(),
+    category: z.enum(['association', 'company', 'club', 'other']).default('other'),
+    visibility: z.enum(['public', 'private']).default('public'),
+    max_members: z.number().int().positive().optional()
+  })),
+  async (c) => {
+    const adminId = c.get('userId')
+    const body = c.req.valid('json')
+
+    // 그룹 생성 (즉시 active)
+    const result = await c.env.DB.prepare(`
+      INSERT INTO groups (name, description, category, visibility, status,
+        admin_user_id, approved_by, approved_at, max_members)
+      VALUES (?, ?, ?, ?, 'active', ?, ?, datetime('now'), ?)
+    `).bind(
+      body.name, body.description ?? null, body.category,
+      body.visibility, adminId, adminId, body.max_members ?? null
+    ).run()
+
+    const groupId = result.meta.last_row_id
+
+    // 슈퍼어드민을 그룹 admin 멤버로 자동 등록
+    await c.env.DB.prepare(`
+      INSERT OR REPLACE INTO group_members (group_id, user_id, role, status, joined_at, approved_by, approved_at)
+      VALUES (?, ?, 'admin', 'active', datetime('now'), ?, datetime('now'))
+    `).bind(groupId, adminId, adminId).run()
+
+    return c.json(ok({ group_id: groupId, status: 'active' }, '그룹이 생성되었습니다.'), 201)
+  }
+)
+
 // ── 그룹 승인/거절 ────────────────────────────────────
 admin.get('/groups', async (c) => {
   const { page, limit, offset } = parsePagination(c.req.query('page'), c.req.query('limit'))
@@ -142,6 +178,45 @@ admin.patch(
     }
 
     return c.json(ok(null, `그룹이 ${action === 'approve' ? '승인' : action === 'reject' ? '거절' : '상태 변경'}되었습니다.`))
+  }
+)
+
+// ── 행사 직접 생성 (슈퍼어드민) ─────────────────────
+admin.post(
+  '/events',
+  zValidator('json', z.object({
+    group_id: z.number().int().positive(),
+    title: z.string().min(2).max(200),
+    description: z.string().optional(),
+    location: z.string().max(200).optional(),
+    starts_at: z.string(),
+    ends_at: z.string().optional(),
+    visibility: z.enum(['public', 'group_only']).default('public'),
+    registration_type: z.enum(['free', 'pre_required']).default('free'),
+    entry_method: z.enum(['nfc_qr', 'qr', 'manual']).default('qr'),
+    max_participants: z.number().int().positive().optional()
+  })),
+  async (c) => {
+    const adminId = c.get('userId')
+    const body = c.req.valid('json')
+
+    // 그룹 존재 여부 확인
+    const group = await c.env.DB.prepare(
+      `SELECT id FROM groups WHERE id = ? AND status = 'active' AND is_deleted = 0`
+    ).bind(body.group_id).first()
+    if (!group) return c.json(fail('활성 상태의 그룹을 찾을 수 없습니다.'), 404)
+
+    const result = await c.env.DB.prepare(`
+      INSERT INTO events (group_id, organizer_id, title, description, location,
+        starts_at, ends_at, visibility, registration_type, entry_method, max_participants, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'upcoming')
+    `).bind(
+      body.group_id, adminId, body.title, body.description ?? null, body.location ?? null,
+      body.starts_at, body.ends_at ?? null,
+      body.visibility, body.registration_type, body.entry_method, body.max_participants ?? null
+    ).run()
+
+    return c.json(ok({ event_id: result.meta.last_row_id }, '행사가 생성되었습니다.'), 201)
   }
 )
 

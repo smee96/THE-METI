@@ -394,15 +394,21 @@ async function loadGroups(page = 1, status = 'pending') {
 
     setContent(`
       <div class="space-y-3">
-        <!-- 탭 필터 -->
-        <div class="flex gap-2 flex-wrap">
-          ${['pending', 'active', 'suspended'].map(s => `
-            <button onclick="loadGroups(1,'${s}')"
-              class="px-3 py-1.5 rounded-lg text-xs font-medium transition
-                     ${status === s ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border hover:bg-gray-50'}">
-              ${s === 'pending' ? '⏳ 승인대기' : s === 'active' ? '✅ 활성' : '🚫 정지'}
-            </button>
-          `).join('')}
+        <!-- 상단 액션 바 -->
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <div class="flex gap-2 flex-wrap">
+            ${['pending', 'active', 'suspended'].map(s => `
+              <button onclick="loadGroups(1,'${s}')"
+                class="px-3 py-1.5 rounded-lg text-xs font-medium transition
+                       ${status === s ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border hover:bg-gray-50'}">
+                ${s === 'pending' ? '⏳ 승인대기' : s === 'active' ? '✅ 활성' : '🚫 정지'}
+              </button>
+            `).join('')}
+          </div>
+          <button onclick="showCreateGroupModal()"
+            class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition">
+            <i class="fas fa-plus"></i> 그룹 직접 생성
+          </button>
         </div>
 
         <!-- 데스크탑 테이블 -->
@@ -647,11 +653,17 @@ async function loadPartners() {
 async function loadEvents(page = 1) {
   setContent(loadingSpinner());
   try {
-    const { data } = await axios.get(`/events?limit=20&page=${page}`);
+    const { data } = await axios.get(`/events?limit=20&page=${page}&status=`);
     const rows = data.data || [];
     const pagination = data.pagination;
     setContent(`
       <div class="space-y-3">
+        <div class="flex justify-end">
+          <button onclick="showCreateEventModal()"
+            class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition">
+            <i class="fas fa-plus"></i> 행사 생성
+          </button>
+        </div>
         <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
           <div class="overflow-x-auto">
             <table class="w-full">
@@ -682,6 +694,254 @@ async function loadEvents(page = 1) {
     `);
   } catch (err) {
     setContent(errorBox('행사 목록을 불러오지 못했습니다.'));
+  }
+}
+
+// ── 그룹 생성 모달 ──────────────────────────────────
+function showCreateGroupModal() {
+  const modal = document.createElement('div');
+  modal.id = 'create-group-modal';
+  modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+  modal.innerHTML = `
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+      <div class="flex items-center justify-between px-5 py-4 border-b">
+        <h3 class="font-bold text-gray-900">그룹 직접 생성</h3>
+        <button onclick="document.getElementById('create-group-modal').remove()" class="text-gray-400 hover:text-gray-600">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="p-5 space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">그룹명 <span class="text-red-500">*</span></label>
+          <input type="text" id="cg-name" placeholder="그룹명 입력 (2~100자)"
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">설명</label>
+          <textarea id="cg-desc" rows="3" placeholder="그룹 소개 (선택)"
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">카테고리</label>
+            <select id="cg-category" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="association">협회</option>
+              <option value="company">기업</option>
+              <option value="club">동호회</option>
+              <option value="other" selected>기타</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">공개 여부</label>
+            <select id="cg-visibility" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="public" selected>공개</option>
+              <option value="private">비공개</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">최대 멤버 수</label>
+          <input type="number" id="cg-maxmembers" placeholder="제한 없음 (비워두면 무제한)" min="1"
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div id="cg-error" class="hidden text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
+      </div>
+      <div class="px-5 pb-5 flex gap-2">
+        <button onclick="submitCreateGroup()"
+          class="flex-1 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition">
+          생성하기
+        </button>
+        <button onclick="document.getElementById('create-group-modal').remove()"
+          class="px-4 py-2.5 border text-sm rounded-xl hover:bg-gray-50 transition">취소</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  setTimeout(() => document.getElementById('cg-name')?.focus(), 100);
+}
+
+async function submitCreateGroup() {
+  const name = document.getElementById('cg-name')?.value.trim();
+  const desc = document.getElementById('cg-desc')?.value.trim();
+  const category = document.getElementById('cg-category')?.value;
+  const visibility = document.getElementById('cg-visibility')?.value;
+  const maxVal = document.getElementById('cg-maxmembers')?.value;
+  const errEl = document.getElementById('cg-error');
+
+  if (!name || name.length < 2) {
+    errEl.textContent = '그룹명을 2자 이상 입력해주세요.'; errEl.classList.remove('hidden'); return;
+  }
+  errEl.classList.add('hidden');
+
+  const payload = { name, category, visibility };
+  if (desc) payload.description = desc;
+  if (maxVal) payload.max_members = parseInt(maxVal);
+
+  try {
+    await axios.post('/admin/groups', payload);
+    document.getElementById('create-group-modal')?.remove();
+    showToast('그룹이 생성되었습니다.', 'success');
+    loadGroups(1, 'active');
+  } catch (err) {
+    const msg = err.response?.data?.message || '그룹 생성에 실패했습니다.';
+    errEl.textContent = msg; errEl.classList.remove('hidden');
+  }
+}
+
+// ── 행사 생성 모달 ──────────────────────────────────
+async function showCreateEventModal() {
+  // 활성 그룹 목록 가져오기 (그룹 선택 드롭다운용)
+  let groupOptions = '<option value="">그룹 불러오는 중...</option>';
+  try {
+    const { data } = await axios.get('/admin/groups?status=active&limit=100');
+    const groups = data.data || [];
+    if (groups.length === 0) {
+      groupOptions = '<option value="">활성 그룹 없음</option>';
+    } else {
+      groupOptions = groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+    }
+  } catch (e) {
+    groupOptions = '<option value="">그룹 로드 실패</option>';
+  }
+
+  const modal = document.createElement('div');
+  modal.id = 'create-event-modal';
+  modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto';
+  modal.innerHTML = `
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg my-4">
+      <div class="flex items-center justify-between px-5 py-4 border-b">
+        <h3 class="font-bold text-gray-900">행사 생성</h3>
+        <button onclick="document.getElementById('create-event-modal').remove()" class="text-gray-400 hover:text-gray-600">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="p-5 space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">그룹 선택 <span class="text-red-500">*</span></label>
+          <select id="ce-group" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            ${groupOptions}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">행사명 <span class="text-red-500">*</span></label>
+          <input type="text" id="ce-title" placeholder="행사명 입력 (2~200자)"
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">행사 설명</label>
+          <textarea id="ce-desc" rows="3" placeholder="행사 소개 (선택)"
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">장소</label>
+          <input type="text" id="ce-location" placeholder="행사 장소 (선택)"
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">시작일시 <span class="text-red-500">*</span></label>
+            <input type="datetime-local" id="ce-starts"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">종료일시</label>
+            <input type="datetime-local" id="ce-ends"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">공개 여부</label>
+            <select id="ce-visibility" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="public" selected>공개</option>
+              <option value="group_only">그룹 전용</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">참가 방식</label>
+            <select id="ce-regtype" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="free" selected>자유 참가</option>
+              <option value="pre_required">사전 신청</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">입장 방식</label>
+            <select id="ce-entry" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="qr" selected>QR</option>
+              <option value="nfc_qr">NFC+QR</option>
+              <option value="manual">수동</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">최대 참가자</label>
+            <input type="number" id="ce-maxpart" placeholder="무제한" min="1"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+        </div>
+        <div id="ce-error" class="hidden text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
+      </div>
+      <div class="px-5 pb-5 flex gap-2">
+        <button onclick="submitCreateEvent()"
+          class="flex-1 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition">
+          행사 생성
+        </button>
+        <button onclick="document.getElementById('create-event-modal').remove()"
+          class="px-4 py-2.5 border text-sm rounded-xl hover:bg-gray-50 transition">취소</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+async function submitCreateEvent() {
+  const groupId = document.getElementById('ce-group')?.value;
+  const title = document.getElementById('ce-title')?.value.trim();
+  const desc = document.getElementById('ce-desc')?.value.trim();
+  const location = document.getElementById('ce-location')?.value.trim();
+  const startsRaw = document.getElementById('ce-starts')?.value;
+  const endsRaw = document.getElementById('ce-ends')?.value;
+  const visibility = document.getElementById('ce-visibility')?.value;
+  const regtype = document.getElementById('ce-regtype')?.value;
+  const entry = document.getElementById('ce-entry')?.value;
+  const maxVal = document.getElementById('ce-maxpart')?.value;
+  const errEl = document.getElementById('ce-error');
+
+  if (!groupId) {
+    errEl.textContent = '그룹을 선택해주세요.'; errEl.classList.remove('hidden'); return;
+  }
+  if (!title || title.length < 2) {
+    errEl.textContent = '행사명을 2자 이상 입력해주세요.'; errEl.classList.remove('hidden'); return;
+  }
+  if (!startsRaw) {
+    errEl.textContent = '시작일시를 입력해주세요.'; errEl.classList.remove('hidden'); return;
+  }
+  errEl.classList.add('hidden');
+
+  const payload = {
+    group_id: parseInt(groupId),
+    title,
+    starts_at: new Date(startsRaw).toISOString(),
+    visibility,
+    registration_type: regtype,
+    entry_method: entry
+  };
+  if (desc) payload.description = desc;
+  if (location) payload.location = location;
+  if (endsRaw) payload.ends_at = new Date(endsRaw).toISOString();
+  if (maxVal) payload.max_participants = parseInt(maxVal);
+
+  try {
+    await axios.post('/admin/events', payload);
+    document.getElementById('create-event-modal')?.remove();
+    showToast('행사가 생성되었습니다.', 'success');
+    loadEvents();
+  } catch (err) {
+    const msg = err.response?.data?.message || '행사 생성에 실패했습니다.';
+    errEl.textContent = msg; errEl.classList.remove('hidden');
   }
 }
 
