@@ -135,7 +135,7 @@ function navItem(id, icon, label) {
            hover:bg-slate-700 cursor-pointer transition-colors font-medium mb-0.5"
     style="font-size:14px">
     <i class="fas fa-${icon} text-center flex-shrink-0" style="width:16px;font-size:15px"></i>
-    <span>${label}</span>
+    <span style="font-size:14px">${label}</span>
   </a>`;
 }
 
