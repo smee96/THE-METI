@@ -79,6 +79,8 @@ function renderApp() {
           ${navItem('nfc-cards', 'credit-card', 'NFC 카드')}
           ${navItem('partners', 'handshake', '파트너')}
           ${navItem('rewards', 'gift', '리워드')}
+          <p class="text-slate-500 text-xs uppercase font-semibold px-2 pt-2 pb-0.5">설정</p>
+          ${navItem('plan-configs', 'sliders-h', '플랜 설정')}
         </nav>
 
         <!-- 사용자 정보 -->
@@ -91,7 +93,7 @@ function renderApp() {
               <p class="text-white font-medium truncate" style="font-size:11px">${currentUser?.name || 'Admin'}</p>
             </div>
             <button onclick="logout()" class="text-slate-400 hover:text-red-400 flex-shrink-0 transition-colors" title="로그아웃">
-              <i class="fas fa-sign-out-alt" style="font-size:11px"></i>
+              <i class="fas fa-sign-out-alt" style="font-size:13px"></i>
             </button>
           </div>
         </div>
@@ -132,7 +134,7 @@ function navItem(id, icon, label) {
     class="sidebar-link flex items-center gap-2 px-2 py-1.5 rounded-md text-slate-300
            hover:bg-slate-700 cursor-pointer transition-colors font-medium mb-0.5"
     style="font-size:11.5px">
-    <i class="fas fa-${icon} text-center flex-shrink-0" style="width:14px;font-size:11px"></i>
+    <i class="fas fa-${icon} text-center flex-shrink-0" style="width:16px;font-size:13px"></i>
     <span>${label}</span>
   </a>`;
 }
@@ -174,7 +176,7 @@ function navigateTo(section) {
   const pages = {
     dashboard: loadDashboard, users: loadUsers, groups: loadGroups,
     events: loadEvents, reports: loadReports, 'nfc-cards': loadNfcCards,
-    partners: loadPartners, rewards: loadRewards
+    partners: loadPartners, rewards: loadRewards, 'plan-configs': loadPlanConfigs
   };
   if (pages[section]) pages[section]();
 }
@@ -958,6 +960,93 @@ async function submitCreateEvent() {
   } catch (err) {
     const msg = err.response?.data?.message || '행사 생성에 실패했습니다.';
     errEl.textContent = msg; errEl.classList.remove('hidden');
+  }
+}
+
+// ── 플랜 설정 ──────────────────────────────────────────
+async function loadPlanConfigs() {
+  setContent(loadingSpinner())
+  try {
+    const { data } = await axios.get('/api/v1/admin/plan-configs')
+    const plans = data.data || []
+    const planLabels = { free: 'Free', pro: 'Pro', business: 'Business' }
+    const planColors = { free: 'gray', pro: 'blue', business: 'purple' }
+
+    setContent(`
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-bold text-gray-900">플랜 설정</h2>
+          <p class="text-xs text-gray-400">그룹 최대 멤버 수 등 플랜별 제한을 설정합니다.</p>
+        </div>
+        <div class="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-700">
+          <i class="fas fa-info-circle mr-1"></i>
+          멤버 수 <strong>NULL = 무제한</strong>. 변경 즉시 신규 가입/승인에 적용됩니다.
+        </div>
+        <div class="grid gap-4">
+          ${plans.map(p => {
+            const color = planColors[p.code] || 'gray'
+            const colorClass = { gray: 'border-gray-300 bg-gray-50', blue: 'border-blue-300 bg-blue-50', purple: 'border-purple-300 bg-purple-50' }[color]
+            const badgeClass = { gray: 'bg-gray-100 text-gray-700', blue: 'bg-blue-100 text-blue-700', purple: 'bg-purple-100 text-purple-700' }[color]
+            return `
+            <div class="bg-white rounded-xl shadow-sm border p-5">
+              <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2">
+                  <span class="px-2.5 py-1 rounded-full text-xs font-bold ${badgeClass}">${planLabels[p.code] || p.code}</span>
+                  <span class="text-sm text-gray-500">${p.name}</span>
+                </div>
+                <span class="text-xs text-gray-400">code: ${p.code}</span>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 mb-1">그룹 최대 멤버 수</label>
+                  <div class="flex gap-2">
+                    <input type="number" id="plan-members-${p.code}" value="${p.max_group_members ?? ''}" placeholder="무제한 (비워두기)"
+                      min="1" class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button onclick="updatePlanConfig('${p.code}', 'max_group_members')"
+                      class="px-3 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition">
+                      저장
+                    </button>
+                  </div>
+                  <p class="text-xs text-gray-400 mt-1">현재: ${p.max_group_members !== null ? p.max_group_members + '명' : '무제한'}</p>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 mb-1">명함 한도</label>
+                  <div class="flex gap-2">
+                    <input type="number" id="plan-cards-${p.code}" value="${p.max_cards ?? ''}" placeholder="무제한 (비워두기)"
+                      min="1" class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button onclick="updatePlanConfig('${p.code}', 'max_cards')"
+                      class="px-3 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition">
+                      저장
+                    </button>
+                  </div>
+                  <p class="text-xs text-gray-400 mt-1">현재: ${p.max_cards !== null ? p.max_cards + '개' : '무제한'}</p>
+                </div>
+              </div>
+            </div>`
+          }).join('')}
+        </div>
+      </div>
+    `)
+  } catch (e) {
+    setContent(`<div class="text-center text-red-500 py-10">플랜 설정을 불러오지 못했습니다.</div>`)
+  }
+}
+
+async function updatePlanConfig(planCode, field) {
+  const input = document.getElementById(`plan-${field === 'max_group_members' ? 'members' : 'cards'}-${planCode}`)
+  const rawVal = input?.value.trim()
+  const value = rawVal === '' ? null : parseInt(rawVal)
+
+  if (rawVal !== '' && (isNaN(value) || value < 1)) {
+    showToast('올바른 숫자를 입력하거나 비워두세요 (무제한).', 'error'); return
+  }
+
+  try {
+    await axios.patch(`/api/v1/admin/plan-configs/${planCode}`, { [field]: value })
+    showToast(`${planCode} 플랜 설정이 저장되었습니다.`, 'success')
+    loadPlanConfigs()
+  } catch (e) {
+    showToast(e.response?.data?.error || '저장 실패', 'error')
   }
 }
 

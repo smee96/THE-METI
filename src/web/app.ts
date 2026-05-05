@@ -8,6 +8,7 @@ export function appLoginHtml(): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>METI - 로그인</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { theme: { extend: { fontSize: { 'xs':'0.75rem','sm':'0.8125rem','base':'0.875rem','lg':'1rem','xl':'1.125rem','2xl':'1.25rem','3xl':'1.5rem' } } } }</script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center">
@@ -112,6 +113,7 @@ export function appRegisterHtml(): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>METI - 회원가입</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { theme: { extend: { fontSize: { 'xs':'0.75rem','sm':'0.8125rem','base':'0.875rem','lg':'1rem','xl':'1.125rem','2xl':'1.25rem','3xl':'1.5rem' } } } }</script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center py-10">
@@ -219,6 +221,7 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${pageTitle}</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { theme: { extend: { fontSize: { 'xs':'0.75rem','sm':'0.8125rem','base':'0.875rem','lg':'1rem','xl':'1.125rem','2xl':'1.25rem','3xl':'1.5rem' } } } }</script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
   <style>
     /* 사이드바 */

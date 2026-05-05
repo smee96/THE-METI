@@ -8,6 +8,7 @@ export function adminLoginHtml(): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>METI Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { theme: { extend: { fontSize: { 'xs':'0.75rem','sm':'0.8125rem','base':'0.875rem','lg':'1rem','xl':'1.125rem','2xl':'1.25rem','3xl':'1.5rem' } } } }</script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
 </head>
 <body class="bg-gradient-to-br from-slate-900 to-slate-800 min-h-screen flex items-center justify-center">
@@ -90,6 +91,7 @@ export function adminAppHtml(): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>METI Admin Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { theme: { extend: { fontSize: { 'xs':'0.75rem','sm':'0.8125rem','base':'0.875rem','lg':'1rem','xl':'1.125rem','2xl':'1.25rem','3xl':'1.5rem' } } } }</script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
   <style>
