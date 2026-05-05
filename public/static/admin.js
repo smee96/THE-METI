@@ -908,8 +908,6 @@ async function showCreateEventModal() {
     </div>
   `;
   document.body.appendChild(modal);
-  // mousedown 사용: 달력/피커 팝업 선택 시 click 이벤트 오발동 방지
-  modal.addEventListener('mousedown', e => { if (e.target === modal) modal.remove(); });
 }
 
 async function submitCreateEvent() {
