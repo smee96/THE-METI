@@ -122,14 +122,40 @@ groups.post(
       if (existing.status === 'pending') return c.json(fail('이미 가입 신청 중입니다.'), 409)
     }
 
-    // 최대 멤버 수 확인
-    if (group.max_members) {
-      const memberCount = await c.env.DB.prepare(
+    // ── 플랜별 최대 멤버 수 확인 ──────────────────────────
+    // groups.max_members: 그룹 자체 정원 (관리자가 설정)
+    // plans.max_group_members: 그룹 관리자 플랜이 허용하는 최대 멤버 수
+    const [memberCountRow, groupAdminPlan] = await Promise.all([
+      c.env.DB.prepare(
         `SELECT COUNT(*) as cnt FROM group_members WHERE group_id = ? AND status = 'active'`
-      ).bind(groupId).first<{ cnt: number }>()
-      if ((memberCount?.cnt ?? 0) >= group.max_members) {
-        return c.json(fail('그룹 정원이 가득 찼습니다.'), 409)
-      }
+      ).bind(groupId).first<{ cnt: number }>(),
+      c.env.DB.prepare(`
+        SELECT p.max_group_members
+        FROM groups g
+        JOIN users u ON u.id = g.admin_user_id
+        JOIN plans p ON p.code = u.plan
+        WHERE g.id = ?
+      `).bind(groupId).first<{ max_group_members: number | null }>()
+    ])
+
+    const currentCount = memberCountRow?.cnt ?? 0
+
+    // 그룹 자체 정원 초과 체크
+    if (group.max_members && currentCount >= group.max_members) {
+      return c.json(fail('그룹 정원이 가득 찼습니다.'), 409)
+    }
+
+    // 플랜 멤버 한도 초과 체크 (NULL = 무제한)
+    const planLimit = groupAdminPlan?.max_group_members ?? null
+    if (planLimit !== null && currentCount >= planLimit) {
+      return c.json({
+        success: false,
+        error: '그룹 관리자의 플랜 멤버 한도에 도달했습니다.',
+        error_code: 'plan_member_limit_reached',
+        current: currentCount,
+        limit: planLimit,
+        upgrade_required: true
+      }, 403)
     }
 
     // 생년월일 입력 시 미성년자 여부 계산
@@ -234,6 +260,40 @@ groups.patch(
 
     if (!adminMember || !['admin', 'sub_admin'].includes(adminMember.role)) {
       return c.json(fail('권한이 없습니다.'), 403)
+    }
+
+    // 승인 시 플랜 멤버 한도 체크
+    if (action === 'approve') {
+      const [memberCountRow, groupAdminPlan] = await Promise.all([
+        c.env.DB.prepare(
+          `SELECT COUNT(*) as cnt FROM group_members WHERE group_id = ? AND status = 'active'`
+        ).bind(groupId).first<{ cnt: number }>(),
+        c.env.DB.prepare(`
+          SELECT p.max_group_members, g.max_members
+          FROM groups g
+          JOIN users u ON u.id = g.admin_user_id
+          JOIN plans p ON p.code = u.plan
+          WHERE g.id = ?
+        `).bind(groupId).first<{ max_group_members: number | null; max_members: number | null }>()
+      ])
+
+      const currentCount = memberCountRow?.cnt ?? 0
+
+      if (groupAdminPlan?.max_members && currentCount >= groupAdminPlan.max_members) {
+        return c.json(fail('그룹 정원이 가득 찼습니다.'), 409)
+      }
+
+      const planLimit = groupAdminPlan?.max_group_members ?? null
+      if (planLimit !== null && currentCount >= planLimit) {
+        return c.json({
+          success: false,
+          error: '플랜 멤버 한도에 도달했습니다. 플랜을 업그레이드해주세요.',
+          error_code: 'plan_member_limit_reached',
+          current: currentCount,
+          limit: planLimit,
+          upgrade_required: true
+        }, 403)
+      }
     }
 
     const statusMap = { approve: 'active', reject: 'rejected', kick: 'kicked' }

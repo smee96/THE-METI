@@ -17,7 +17,7 @@ export function appLoginHtml(): string {
       <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4 shadow-lg">
         <i class="fas fa-id-card text-white text-2xl"></i>
       </div>
-      <h1 class="text-3xl font-bold text-gray-800">METI</h1>
+      <h1 class="text-xl font-bold text-gray-800">METI</h1>
       <p class="text-gray-500 mt-2">디지털 명함 플랫폼</p>
     </div>
     <div class="bg-white rounded-2xl shadow-xl p-8">
@@ -122,7 +122,7 @@ export function appRegisterHtml(): string {
       <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4 shadow-lg">
         <i class="fas fa-id-card text-white text-2xl"></i>
       </div>
-      <h1 class="text-3xl font-bold text-gray-800">METI</h1>
+      <h1 class="text-xl font-bold text-gray-800">METI</h1>
       <p class="text-gray-500 mt-2">디지털 명함 플랫폼</p>
     </div>
     <div class="bg-white rounded-2xl shadow-xl p-8">
@@ -237,7 +237,7 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
       display: flex; align-items: center; gap: 0.75rem;
       padding: 0.65rem 1rem; border-radius: 0.5rem;
       color: #94a3b8; cursor: pointer; transition: all 0.15s;
-      font-size: 0.9rem;
+      font-size: 0.8125rem;
     }
     .nav-item:hover { background: #1e293b; color: #f1f5f9; }
     .nav-item.active { background: #2563eb; color: #fff; }
@@ -245,7 +245,7 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
 
     /* 컨텍스트 배지 */
     .ctx-badge {
-      font-size: 0.65rem; padding: 0.1rem 0.5rem;
+      font-size: 0.75rem; padding: 0.1rem 0.5rem;
       border-radius: 9999px; font-weight: 600;
     }
     /* 페이지 섹션 */
@@ -342,20 +342,20 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
         </div>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div class="stat-card text-center">
-            <p class="text-2xl font-bold text-blue-600" id="stat-cards">-</p>
-            <p class="text-xs text-gray-500 mt-1">내 명함</p>
+            <p class="text-xl font-bold text-blue-600" id="stat-cards">-</p>
+            <p class="text-sm text-gray-500 mt-1">내 명함</p>
           </div>
           <div class="stat-card text-center">
-            <p class="text-2xl font-bold text-green-600" id="stat-groups">-</p>
-            <p class="text-xs text-gray-500 mt-1">소속 그룹</p>
+            <p class="text-xl font-bold text-green-600" id="stat-groups">-</p>
+            <p class="text-sm text-gray-500 mt-1">소속 그룹</p>
           </div>
           <div class="stat-card text-center">
-            <p class="text-2xl font-bold text-purple-600" id="stat-points">-</p>
-            <p class="text-xs text-gray-500 mt-1">포인트 (P)</p>
+            <p class="text-xl font-bold text-purple-600" id="stat-points">-</p>
+            <p class="text-sm text-gray-500 mt-1">포인트 (P)</p>
           </div>
           <div class="stat-card text-center">
-            <p class="text-2xl font-bold text-orange-500" id="stat-plan">-</p>
-            <p class="text-xs text-gray-500 mt-1">현재 플랜</p>
+            <p class="text-xl font-bold text-orange-500" id="stat-plan">-</p>
+            <p class="text-sm text-gray-500 mt-1">현재 플랜</p>
           </div>
         </div>
         <div class="grid md:grid-cols-2 gap-4">
@@ -383,7 +383,7 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
       <!-- ── [개인] 내 명함 ── -->
       <section id="section-cards" class="page-section">
         <div class="flex items-center justify-between mb-5">
-          <h3 class="text-xl font-bold text-gray-800">내 명함</h3>
+          <h3 class="text-lg font-bold text-gray-800">내 명함</h3>
           <button onclick="openCreateCardModal()"
             class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium">
             <i class="fas fa-plus"></i> 명함 추가
@@ -397,7 +397,7 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
       <!-- ── [개인] 내 그룹 목록 ── -->
       <section id="section-groups" class="page-section">
         <div class="flex items-center justify-between mb-5">
-          <h3 class="text-xl font-bold text-gray-800">내 그룹</h3>
+          <h3 class="text-lg font-bold text-gray-800">내 그룹</h3>
           <button onclick="openJoinGroupModal()"
             class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium">
             <i class="fas fa-search"></i> 그룹 탐색
@@ -410,12 +410,12 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
 
       <!-- ── [개인] 포인트 ── -->
       <section id="section-points" class="page-section">
-        <h3 class="text-xl font-bold text-gray-800 mb-5">포인트</h3>
+        <h3 class="text-lg font-bold text-gray-800 mb-5">포인트</h3>
         <div class="stat-card mb-4">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm text-gray-500">현재 잔액</p>
-              <p class="text-3xl font-bold text-blue-600 mt-1"><span id="points-balance">-</span> P</p>
+              <p class="text-2xl font-bold text-blue-600 mt-1"><span id="points-balance">-</span> P</p>
             </div>
             <div class="text-right">
               <p class="text-xs text-gray-400 mb-2">1P = 1원</p>
@@ -436,7 +436,7 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
 
       <!-- ── [개인] 구독 ── -->
       <section id="section-subscription" class="page-section">
-        <h3 class="text-xl font-bold text-gray-800 mb-5">구독</h3>
+        <h3 class="text-lg font-bold text-gray-800 mb-5">구독</h3>
         <div class="stat-card mb-4">
           <div class="flex items-center gap-4">
             <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
@@ -459,25 +459,25 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
       <!-- ── [그룹관리] 그룹 대시보드 ── -->
       <section id="section-group-dashboard" class="page-section">
         <div class="mb-5">
-          <h3 class="text-xl font-bold text-gray-800">그룹 대시보드</h3>
+          <h3 class="text-lg font-bold text-gray-800">그룹 대시보드</h3>
           <p class="text-sm text-gray-500 mt-1" id="group-desc-text"></p>
         </div>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div class="stat-card text-center">
-            <p class="text-2xl font-bold text-blue-600" id="gstat-members">-</p>
-            <p class="text-xs text-gray-500 mt-1">전체 멤버</p>
+            <p class="text-xl font-bold text-blue-600" id="gstat-members">-</p>
+            <p class="text-sm text-gray-500 mt-1">전체 멤버</p>
           </div>
           <div class="stat-card text-center">
-            <p class="text-2xl font-bold text-yellow-500" id="gstat-pending">-</p>
-            <p class="text-xs text-gray-500 mt-1">가입 대기</p>
+            <p class="text-xl font-bold text-yellow-500" id="gstat-pending">-</p>
+            <p class="text-sm text-gray-500 mt-1">가입 대기</p>
           </div>
           <div class="stat-card text-center">
-            <p class="text-2xl font-bold text-green-600" id="gstat-events">-</p>
-            <p class="text-xs text-gray-500 mt-1">행사</p>
+            <p class="text-xl font-bold text-green-600" id="gstat-events">-</p>
+            <p class="text-sm text-gray-500 mt-1">행사</p>
           </div>
           <div class="stat-card text-center">
-            <p class="text-2xl font-bold text-purple-600" id="gstat-points">-</p>
-            <p class="text-xs text-gray-500 mt-1">그룹 포인트 (P)</p>
+            <p class="text-xl font-bold text-purple-600" id="gstat-points">-</p>
+            <p class="text-sm text-gray-500 mt-1">그룹 포인트 (P)</p>
           </div>
         </div>
         <div class="stat-card">
@@ -491,7 +491,7 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
       <!-- ── [그룹관리] 멤버 관리 ── -->
       <section id="section-group-members" class="page-section">
         <div class="flex items-center justify-between mb-5">
-          <h3 class="text-xl font-bold text-gray-800">멤버 관리</h3>
+          <h3 class="text-lg font-bold text-gray-800">멤버 관리</h3>
           <div class="flex gap-2">
             <button onclick="showSection('group-invites')"
               class="flex items-center gap-2 px-3 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition text-sm">
@@ -514,7 +514,7 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
       <!-- ── [그룹관리] 행사 관리 ── -->
       <section id="section-group-events" class="page-section">
         <div class="flex items-center justify-between mb-5">
-          <h3 class="text-xl font-bold text-gray-800">행사 관리</h3>
+          <h3 class="text-lg font-bold text-gray-800">행사 관리</h3>
           <button onclick="openCreateEventModal()"
             class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium">
             <i class="fas fa-plus"></i> 행사 생성
@@ -527,12 +527,12 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
 
       <!-- ── [그룹관리] 그룹 포인트 ── -->
       <section id="section-group-points" class="page-section">
-        <h3 class="text-xl font-bold text-gray-800 mb-5">그룹 포인트</h3>
+        <h3 class="text-lg font-bold text-gray-800 mb-5">그룹 포인트</h3>
         <div class="stat-card mb-4">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm text-gray-500">그룹 잔액</p>
-              <p class="text-3xl font-bold text-purple-600 mt-1"><span id="group-points-balance">-</span> P</p>
+              <p class="text-2xl font-bold text-purple-600 mt-1"><span id="group-points-balance">-</span> P</p>
             </div>
             <div class="flex flex-col gap-2 items-end">
               <button onclick="openGroupChargeModal()"
@@ -557,7 +557,7 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
       <!-- ── [그룹관리] 레슨 관리 ── -->
       <section id="section-group-lessons" class="page-section">
         <div class="flex items-center justify-between mb-5">
-          <h3 class="text-xl font-bold text-gray-800">레슨 관리</h3>
+          <h3 class="text-lg font-bold text-gray-800">레슨 관리</h3>
           <button onclick="openCreateLessonModal()"
             class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium">
             <i class="fas fa-plus"></i> 일정 추가
@@ -571,7 +571,7 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
       <!-- ── [그룹관리] 초대링크 ── -->
       <section id="section-group-invites" class="page-section">
         <div class="flex items-center justify-between mb-5">
-          <h3 class="text-xl font-bold text-gray-800">초대링크 관리</h3>
+          <h3 class="text-lg font-bold text-gray-800">초대링크 관리</h3>
           <button onclick="openCreateInviteModal()"
             class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium">
             <i class="fas fa-plus"></i> 링크 생성
@@ -584,7 +584,7 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
 
       <!-- ── 알림 ── -->
       <section id="section-notifications" class="page-section">
-        <h3 class="text-xl font-bold text-gray-800 mb-5">알림</h3>
+        <h3 class="text-lg font-bold text-gray-800 mb-5">알림</h3>
         <div id="notifications-list">
           <p class="text-sm text-gray-400 text-center py-8">알림이 없습니다.</p>
         </div>

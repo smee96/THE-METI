@@ -465,14 +465,36 @@ auth.post(
     ).bind(invite.group_id, userId).first<{ status: string }>()
     if (existing?.status === 'active') return c.json(fail('이미 가입된 그룹입니다.'), 409)
 
-    // 그룹 정원 확인
-    if (invite.max_members) {
-      const memberCount = await c.env.DB.prepare(
+    // 그룹 정원 + 플랜 멤버 한도 확인
+    const [memberCountRow, groupAdminPlan] = await Promise.all([
+      c.env.DB.prepare(
         `SELECT COUNT(*) as cnt FROM group_members WHERE group_id = ? AND status = 'active'`
-      ).bind(invite.group_id).first<{ cnt: number }>()
-      if ((memberCount?.cnt ?? 0) >= invite.max_members) {
-        return c.json(fail('그룹 정원이 가득 찼습니다.'), 409)
-      }
+      ).bind(invite.group_id).first<{ cnt: number }>(),
+      c.env.DB.prepare(`
+        SELECT p.max_group_members
+        FROM groups g
+        JOIN users u ON u.id = g.admin_user_id
+        JOIN plans p ON p.code = u.plan
+        WHERE g.id = ?
+      `).bind(invite.group_id).first<{ max_group_members: number | null }>()
+    ])
+
+    const currentCount = memberCountRow?.cnt ?? 0
+
+    if (invite.max_members && currentCount >= invite.max_members) {
+      return c.json(fail('그룹 정원이 가득 찼습니다.'), 409)
+    }
+
+    const planLimit = groupAdminPlan?.max_group_members ?? null
+    if (planLimit !== null && currentCount >= planLimit) {
+      return c.json({
+        success: false,
+        error: '그룹 멤버 한도에 도달했습니다.',
+        error_code: 'plan_member_limit_reached',
+        current: currentCount,
+        limit: planLimit,
+        upgrade_required: true
+      }, 403)
     }
 
     // 생년월일 입력 시 미성년자 여부 계산 (만 19세 미만 = 미성년)

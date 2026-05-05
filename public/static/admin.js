@@ -62,7 +62,7 @@ function renderApp() {
             </div>
           </div>
           <button onclick="closeSidebar()" class="lg:hidden text-slate-400 hover:text-white p-1">
-            <i class="fas fa-times text-xs"></i>
+            <i class="fas fa-times text-sm"></i>
           </button>
         </div>
 
@@ -112,8 +112,8 @@ function renderApp() {
               <h2 id="page-title" class="text-base font-semibold text-gray-800">대시보드</h2>
             </div>
             <div class="flex items-center gap-2">
-              <span class="hidden sm:block text-xs text-gray-500">${new Date().toLocaleDateString('ko-KR')}</span>
-              <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">Super Admin</span>
+              <span class="hidden sm:block text-sm text-gray-500">${new Date().toLocaleDateString('ko-KR')}</span>
+              <span class="px-2 py-1 bg-blue-100 text-blue-700 text-sm font-semibold rounded-full">Super Admin</span>
             </div>
           </div>
         </header>
@@ -219,13 +219,13 @@ async function loadDashboard() {
               <button onclick="navigateTo('groups')"
                 class="p-3 bg-orange-50 hover:bg-orange-100 rounded-xl text-left transition">
                 <i class="fas fa-building text-orange-500 text-lg mb-1 block"></i>
-                <p class="font-semibold text-gray-800 text-xs">그룹 승인 대기</p>
+                <p class="font-semibold text-gray-800 text-sm">그룹 승인 대기</p>
                 <p class="text-xl font-bold text-orange-600">${d.groups?.pending || 0}</p>
               </button>
               <button onclick="navigateTo('reports')"
                 class="p-3 bg-red-50 hover:bg-red-100 rounded-xl text-left transition">
                 <i class="fas fa-flag text-red-500 text-lg mb-1 block"></i>
-                <p class="font-semibold text-gray-800 text-xs">신고 처리 대기</p>
+                <p class="font-semibold text-gray-800 text-sm">신고 처리 대기</p>
                 <p class="text-xl font-bold text-red-600">${d.reports?.pending || 0}</p>
               </button>
             </div>
@@ -252,8 +252,8 @@ function statCard(label, value, icon, color, sub) {
       </div>
     </div>
     <p class="text-2xl font-bold text-gray-900">${value.toLocaleString()}</p>
-    <p class="text-gray-500 text-xs mt-0.5">${label}</p>
-    <p class="text-xs text-gray-400 mt-1">${sub}</p>
+    <p class="text-gray-500 text-sm mt-0.5">${label}</p>
+    <p class="text-sm text-gray-400 mt-1">${sub}</p>
   </div>`;
 }
 
@@ -261,7 +261,7 @@ function planBar(label, count, total, color) {
   const pct = total > 0 ? Math.round((count / total) * 100) : 0;
   const colors = { gray: 'bg-gray-400', blue: 'bg-blue-500', purple: 'bg-purple-500' };
   return `<div>
-    <div class="flex justify-between text-xs mb-1">
+    <div class="flex justify-between text-sm mb-1">
       <span class="text-gray-600">${label}</span>
       <span class="font-semibold">${count} (${pct}%)</span>
     </div>
@@ -311,7 +311,7 @@ async function loadUsers(page = 1, search = '') {
                 ${users.length === 0 ? `<tr><td colspan="7" class="px-4 py-10 text-center text-gray-400 text-sm">유저가 없습니다.</td></tr>` : ''}
                 ${users.map(u => `
                   <tr class="hover:bg-gray-50">
-                    <td class="px-4 py-3 text-xs text-gray-400">#${u.id}</td>
+                    <td class="px-4 py-3 text-sm text-gray-400">#${u.id}</td>
                     <td class="px-4 py-3">
                       <p class="text-sm font-medium text-gray-900">${u.name}</p>
                       <p class="text-sm text-gray-400">${u.email}</p>
@@ -323,16 +323,16 @@ async function loadUsers(page = 1, search = '') {
                         ? '<span class="px-2 py-0.5 bg-green-100 text-green-700 text-sm rounded-full">활성</span>'
                         : '<span class="px-2 py-0.5 bg-red-100 text-red-700 text-sm rounded-full">비활성</span>'}
                     </td>
-                    <td class="px-4 py-3 text-xs text-gray-400">${formatDate(u.created_at)}</td>
+                    <td class="px-4 py-3 text-sm text-gray-400">${formatDate(u.created_at)}</td>
                     <td class="px-4 py-3">
                       <div class="flex gap-1">
                         <button onclick="toggleUserActive(${u.id}, ${u.is_active})"
-                          class="text-xs px-2 py-1 border rounded hover:bg-gray-50
+                          class="text-sm px-2 py-1 border rounded hover:bg-gray-50
                                  ${u.is_active ? 'text-red-600 border-red-200' : 'text-green-600 border-green-200'}">
                           ${u.is_active ? '비활성화' : '활성화'}
                         </button>
                         <button onclick="changeUserPlan(${u.id}, '${u.plan}')"
-                          class="text-xs px-2 py-1 border border-blue-200 text-blue-600 rounded hover:bg-blue-50">
+                          class="text-sm px-2 py-1 border border-blue-200 text-blue-600 rounded hover:bg-blue-50">
                           플랜
                         </button>
                       </div>
@@ -361,16 +361,16 @@ async function loadUsers(page = 1, search = '') {
                     : '<span class="px-2 py-0.5 bg-red-100 text-red-700 text-sm rounded-full">비활성</span>'}
                 </div>
               </div>
-              <div class="flex items-center justify-between text-xs text-gray-400">
+              <div class="flex items-center justify-between text-sm text-gray-400">
                 <span>${accountTypeBadge(u.account_type)} · ${formatDate(u.created_at)}</span>
                 <div class="flex gap-1">
                   <button onclick="toggleUserActive(${u.id}, ${u.is_active})"
-                    class="px-2 py-1 border rounded text-xs
+                    class="px-2 py-1 border rounded text-sm
                            ${u.is_active ? 'text-red-600 border-red-200' : 'text-green-600 border-green-200'}">
                     ${u.is_active ? '비활성화' : '활성화'}
                   </button>
                   <button onclick="changeUserPlan(${u.id}, '${u.plan}')"
-                    class="px-2 py-1 border border-blue-200 text-blue-600 rounded text-xs">
+                    class="px-2 py-1 border border-blue-200 text-blue-600 rounded text-sm">
                     플랜변경
                   </button>
                 </div>
@@ -401,14 +401,14 @@ async function loadGroups(page = 1, status = 'pending') {
           <div class="flex gap-2 flex-wrap">
             ${['pending', 'active', 'suspended'].map(s => `
               <button onclick="loadGroups(1,'${s}')"
-                class="px-3 py-1.5 rounded-lg text-xs font-medium transition
+                class="px-3 py-1.5 rounded-lg text-sm font-medium transition
                        ${status === s ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border hover:bg-gray-50'}">
                 ${s === 'pending' ? '⏳ 승인대기' : s === 'active' ? '✅ 활성' : '🚫 정지'}
               </button>
             `).join('')}
           </div>
           <button onclick="showCreateGroupModal()"
-            class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition">
+            class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition">
             <i class="fas fa-plus"></i> 그룹 직접 생성
           </button>
         </div>
@@ -432,34 +432,34 @@ async function loadGroups(page = 1, status = 'pending') {
                 <tr class="hover:bg-gray-50">
                   <td class="px-4 py-3">
                     <p class="text-sm font-medium text-gray-900">${g.name}</p>
-                    <p class="text-xs text-gray-400 truncate max-w-xs">${g.description || '-'}</p>
+                    <p class="text-sm text-gray-400 truncate max-w-xs">${g.description || '-'}</p>
                   </td>
                   <td class="px-4 py-3">
-                    <p class="text-xs text-gray-900">${g.admin_name || '-'}</p>
-                    <p class="text-xs text-gray-400">${g.admin_email || ''}</p>
+                    <p class="text-sm text-gray-900">${g.admin_name || '-'}</p>
+                    <p class="text-sm text-gray-400">${g.admin_email || ''}</p>
                   </td>
                   <td class="px-4 py-3">${categoryBadge(g.category)}</td>
                   <td class="px-4 py-3">
-                    <span class="text-xs ${g.visibility === 'public' ? 'text-green-600' : 'text-gray-400'}">
+                    <span class="text-sm ${g.visibility === 'public' ? 'text-green-600' : 'text-gray-400'}">
                       ${g.visibility === 'public' ? '공개' : '비공개'}
                     </span>
                   </td>
-                  <td class="px-4 py-3 text-xs text-gray-400">${formatDate(g.created_at)}</td>
+                  <td class="px-4 py-3 text-sm text-gray-400">${formatDate(g.created_at)}</td>
                   <td class="px-4 py-3">
                     <div class="flex gap-1">
                       ${status === 'pending' ? `
                         <button onclick="approveGroup(${g.id},'approve')"
-                          class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">승인</button>
+                          class="text-sm px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">승인</button>
                         <button onclick="approveGroup(${g.id},'reject')"
-                          class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200">거절</button>
+                          class="text-sm px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200">거절</button>
                       ` : ''}
                       ${status === 'active' ? `
                         <button onclick="approveGroup(${g.id},'suspend')"
-                          class="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded hover:bg-orange-200">정지</button>
+                          class="text-sm px-2 py-1 bg-orange-100 text-orange-700 rounded hover:bg-orange-200">정지</button>
                       ` : ''}
                       ${status === 'suspended' ? `
                         <button onclick="approveGroup(${g.id},'activate')"
-                          class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">활성화</button>
+                          class="text-sm px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">활성화</button>
                       ` : ''}
                     </div>
                   </td>
@@ -477,28 +477,28 @@ async function loadGroups(page = 1, status = 'pending') {
               <div class="flex items-start justify-between mb-2">
                 <div class="flex-1 min-w-0">
                   <p class="font-medium text-gray-900 text-sm">${g.name}</p>
-                  <p class="text-xs text-gray-400 truncate">${g.description || '-'}</p>
+                  <p class="text-sm text-gray-400 truncate">${g.description || '-'}</p>
                 </div>
                 ${categoryBadge(g.category)}
               </div>
               <div class="flex items-center justify-between">
-                <div class="text-xs text-gray-400">
+                <div class="text-sm text-gray-400">
                   <span>${g.admin_name || '-'}</span> · <span>${formatDate(g.created_at)}</span>
                 </div>
                 <div class="flex gap-1">
                   ${status === 'pending' ? `
                     <button onclick="approveGroup(${g.id},'approve')"
-                      class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">승인</button>
+                      class="text-sm px-2 py-1 bg-green-100 text-green-700 rounded">승인</button>
                     <button onclick="approveGroup(${g.id},'reject')"
-                      class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded">거절</button>
+                      class="text-sm px-2 py-1 bg-red-100 text-red-700 rounded">거절</button>
                   ` : ''}
                   ${status === 'active' ? `
                     <button onclick="approveGroup(${g.id},'suspend')"
-                      class="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded">정지</button>
+                      class="text-sm px-2 py-1 bg-orange-100 text-orange-700 rounded">정지</button>
                   ` : ''}
                   ${status === 'suspended' ? `
                     <button onclick="approveGroup(${g.id},'activate')"
-                      class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">활성화</button>
+                      class="text-sm px-2 py-1 bg-blue-100 text-blue-700 rounded">활성화</button>
                   ` : ''}
                 </div>
               </div>
@@ -526,7 +526,7 @@ async function loadReports(page = 1, status = 'pending') {
         <div class="flex gap-2 flex-wrap">
           ${['pending', 'reviewed', 'resolved', 'dismissed'].map(s => `
             <button onclick="loadReports(1,'${s}')"
-              class="px-3 py-1.5 rounded-lg text-xs font-medium transition
+              class="px-3 py-1.5 rounded-lg text-sm font-medium transition
                      ${status === s ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border hover:bg-gray-50'}">
               ${s === 'pending' ? '대기' : s === 'reviewed' ? '검토중' : s === 'resolved' ? '처리완료' : '기각'}
             </button>
@@ -549,22 +549,22 @@ async function loadReports(page = 1, status = 'pending') {
                 ${reports.map(r => `
                   <tr class="hover:bg-gray-50">
                     <td class="px-4 py-3">
-                      <p class="text-xs font-medium text-gray-900">${r.reporter_name}</p>
-                      <p class="text-xs text-gray-400">${r.reporter_email}</p>
+                      <p class="text-sm font-medium text-gray-900">${r.reporter_name}</p>
+                      <p class="text-sm text-gray-400">${r.reporter_email}</p>
                     </td>
                     <td class="px-4 py-3">
-                      <span class="text-xs px-2 py-0.5 bg-gray-100 rounded">${r.target_type} #${r.target_id}</span>
+                      <span class="text-sm px-2 py-0.5 bg-gray-100 rounded">${r.target_type} #${r.target_id}</span>
                     </td>
-                    <td class="px-4 py-3 text-xs text-gray-700">${r.reason}</td>
-                    <td class="px-4 py-3 text-xs text-gray-400">${formatDate(r.created_at)}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">${r.reason}</td>
+                    <td class="px-4 py-3 text-sm text-gray-400">${formatDate(r.created_at)}</td>
                     <td class="px-4 py-3">
                       <div class="flex gap-1">
                         ${status === 'pending' ? `
                           <button onclick="resolveReport(${r.id},'resolved')"
-                            class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">처리완료</button>
+                            class="text-sm px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">처리완료</button>
                           <button onclick="resolveReport(${r.id},'dismissed')"
-                            class="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200">기각</button>
-                        ` : `<span class="text-xs text-gray-400">-</span>`}
+                            class="text-sm px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200">기각</button>
+                        ` : `<span class="text-sm text-gray-400">-</span>`}
                       </div>
                     </td>
                   </tr>
@@ -611,8 +611,8 @@ async function loadPartners() {
               class="px-4 py-2 border text-sm rounded-lg hover:bg-gray-50">취소</button>
           </div>
           <div id="new-apikey" class="hidden mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p class="text-xs font-semibold text-yellow-800 mb-1">⚠️ API 키 (최초 1회만 표시)</p>
-            <code id="apikey-val" class="text-xs font-mono break-all text-yellow-900"></code>
+            <p class="text-sm font-semibold text-yellow-800 mb-1">⚠️ API 키 (최초 1회만 표시)</p>
+            <code id="apikey-val" class="text-sm font-mono break-all text-yellow-900"></code>
           </div>
         </div>
         <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
@@ -631,13 +631,13 @@ async function loadPartners() {
                 ${partners.map(p => `
                   <tr class="hover:bg-gray-50">
                     <td class="px-4 py-3 text-sm font-medium text-gray-900">${p.name}</td>
-                    <td class="px-4 py-3 text-xs text-gray-400">${p.description || '-'}</td>
+                    <td class="px-4 py-3 text-sm text-gray-400">${p.description || '-'}</td>
                     <td class="px-4 py-3">
                       ${p.status === 'active'
                         ? '<span class="px-2 py-0.5 bg-green-100 text-green-700 text-sm rounded-full">활성</span>'
                         : '<span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-sm rounded-full">비활성</span>'}
                     </td>
-                    <td class="px-4 py-3 text-xs text-gray-400">${formatDate(p.created_at)}</td>
+                    <td class="px-4 py-3 text-sm text-gray-400">${formatDate(p.created_at)}</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -662,7 +662,7 @@ async function loadEvents(page = 1) {
       <div class="space-y-3">
         <div class="flex justify-end">
           <button onclick="showCreateEventModal()"
-            class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition">
+            class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition">
             <i class="fas fa-plus"></i> 행사 생성
           </button>
         </div>
@@ -682,8 +682,8 @@ async function loadEvents(page = 1) {
                 ${rows.map(r => `
                   <tr class="hover:bg-gray-50">
                     <td class="px-4 py-3 text-sm font-medium text-gray-900">${r.title ?? '-'}</td>
-                    <td class="px-4 py-3 text-xs text-gray-500">${r.group_name ?? '-'}</td>
-                    <td class="px-4 py-3 text-xs text-gray-500">${r.starts_at ? formatDate(r.starts_at) : '-'}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">${r.group_name ?? '-'}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">${r.starts_at ? formatDate(r.starts_at) : '-'}</td>
                     <td class="px-4 py-3">${eventStatusBadge(r.status)}</td>
                   </tr>
                 `).join('')}
@@ -714,18 +714,18 @@ function showCreateGroupModal() {
       </div>
       <div class="p-5 space-y-3">
         <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1">그룹명 <span class="text-red-500">*</span></label>
+          <label class="block text-sm font-semibold text-gray-600 mb-1">그룹명 <span class="text-red-500">*</span></label>
           <input type="text" id="cg-name" placeholder="그룹명 입력 (2~100자)"
             class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1">설명</label>
+          <label class="block text-sm font-semibold text-gray-600 mb-1">설명</label>
           <textarea id="cg-desc" rows="3" placeholder="그룹 소개 (선택)"
             class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">카테고리</label>
+            <label class="block text-sm font-semibold text-gray-600 mb-1">카테고리</label>
             <select id="cg-category" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="association">협회</option>
               <option value="company">기업</option>
@@ -734,7 +734,7 @@ function showCreateGroupModal() {
             </select>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">공개 여부</label>
+            <label class="block text-sm font-semibold text-gray-600 mb-1">공개 여부</label>
             <select id="cg-visibility" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="public" selected>공개</option>
               <option value="private">비공개</option>
@@ -742,11 +742,11 @@ function showCreateGroupModal() {
           </div>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1">최대 멤버 수</label>
+          <label class="block text-sm font-semibold text-gray-600 mb-1">최대 멤버 수</label>
           <input type="number" id="cg-maxmembers" placeholder="제한 없음 (비워두면 무제한)" min="1"
             class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
-        <div id="cg-error" class="hidden text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
+        <div id="cg-error" class="hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
       </div>
       <div class="px-5 pb-5 flex gap-2">
         <button onclick="submitCreateGroup()"
@@ -819,28 +819,28 @@ async function showCreateEventModal() {
       </div>
       <div class="p-5 space-y-3">
         <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1">그룹 선택 <span class="text-red-500">*</span></label>
+          <label class="block text-sm font-semibold text-gray-600 mb-1">그룹 선택 <span class="text-red-500">*</span></label>
           <select id="ce-group" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
             ${groupOptions}
           </select>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1">행사명 <span class="text-red-500">*</span></label>
+          <label class="block text-sm font-semibold text-gray-600 mb-1">행사명 <span class="text-red-500">*</span></label>
           <input type="text" id="ce-title" placeholder="행사명 입력 (2~200자)"
             class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1">행사 설명</label>
+          <label class="block text-sm font-semibold text-gray-600 mb-1">행사 설명</label>
           <textarea id="ce-desc" rows="3" placeholder="행사 소개 (선택)"
             class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1">장소</label>
+          <label class="block text-sm font-semibold text-gray-600 mb-1">장소</label>
           <input type="text" id="ce-location" placeholder="행사 장소 (선택)"
             class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1">시작일시 <span class="text-red-500">*</span></label>
+          <label class="block text-sm font-semibold text-gray-600 mb-1">시작일시 <span class="text-red-500">*</span></label>
           <div class="grid grid-cols-2 gap-2">
             <input type="date" id="ce-starts-date"
               class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -853,7 +853,7 @@ async function showCreateEventModal() {
           </div>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1">종료일시</label>
+          <label class="block text-sm font-semibold text-gray-600 mb-1">종료일시</label>
           <div class="grid grid-cols-2 gap-2">
             <input type="date" id="ce-ends-date"
               class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -867,14 +867,14 @@ async function showCreateEventModal() {
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">공개 여부</label>
+            <label class="block text-sm font-semibold text-gray-600 mb-1">공개 여부</label>
             <select id="ce-visibility" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="public" selected>공개</option>
               <option value="group_only">그룹 전용</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">참가 방식</label>
+            <label class="block text-sm font-semibold text-gray-600 mb-1">참가 방식</label>
             <select id="ce-regtype" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="free" selected>자유 참가</option>
               <option value="pre_required">사전 신청</option>
@@ -883,7 +883,7 @@ async function showCreateEventModal() {
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">입장 방식</label>
+            <label class="block text-sm font-semibold text-gray-600 mb-1">입장 방식</label>
             <select id="ce-entry" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="qr" selected>QR</option>
               <option value="nfc_qr">NFC+QR</option>
@@ -891,12 +891,12 @@ async function showCreateEventModal() {
             </select>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">최대 참가자</label>
+            <label class="block text-sm font-semibold text-gray-600 mb-1">최대 참가자</label>
             <input type="number" id="ce-maxpart" placeholder="무제한" min="1"
               class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
           </div>
         </div>
-        <div id="ce-error" class="hidden text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
+        <div id="ce-error" class="hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
       </div>
       <div class="px-5 pb-5 flex gap-2">
         <button onclick="submitCreateEvent()"
@@ -976,7 +976,7 @@ async function loadPlanConfigs() {
       <div class="space-y-4">
         <div class="flex items-center justify-between">
           <h2 class="text-lg font-bold text-gray-900">플랜 설정</h2>
-          <p class="text-xs text-gray-400">그룹 최대 멤버 수 등 플랜별 제한을 설정합니다.</p>
+          <p class="text-sm text-gray-400">그룹 최대 멤버 수 등 플랜별 제한을 설정합니다.</p>
         </div>
         <div class="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-700">
           <i class="fas fa-info-circle mr-1"></i>
@@ -991,35 +991,35 @@ async function loadPlanConfigs() {
             <div class="bg-white rounded-xl shadow-sm border p-5">
               <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-2">
-                  <span class="px-2.5 py-1 rounded-full text-xs font-bold ${badgeClass}">${planLabels[p.code] || p.code}</span>
+                  <span class="px-2.5 py-1 rounded-full text-sm font-bold ${badgeClass}">${planLabels[p.code] || p.code}</span>
                   <span class="text-sm text-gray-500">${p.name}</span>
                 </div>
-                <span class="text-xs text-gray-400">code: ${p.code}</span>
+                <span class="text-sm text-gray-400">code: ${p.code}</span>
               </div>
               <div class="grid grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 mb-1">그룹 최대 멤버 수</label>
+                  <label class="block text-sm font-semibold text-gray-600 mb-1">그룹 최대 멤버 수</label>
                   <div class="flex gap-2">
                     <input type="number" id="plan-members-${p.code}" value="${p.max_group_members ?? ''}" placeholder="무제한 (비워두기)"
                       min="1" class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <button onclick="updatePlanConfig('${p.code}', 'max_group_members')"
-                      class="px-3 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition">
+                      class="px-3 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition">
                       저장
                     </button>
                   </div>
-                  <p class="text-xs text-gray-400 mt-1">현재: ${p.max_group_members !== null ? p.max_group_members + '명' : '무제한'}</p>
+                  <p class="text-sm text-gray-400 mt-1">현재: ${p.max_group_members !== null ? p.max_group_members + '명' : '무제한'}</p>
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 mb-1">명함 한도</label>
+                  <label class="block text-sm font-semibold text-gray-600 mb-1">명함 한도</label>
                   <div class="flex gap-2">
                     <input type="number" id="plan-cards-${p.code}" value="${p.max_cards ?? ''}" placeholder="무제한 (비워두기)"
                       min="1" class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <button onclick="updatePlanConfig('${p.code}', 'max_cards')"
-                      class="px-3 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition">
+                      class="px-3 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition">
                       저장
                     </button>
                   </div>
-                  <p class="text-xs text-gray-400 mt-1">현재: ${p.max_cards !== null ? p.max_cards + '개' : '무제한'}</p>
+                  <p class="text-sm text-gray-400 mt-1">현재: ${p.max_cards !== null ? p.max_cards + '개' : '무제한'}</p>
                 </div>
               </div>
             </div>`
@@ -1074,9 +1074,9 @@ async function loadNfcCards(page = 1) {
                 ${rows.map(r => `
                   <tr class="hover:bg-gray-50">
                     <td class="px-4 py-3 text-sm text-gray-900">${r.user_name ?? '-'}</td>
-                    <td class="px-4 py-3 text-xs text-gray-500">${r.group_name ?? '-'}</td>
-                    <td class="px-4 py-3 text-xs text-gray-500">${r.status ?? '-'}</td>
-                    <td class="px-4 py-3 text-xs text-gray-500">${r.applied_at ? formatDate(r.applied_at) : '-'}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">${r.group_name ?? '-'}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">${r.status ?? '-'}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">${r.applied_at ? formatDate(r.applied_at) : '-'}</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -1115,9 +1115,9 @@ async function loadRewards(page = 1) {
                 ${rows.map(r => `
                   <tr class="hover:bg-gray-50">
                     <td class="px-4 py-3 text-sm text-gray-900">${r.name ?? '-'}</td>
-                    <td class="px-4 py-3 text-xs text-gray-500">${r.partner_name ?? '-'}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">${r.partner_name ?? '-'}</td>
                     <td class="px-4 py-3 text-sm font-semibold text-blue-600">+${r.points ?? 0}</td>
-                    <td class="px-4 py-3 text-xs text-gray-500">${r.created_at ? formatDate(r.created_at) : '-'}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">${r.created_at ? formatDate(r.created_at) : '-'}</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -1228,15 +1228,15 @@ function renderPagination(p, loadFn) {
   let end = Math.min(total, start + 4);
   if (end - start < 4) start = Math.max(1, end - 4);
 
-  if (start > 1) btns.push(`<button onclick="${loadFn}(1)" class="w-8 h-8 rounded text-xs border hover:bg-gray-50">1</button>`);
-  if (start > 2) btns.push(`<span class="w-8 h-8 flex items-center justify-center text-gray-400 text-xs">…</span>`);
+  if (start > 1) btns.push(`<button onclick="${loadFn}(1)" class="w-8 h-8 rounded text-sm border hover:bg-gray-50">1</button>`);
+  if (start > 2) btns.push(`<span class="w-8 h-8 flex items-center justify-center text-gray-400 text-sm">…</span>`);
   for (let i = start; i <= end; i++) {
     btns.push(`<button onclick="${loadFn}(${i})"
-      class="w-8 h-8 rounded text-xs font-medium transition
+      class="w-8 h-8 rounded text-sm font-medium transition
              ${i === current ? 'bg-blue-600 text-white' : 'border hover:bg-gray-50 text-gray-600'}">${i}</button>`);
   }
-  if (end < total - 1) btns.push(`<span class="w-8 h-8 flex items-center justify-center text-gray-400 text-xs">…</span>`);
-  if (end < total) btns.push(`<button onclick="${loadFn}(${total})" class="w-8 h-8 rounded text-xs border hover:bg-gray-50">${total}</button>`);
+  if (end < total - 1) btns.push(`<span class="w-8 h-8 flex items-center justify-center text-gray-400 text-sm">…</span>`);
+  if (end < total) btns.push(`<button onclick="${loadFn}(${total})" class="w-8 h-8 rounded text-sm border hover:bg-gray-50">${total}</button>`);
 
   return `<div class="flex justify-center gap-1 pt-2">${btns.join('')}</div>`;
 }
@@ -1247,18 +1247,18 @@ function planBadge(plan) {
     pro: 'bg-blue-100 text-blue-700',
     business: 'bg-purple-100 text-purple-700'
   };
-  return `<span class="px-2 py-0.5 ${map[plan] || map.free} text-xs font-semibold rounded-full capitalize">${plan}</span>`;
+  return `<span class="px-2 py-0.5 ${map[plan] || map.free} text-sm font-semibold rounded-full capitalize">${plan}</span>`;
 }
 
 function accountTypeBadge(type) {
   const map = { personal: 'bg-gray-100 text-gray-600', headhunter: 'bg-orange-100 text-orange-700' };
   const labels = { personal: '일반', headhunter: '헤드헌터' };
-  return `<span class="px-2 py-0.5 ${map[type] || map.personal} text-xs rounded-full">${labels[type] || type}</span>`;
+  return `<span class="px-2 py-0.5 ${map[type] || map.personal} text-sm rounded-full">${labels[type] || type}</span>`;
 }
 
 function categoryBadge(cat) {
   const map = { association: '협회', company: '기업', club: '동호회', other: '기타' };
-  return `<span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded-full">${map[cat] || cat || '-'}</span>`;
+  return `<span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-sm rounded-full">${map[cat] || cat || '-'}</span>`;
 }
 
 function eventStatusBadge(status) {
@@ -1268,7 +1268,7 @@ function eventStatusBadge(status) {
     ended: 'bg-gray-100 text-gray-500'
   };
   const labels = { upcoming: '예정', ongoing: '진행중', ended: '종료' };
-  return `<span class="px-2 py-0.5 ${map[status] || 'bg-gray-100 text-gray-500'} text-xs rounded-full">${labels[status] || status || '-'}</span>`;
+  return `<span class="px-2 py-0.5 ${map[status] || 'bg-gray-100 text-gray-500'} text-sm rounded-full">${labels[status] || status || '-'}</span>`;
 }
 
 function formatDate(dateStr) {

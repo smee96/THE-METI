@@ -371,4 +371,48 @@ admin.patch(
   }
 )
 
+// ── 플랜 설정 조회 ────────────────────────────────────
+admin.get('/plan-configs', superAdminMiddleware, async (c) => {
+  const plans = await c.env.DB.prepare(`
+    SELECT code, name, max_cards, max_groups, max_group_members, monthly_points, price_monthly, features
+    FROM plans WHERE target = 'user' ORDER BY price_monthly ASC
+  `).all()
+  return c.json(ok(plans.results))
+})
+
+// ── 플랜 설정 변경 ────────────────────────────────────
+admin.patch(
+  '/plan-configs/:code',
+  superAdminMiddleware,
+  zValidator('json', z.object({
+    max_group_members: z.number().int().positive().nullable().optional(),
+    max_cards:         z.number().int().positive().nullable().optional(),
+    monthly_points:    z.number().int().min(0).optional(),
+    price_monthly:     z.number().int().min(0).optional(),
+  })),
+  async (c) => {
+    const code = c.req.param('code')
+    const body = c.req.valid('json')
+    const adminId = c.get('userId')
+
+    const plan = await c.env.DB.prepare(
+      `SELECT code FROM plans WHERE code = ? AND target = 'user'`
+    ).bind(code).first()
+    if (!plan) return c.json(fail('플랜을 찾을 수 없습니다.'), 404)
+
+    const updates: string[] = [`updated_at = datetime('now')`, `updated_by = ?`]
+    const values: unknown[] = [adminId]
+
+    if (body.max_group_members !== undefined) { updates.push('max_group_members = ?'); values.push(body.max_group_members) }
+    if (body.max_cards         !== undefined) { updates.push('max_cards = ?');         values.push(body.max_cards) }
+    if (body.monthly_points    !== undefined) { updates.push('monthly_points = ?');    values.push(body.monthly_points) }
+    if (body.price_monthly     !== undefined) { updates.push('price_monthly = ?');     values.push(body.price_monthly) }
+
+    values.push(code)
+    await c.env.DB.prepare(`UPDATE plans SET ${updates.join(', ')} WHERE code = ?`).bind(...values).run()
+
+    return c.json(ok(null, `${code} 플랜 설정이 변경되었습니다.`))
+  }
+)
+
 export default admin
