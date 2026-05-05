@@ -95,8 +95,9 @@ export function adminAppHtml(): string {
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
   <style>
+    html, body { font-size: 14px !important; }
     .sidebar-link.active { background: #1d4ed8; color: white; }
-    .sidebar-link { display:flex; align-items:center; gap:0.75rem; padding:0.75rem 1rem; border-radius:0.5rem; color:#cbd5e1; cursor:pointer; transition:background 0.15s; font-size:14px; }
+    .sidebar-link { display:flex; align-items:center; gap:0.75rem; padding:0.75rem 1rem; border-radius:0.5rem; color:#cbd5e1; cursor:pointer; transition:background 0.15s; }
     .sidebar-link:hover { background: #334155; }
   </style>
 </head>

@@ -224,6 +224,7 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
   <script>tailwind.config = { theme: { extend: { fontSize: { 'xs':'0.75rem','sm':'0.8125rem','base':'0.875rem','lg':'1rem','xl':'1.125rem','2xl':'1.25rem','3xl':'1.5rem' } } } }</script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
   <style>
+    html, body { font-size: 14px !important; }
     /* 사이드바 */
     #sidebar { transition: transform 0.25s ease; }
     @media (max-width: 768px) {
