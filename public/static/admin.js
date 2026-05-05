@@ -806,9 +806,9 @@ async function showCreateEventModal() {
 
   const modal = document.createElement('div');
   modal.id = 'create-event-modal';
-  modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto';
+  modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center p-4 overflow-y-auto';
   modal.innerHTML = `
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg my-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mt-8 mb-4">
       <div class="flex items-center justify-between px-5 py-4 border-b">
         <h3 class="font-bold text-gray-900">행사 생성</h3>
         <button onclick="document.getElementById('create-event-modal').remove()" class="text-gray-400 hover:text-gray-600">
