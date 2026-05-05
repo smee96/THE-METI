@@ -757,7 +757,6 @@ function showCreateGroupModal() {
     </div>
   `;
   document.body.appendChild(modal);
-  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
   setTimeout(() => document.getElementById('cg-name')?.focus(), 100);
 }
 
