@@ -838,16 +838,30 @@ async function showCreateEventModal() {
           <input type="text" id="ce-location" placeholder="행사 장소 (선택)"
             class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">시작일시 <span class="text-red-500">*</span></label>
-            <input type="datetime-local" id="ce-starts"
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">시작일시 <span class="text-red-500">*</span></label>
+          <div class="grid grid-cols-2 gap-2">
+            <input type="date" id="ce-starts-date"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onclick="this.showPicker && this.showPicker()">
+            <select id="ce-starts-hour"
               class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">시간 선택</option>
+              ${Array.from({length:24},(_,i)=>`<option value="${String(i).padStart(2,'0')}">${String(i).padStart(2,'0')}:00</option>`).join('')}
+            </select>
           </div>
-          <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">종료일시</label>
-            <input type="datetime-local" id="ce-ends"
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">종료일시</label>
+          <div class="grid grid-cols-2 gap-2">
+            <input type="date" id="ce-ends-date"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onclick="this.showPicker && this.showPicker()">
+            <select id="ce-ends-hour"
               class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">시간 선택</option>
+              ${Array.from({length:24},(_,i)=>`<option value="${String(i).padStart(2,'0')}">${String(i).padStart(2,'0')}:00</option>`).join('')}
+            </select>
           </div>
         </div>
         <div class="grid grid-cols-2 gap-3">
@@ -894,7 +908,8 @@ async function showCreateEventModal() {
     </div>
   `;
   document.body.appendChild(modal);
-  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  // mousedown 사용: 달력/피커 팝업 선택 시 click 이벤트 오발동 방지
+  modal.addEventListener('mousedown', e => { if (e.target === modal) modal.remove(); });
 }
 
 async function submitCreateEvent() {
@@ -902,8 +917,12 @@ async function submitCreateEvent() {
   const title = document.getElementById('ce-title')?.value.trim();
   const desc = document.getElementById('ce-desc')?.value.trim();
   const location = document.getElementById('ce-location')?.value.trim();
-  const startsRaw = document.getElementById('ce-starts')?.value;
-  const endsRaw = document.getElementById('ce-ends')?.value;
+  const startsDate = document.getElementById('ce-starts-date')?.value;
+  const startsHour = document.getElementById('ce-starts-hour')?.value;
+  const endsDate = document.getElementById('ce-ends-date')?.value;
+  const endsHour = document.getElementById('ce-ends-hour')?.value;
+  const startsRaw = (startsDate && startsHour) ? `${startsDate}T${startsHour}:00` : '';
+  const endsRaw   = (endsDate && endsHour)     ? `${endsDate}T${endsHour}:00`     : '';
   const visibility = document.getElementById('ce-visibility')?.value;
   const regtype = document.getElementById('ce-regtype')?.value;
   const entry = document.getElementById('ce-entry')?.value;
