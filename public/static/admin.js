@@ -69,17 +69,17 @@ function renderApp() {
         <!-- 네비게이션 -->
         <nav class="flex-1 px-2 py-1 overflow-y-auto" style="scrollbar-width:none;-ms-overflow-style:none;">
           <style>#sidebar nav::-webkit-scrollbar{display:none}</style>
-          <p class="text-slate-500 text-xs uppercase font-semibold px-2 pt-1 pb-0.5">메인</p>
+          <p class="text-slate-500 text-sm uppercase font-semibold px-2 pt-1 pb-0.5">메인</p>
           ${navItem('dashboard', 'tachometer-alt', '대시보드')}
           ${navItem('users', 'users', '유저 관리')}
           ${navItem('groups', 'building', '그룹 관리')}
           ${navItem('events', 'calendar-alt', '행사 관리')}
-          <p class="text-slate-500 text-xs uppercase font-semibold px-2 pt-2 pb-0.5">운영</p>
+          <p class="text-slate-500 text-sm uppercase font-semibold px-2 pt-2 pb-0.5">운영</p>
           ${navItem('reports', 'flag', '신고 관리')}
           ${navItem('nfc-cards', 'credit-card', 'NFC 카드')}
           ${navItem('partners', 'handshake', '파트너')}
           ${navItem('rewards', 'gift', '리워드')}
-          <p class="text-slate-500 text-xs uppercase font-semibold px-2 pt-2 pb-0.5">설정</p>
+          <p class="text-slate-500 text-sm uppercase font-semibold px-2 pt-2 pb-0.5">설정</p>
           ${navItem('plan-configs', 'sliders-h', '플랜 설정')}
         </nav>
 
@@ -298,13 +298,13 @@ async function loadUsers(page = 1, search = '') {
             <table class="w-full">
               <thead class="bg-gray-50 border-b">
                 <tr>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">ID</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">유저</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">유형</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">플랜</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">상태</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">가입일</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">액션</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">ID</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">유저</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">유형</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">플랜</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">상태</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">가입일</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">액션</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100">
@@ -314,14 +314,14 @@ async function loadUsers(page = 1, search = '') {
                     <td class="px-4 py-3 text-xs text-gray-400">#${u.id}</td>
                     <td class="px-4 py-3">
                       <p class="text-sm font-medium text-gray-900">${u.name}</p>
-                      <p class="text-xs text-gray-400">${u.email}</p>
+                      <p class="text-sm text-gray-400">${u.email}</p>
                     </td>
                     <td class="px-4 py-3">${accountTypeBadge(u.account_type)}</td>
                     <td class="px-4 py-3">${planBadge(u.plan)}</td>
                     <td class="px-4 py-3">
                       ${u.is_active
-                        ? '<span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">활성</span>'
-                        : '<span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">비활성</span>'}
+                        ? '<span class="px-2 py-0.5 bg-green-100 text-green-700 text-sm rounded-full">활성</span>'
+                        : '<span class="px-2 py-0.5 bg-red-100 text-red-700 text-sm rounded-full">비활성</span>'}
                     </td>
                     <td class="px-4 py-3 text-xs text-gray-400">${formatDate(u.created_at)}</td>
                     <td class="px-4 py-3">
@@ -352,13 +352,13 @@ async function loadUsers(page = 1, search = '') {
               <div class="flex items-start justify-between mb-2">
                 <div>
                   <p class="font-medium text-gray-900 text-sm">${u.name}</p>
-                  <p class="text-xs text-gray-400">${u.email}</p>
+                  <p class="text-sm text-gray-400">${u.email}</p>
                 </div>
                 <div class="flex gap-1">
                   ${planBadge(u.plan)}
                   ${u.is_active
-                    ? '<span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">활성</span>'
-                    : '<span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">비활성</span>'}
+                    ? '<span class="px-2 py-0.5 bg-green-100 text-green-700 text-sm rounded-full">활성</span>'
+                    : '<span class="px-2 py-0.5 bg-red-100 text-red-700 text-sm rounded-full">비활성</span>'}
                 </div>
               </div>
               <div class="flex items-center justify-between text-xs text-gray-400">
@@ -418,12 +418,12 @@ async function loadGroups(page = 1, status = 'pending') {
           <table class="w-full">
             <thead class="bg-gray-50 border-b">
               <tr>
-                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">그룹명</th>
-                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">관리자</th>
-                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">카테고리</th>
-                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">공개</th>
-                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">신청일</th>
-                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">액션</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">그룹명</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">관리자</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">카테고리</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">공개</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">신청일</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">액션</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
@@ -537,11 +537,11 @@ async function loadReports(page = 1, status = 'pending') {
             <table class="w-full">
               <thead class="bg-gray-50 border-b">
                 <tr>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">신고자</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">대상</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">사유</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">날짜</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">액션</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">신고자</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">대상</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">사유</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">날짜</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">액션</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100">
@@ -620,10 +620,10 @@ async function loadPartners() {
             <table class="w-full">
               <thead class="bg-gray-50 border-b">
                 <tr>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">서비스명</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">설명</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">상태</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">등록일</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">서비스명</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">설명</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">상태</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">등록일</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100">
@@ -634,8 +634,8 @@ async function loadPartners() {
                     <td class="px-4 py-3 text-xs text-gray-400">${p.description || '-'}</td>
                     <td class="px-4 py-3">
                       ${p.status === 'active'
-                        ? '<span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">활성</span>'
-                        : '<span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">비활성</span>'}
+                        ? '<span class="px-2 py-0.5 bg-green-100 text-green-700 text-sm rounded-full">활성</span>'
+                        : '<span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-sm rounded-full">비활성</span>'}
                     </td>
                     <td class="px-4 py-3 text-xs text-gray-400">${formatDate(p.created_at)}</td>
                   </tr>
@@ -671,10 +671,10 @@ async function loadEvents(page = 1) {
             <table class="w-full">
               <thead class="bg-gray-50 border-b">
                 <tr>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">제목</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">그룹</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">일정</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">상태</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">제목</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">그룹</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">일정</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">상태</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100">
@@ -1063,10 +1063,10 @@ async function loadNfcCards(page = 1) {
             <table class="w-full">
               <thead class="bg-gray-50 border-b">
                 <tr>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">유저</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">그룹</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">상태</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">신청일</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">유저</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">그룹</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">상태</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">신청일</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100">
@@ -1104,10 +1104,10 @@ async function loadRewards(page = 1) {
             <table class="w-full">
               <thead class="bg-gray-50 border-b">
                 <tr>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">유저</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">파트너</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">포인트</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">날짜</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">유저</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">파트너</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">포인트</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">날짜</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100">

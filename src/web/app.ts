@@ -336,7 +336,7 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
       <!-- ── [개인] 대시보드 ── -->
       <section id="section-dashboard" class="page-section active">
         <div class="mb-6">
-          <h3 class="text-2xl font-bold text-gray-800">안녕하세요, <span id="greeting-name">-</span>님 👋</h3>
+          <h3 class="text-lg font-bold text-gray-800">안녕하세요, <span id="greeting-name">-</span>님 👋</h3>
           <p class="text-gray-500 mt-1">오늘도 좋은 하루 되세요.</p>
         </div>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
