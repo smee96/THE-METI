@@ -131,11 +131,9 @@ function renderApp() {
 
 function navItem(id, icon, label) {
   return `<a onclick="navigateTo('${id}'); closeSidebar();" href="#${id}" id="nav-${id}"
-    class="sidebar-link flex items-center gap-2 px-2 py-1.5 rounded-md text-slate-300
-           hover:bg-slate-700 cursor-pointer transition-colors font-medium mb-0.5"
-    style="font-size:14px">
-    <i class="fas fa-${icon} text-center flex-shrink-0" style="width:16px;font-size:15px"></i>
-    <span style="font-size:14px">${label}</span>
+    class="sidebar-link mb-0.5">
+    <i class="fas fa-${icon}" style="width:16px;text-align:center;flex-shrink:0"></i>
+    <span>${label}</span>
   </a>`;
 }
 
