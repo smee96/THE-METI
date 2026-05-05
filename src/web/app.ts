@@ -8,7 +8,7 @@ export function appLoginHtml(): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>METI - 로그인</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>tailwind.config = { theme: { extend: { fontSize: { 'xs':'0.75rem','sm':'0.8125rem','base':'0.875rem','lg':'1rem','xl':'1.125rem','2xl':'1.25rem','3xl':'1.5rem' } } } }</script>
+  <script>tailwind.config = { theme: { extend: { fontSize: { 'xs':'11px','sm':'12px','base':'13px','lg':'14px','xl':'15px','2xl':'16px','3xl':'18px' } } } }</script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center">
@@ -113,7 +113,7 @@ export function appRegisterHtml(): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>METI - 회원가입</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>tailwind.config = { theme: { extend: { fontSize: { 'xs':'0.75rem','sm':'0.8125rem','base':'0.875rem','lg':'1rem','xl':'1.125rem','2xl':'1.25rem','3xl':'1.5rem' } } } }</script>
+  <script>tailwind.config = { theme: { extend: { fontSize: { 'xs':'11px','sm':'12px','base':'13px','lg':'14px','xl':'15px','2xl':'16px','3xl':'18px' } } } }</script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center py-10">
@@ -221,10 +221,10 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${pageTitle}</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>tailwind.config = { theme: { extend: { fontSize: { 'xs':'0.75rem','sm':'0.8125rem','base':'0.875rem','lg':'1rem','xl':'1.125rem','2xl':'1.25rem','3xl':'1.5rem' } } } }</script>
+  <script>tailwind.config = { theme: { extend: { fontSize: { 'xs':'11px','sm':'12px','base':'13px','lg':'14px','xl':'15px','2xl':'16px','3xl':'18px' } } } }</script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
   <style>
-    html, body { font-size: 14px !important; }
+    html, body { font-size: 13px; }
     /* 사이드바 */
     #sidebar { transition: transform 0.25s ease; }
     @media (max-width: 768px) {
@@ -237,7 +237,7 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
       display: flex; align-items: center; gap: 0.75rem;
       padding: 0.65rem 1rem; border-radius: 0.5rem;
       color: #94a3b8; cursor: pointer; transition: all 0.15s;
-      font-size: 0.8125rem;
+      font-size: 13px;
     }
     .nav-item:hover { background: #1e293b; color: #f1f5f9; }
     .nav-item.active { background: #2563eb; color: #fff; }
