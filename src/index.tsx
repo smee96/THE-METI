@@ -20,108 +20,8 @@ import { appLoginHtml, appRegisterHtml, appShellHtml } from './web/app'
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
-// ── 글로벌 미들웨어 ───────────────────────────────────────
-app.use('*', logger())
-app.use('/api/*', cors({
-  origin: [
-    'https://meti.io',
-    'https://admin.meti.io',
-    'https://my.meti.io',
-    'https://the-meti.pages.dev',
-    'https://www.the-meti.pages.dev',
-    'http://localhost:3000',
-    'http://localhost:5173',
-  ],
-  allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization', 'X-Partner-API-Key'],
-  exposeHeaders: ['X-Total-Count'],
-  maxAge: 86400,
-  credentials: true,
-}))
-
-// ── 정적 파일 ─────────────────────────────────────────────
-app.use('/static/*', serveStatic({ root: './public' }))
-
-// ── API 라우트 (v1) ───────────────────────────────────────
-app.route('/api/v1/auth',    authRoutes)
-app.route('/api/v1/cards',   cardsRoutes)
-app.route('/api/v1/groups',  groupsRoutes)
-app.route('/api/v1/events',  eventsRoutes)
-app.route('/api/v1/chat',    chatRoutes)
-app.route('/api/v1/partner', partnerRoutes)
-app.route('/api/v1/admin',   adminRoutes)
-app.route('/api/v1/lessons', lessonsRoutes)
-
-// ── 헬스체크 ──────────────────────────────────────────────
-app.get('/health', (c) =>
-  c.json({ status: 'ok', service: 'METI Backend', version: '1.0.0' })
-)
-
 // ════════════════════════════════════════════════════════════
-// ── Admin Web UI  (/admin)
-// ════════════════════════════════════════════════════════════
-app.get('/admin', (c) => c.html(adminLoginHtml()))
-app.get('/admin/*', (c) => c.html(adminAppHtml()))
-
-// ════════════════════════════════════════════════════════════
-// ── App Web UI  (/app)
-//    사용자 + 그룹관리자 웹
-//
-//  /app/login          로그인 (공통 진입점)
-//  /app/register       회원가입
-//  /app/dashboard      개인 대시보드
-//  /app/cards          내 명함 관리
-//  /app/groups         내 그룹 목록 (소속 전체)
-//  /app/points         개인 포인트
-//  /app/subscription   구독 현황
-//  /app/group/:id/*    그룹 관리 (group_admin 전용)
-//    └─ /app/group/:id/dashboard
-//    └─ /app/group/:id/members
-//    └─ /app/group/:id/events
-//    └─ /app/group/:id/points
-//    └─ /app/group/:id/lessons
-//    └─ /app/group/:id/invites
-// ════════════════════════════════════════════════════════════
-
-// 로그인 / 회원가입 (인증 불필요)
-app.get('/app/login',    (c) => c.html(appLoginHtml()))
-app.get('/app/register', (c) => c.html(appRegisterHtml()))
-
-// /app 루트 → 로그인으로 리다이렉트
-app.get('/app', (c) => c.redirect('/app/login'))
-
-// 나머지 /app/* 전체 → SPA shell (JS가 라우팅 처리)
-app.get('/app/*', (c) => c.html(appShellHtml('METI')))
-
-// ════════════════════════════════════════════════════════════
-// ── 명함 공개 페이지 (앱 미설치자용)
-// ════════════════════════════════════════════════════════════
-app.get('/card/:id', (c) => {
-  const cardId = c.req.param('id')
-  return c.html(cardPublicHtml(cardId))
-})
-
-// ── API 404 ───────────────────────────────────────────────
-app.notFound((c) => {
-  if (c.req.path.startsWith('/api/')) {
-    return c.json({ success: false, error: '요청한 엔드포인트를 찾을 수 없습니다.' }, 404)
-  }
-  return c.html('<h1>Not Found</h1>', 404)
-})
-
-// ── 글로벌 에러 핸들러 ────────────────────────────────────
-app.onError((err, c) => {
-  console.error('Unhandled error:', err)
-  if (c.req.path.startsWith('/api/')) {
-    return c.json({ success: false, error: '서버 오류가 발생했습니다.' }, 500)
-  }
-  return c.html('<h1>Internal Server Error</h1>', 500)
-})
-
-export default app
-
-// ════════════════════════════════════════════════════════════
-// ── 명함 공개 페이지 HTML
+// ── 명함 공개 페이지 HTML (함수 먼저 선언)
 // ════════════════════════════════════════════════════════════
 function cardPublicHtml(cardId: string): string {
   return `<!DOCTYPE html>
@@ -202,3 +102,106 @@ function cardPublicHtml(cardId: string): string {
 </body>
 </html>`
 }
+
+// ── 글로벌 미들웨어 ───────────────────────────────────────
+app.use('*', logger())
+app.use('/api/*', cors({
+  origin: [
+    'https://meti.io',
+    'https://admin.meti.io',
+    'https://my.meti.io',
+    'https://the-meti.pages.dev',
+    'https://www.the-meti.pages.dev',
+    'http://localhost:3000',
+    'http://localhost:5173',
+  ],
+  allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Partner-API-Key'],
+  exposeHeaders: ['X-Total-Count'],
+  maxAge: 86400,
+  credentials: true,
+}))
+
+// ── 정적 파일 ─────────────────────────────────────────────
+app.use('/static/*', serveStatic({ root: './public' }))
+
+// ── API 라우트 (v1) ───────────────────────────────────────
+app.route('/api/v1/auth',    authRoutes)
+app.route('/api/v1/cards',   cardsRoutes)
+app.route('/api/v1/groups',  groupsRoutes)
+app.route('/api/v1/events',  eventsRoutes)
+app.route('/api/v1/chat',    chatRoutes)
+app.route('/api/v1/partner', partnerRoutes)
+app.route('/api/v1/admin',   adminRoutes)
+app.route('/api/v1/lessons', lessonsRoutes)
+
+// ── 헬스체크 ──────────────────────────────────────────────
+app.get('/health', (c) =>
+  c.json({ status: 'ok', service: 'METI Backend', version: '1.0.0' })
+)
+
+// ════════════════════════════════════════════════════════════
+// ── Admin Web UI  (/admin)
+// ════════════════════════════════════════════════════════════
+app.get('/admin', (c) => c.html(adminLoginHtml()))
+app.get('/admin/*', (c) => c.html(adminAppHtml()))
+
+// ════════════════════════════════════════════════════════════
+// ── App Web UI  (/app)
+//    사용자 + 그룹관리자 웹
+//
+//  /app/login          로그인 (공통 진입점)
+//  /app/register       회원가입
+//  /app/dashboard      개인 대시보드
+//  /app/cards          내 명함 관리
+//  /app/groups         내 그룹 목록 (소속 전체)
+//  /app/points         개인 포인트
+//  /app/subscription   구독 현황
+//  /app/group/:id/*    그룹 관리 (group_admin 전용)
+//    └─ /app/group/:id/dashboard
+//    └─ /app/group/:id/members
+//    └─ /app/group/:id/events
+//    └─ /app/group/:id/points
+//    └─ /app/group/:id/lessons
+//    └─ /app/group/:id/invites
+// ════════════════════════════════════════════════════════════
+
+// 로그인 / 회원가입 (인증 불필요)
+app.get('/app/login',    (c) => c.html(appLoginHtml()))
+app.get('/app/register', (c) => c.html(appRegisterHtml()))
+
+// 루트 → /app/login 으로 리다이렉트
+app.get('/', (c) => c.redirect('/app/login'))
+
+// /app 루트 → 로그인으로 리다이렉트
+app.get('/app', (c) => c.redirect('/app/login'))
+
+// 나머지 /app/* 전체 → SPA shell (JS가 라우팅 처리)
+app.get('/app/*', (c) => c.html(appShellHtml('METI')))
+
+// ════════════════════════════════════════════════════════════
+// ── 명함 공개 페이지 (앱 미설치자용)
+// ════════════════════════════════════════════════════════════
+app.get('/card/:id', (c) => {
+  const cardId = c.req.param('id')
+  return c.html(cardPublicHtml(cardId))
+})
+
+// ── API 404 ───────────────────────────────────────────────
+app.notFound((c) => {
+  if (c.req.path.startsWith('/api/')) {
+    return c.json({ success: false, error: '요청한 엔드포인트를 찾을 수 없습니다.' }, 404)
+  }
+  return c.html('<h1>Not Found</h1>', 404)
+})
+
+// ── 글로벌 에러 핸들러 ────────────────────────────────────
+app.onError((err, c) => {
+  console.error('Unhandled error:', err)
+  if (c.req.path.startsWith('/api/')) {
+    return c.json({ success: false, error: '서버 오류가 발생했습니다.' }, 500)
+  }
+  return c.html('<h1>Internal Server Error</h1>', 500)
+})
+
+export default app
