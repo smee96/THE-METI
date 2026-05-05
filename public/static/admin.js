@@ -55,10 +55,10 @@ function renderApp() {
         <div class="px-3 py-2.5 border-b border-slate-700 flex items-center justify-between flex-shrink-0">
           <div class="flex items-center gap-2">
             <div class="w-6 h-6 bg-blue-600 rounded-md flex items-center justify-center flex-shrink-0">
-              <i class="fas fa-id-card text-white" style="font-size:10px"></i>
+              <i class="fas fa-id-card text-white" style="font-size:14px"></i>
             </div>
             <div>
-              <h1 class="text-white font-bold leading-none" style="font-size:13px">METI Admin</h1>
+              <h1 class="text-white font-bold leading-none" style="font-size:15px">METI Admin</h1>
             </div>
           </div>
           <button onclick="closeSidebar()" class="lg:hidden text-slate-400 hover:text-white p-1">
@@ -87,13 +87,13 @@ function renderApp() {
         <div class="px-2 py-2 border-t border-slate-700 flex-shrink-0">
           <div class="flex items-center gap-2 px-2 py-1.5">
             <div class="w-6 h-6 bg-slate-600 rounded-full flex items-center justify-center flex-shrink-0">
-              <i class="fas fa-user text-slate-300" style="font-size:9px"></i>
+              <i class="fas fa-user text-slate-300" style="font-size:13px"></i>
             </div>
             <div class="flex-1 min-w-0">
-              <p class="text-white font-medium truncate" style="font-size:11px">${currentUser?.name || 'Admin'}</p>
+              <p class="text-white font-medium truncate" style="font-size:14px">${currentUser?.name || 'Admin'}</p>
             </div>
             <button onclick="logout()" class="text-slate-400 hover:text-red-400 flex-shrink-0 transition-colors" title="로그아웃">
-              <i class="fas fa-sign-out-alt" style="font-size:13px"></i>
+              <i class="fas fa-sign-out-alt" style="font-size:15px"></i>
             </button>
           </div>
         </div>
@@ -133,8 +133,8 @@ function navItem(id, icon, label) {
   return `<a onclick="navigateTo('${id}'); closeSidebar();" href="#${id}" id="nav-${id}"
     class="sidebar-link flex items-center gap-2 px-2 py-1.5 rounded-md text-slate-300
            hover:bg-slate-700 cursor-pointer transition-colors font-medium mb-0.5"
-    style="font-size:11.5px">
-    <i class="fas fa-${icon} text-center flex-shrink-0" style="width:16px;font-size:13px"></i>
+    style="font-size:14px">
+    <i class="fas fa-${icon} text-center flex-shrink-0" style="width:16px;font-size:15px"></i>
     <span>${label}</span>
   </a>`;
 }
