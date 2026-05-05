@@ -96,9 +96,10 @@ export function adminAppHtml(): string {
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
   <style>
     html, body { font-size: 13px; }
-    .sidebar-link.active { background: #1d4ed8; color: white; }
-    .sidebar-link { display:flex; align-items:center; gap:0.5rem; padding:0.6rem 0.75rem; border-radius:0.5rem; color:#cbd5e1; cursor:pointer; transition:background 0.15s; font-size:13px; }
-    .sidebar-link:hover { background: #334155; }
+    .sidebar-link { display:flex; align-items:center; gap:0.75rem; padding:0.65rem 1rem; border-radius:0.5rem; color:#94a3b8; cursor:pointer; transition:all 0.15s; font-size:13px; }
+    .sidebar-link:hover { background:#1e293b; color:#f1f5f9; }
+    .sidebar-link.active { background:#2563eb; color:#fff; }
+    .sidebar-link i { width:1.1rem; text-align:center; }
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen">

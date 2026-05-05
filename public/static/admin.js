@@ -130,11 +130,10 @@ function renderApp() {
 }
 
 function navItem(id, icon, label) {
-  return `<a onclick="navigateTo('${id}'); closeSidebar();" href="#${id}" id="nav-${id}"
-    class="sidebar-link mb-0.5">
-    <i class="fas fa-${icon}" style="width:16px;text-align:center;flex-shrink:0"></i>
-    <span>${label}</span>
-  </a>`;
+  return `<button onclick="navigateTo('${id}'); closeSidebar();" id="nav-${id}"
+    class="sidebar-link w-full text-left">
+    <i class="fas fa-${icon}"></i> ${label}
+  </button>`;
 }
 
 // ── 사이드바 토글 (모바일) ─────────────────────────────
@@ -157,9 +156,9 @@ function closeSidebar() {
 // ── 네비게이션 ───────────────────────────────────────────
 function navigateTo(section) {
   document.querySelectorAll('.sidebar-link').forEach(el =>
-    el.classList.remove('bg-blue-700', 'text-white'));
+    el.classList.remove('active'));
   const navEl = document.getElementById(`nav-${section}`);
-  if (navEl) navEl.classList.add('bg-blue-700', 'text-white');
+  if (navEl) navEl.classList.add('active');
 
   currentSection = section;
 
