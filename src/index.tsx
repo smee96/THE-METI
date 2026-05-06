@@ -11,8 +11,9 @@ import groupsRoutes  from './routes/groups'
 import eventsRoutes  from './routes/events'
 import chatRoutes    from './routes/chat'
 import partnerRoutes from './routes/partner'
-import adminRoutes   from './routes/admin'
-import lessonsRoutes from './routes/lessons'
+import adminRoutes    from './routes/admin'
+import lessonsRoutes  from './routes/lessons'
+import productsRoutes from './routes/products'
 
 // Web UI HTML 템플릿
 import { adminLoginHtml, adminAppHtml }               from './web/admin'
@@ -129,11 +130,12 @@ app.use('/static/*', serveStatic({ root: './public' }))
 app.route('/api/v1/auth',    authRoutes)
 app.route('/api/v1/cards',   cardsRoutes)
 app.route('/api/v1/groups',  groupsRoutes)
-app.route('/api/v1/events',  eventsRoutes)
-app.route('/api/v1/chat',    chatRoutes)
-app.route('/api/v1/partner', partnerRoutes)
-app.route('/api/v1/admin',   adminRoutes)
-app.route('/api/v1/lessons', lessonsRoutes)
+app.route('/api/v1/events',   eventsRoutes)
+app.route('/api/v1/chat',     chatRoutes)
+app.route('/api/v1/partner',  partnerRoutes)
+app.route('/api/v1/admin',    adminRoutes)
+app.route('/api/v1/lessons',  lessonsRoutes)
+app.route('/api/v1',          productsRoutes)  // /groups/:id/products, /orders, /payments
 
 // ── 헬스체크 ──────────────────────────────────────────────
 app.get('/health', (c) =>

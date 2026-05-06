@@ -537,4 +537,45 @@ groups.patch(
   }
 )
 
+// ══════════════════════════════════════════════════════════════
+// PATCH /:id/members/:memberId/role
+// 멤버 역할 변경 (admin 전용) — instructor 포함
+// ══════════════════════════════════════════════════════════════
+groups.patch(
+  '/:id/members/:memberId/role',
+  authMiddleware,
+  zValidator('json', z.object({
+    role: z.enum(['sub_admin', 'instructor', 'member'])
+  })),
+  async (c) => {
+    const userId   = c.get('userId')
+    const groupId  = parseInt(c.req.param('id'))
+    const memberId = parseInt(c.req.param('memberId'))
+    const { role } = c.req.valid('json')
+
+    // 요청자가 admin인지 확인
+    const adminMember = await c.env.DB.prepare(
+      `SELECT role FROM group_members WHERE group_id = ? AND user_id = ? AND status = 'active'`
+    ).bind(groupId, userId).first<{ role: string }>()
+
+    if (!adminMember || adminMember.role !== 'admin') {
+      return c.json(fail('그룹 오너(admin)만 역할을 변경할 수 있습니다.'), 403)
+    }
+
+    // 대상 멤버가 존재하는지 확인
+    const target = await c.env.DB.prepare(
+      `SELECT id, user_id, role FROM group_members WHERE id = ? AND group_id = ? AND status = 'active'`
+    ).bind(memberId, groupId).first<{ id: number; user_id: number; role: string }>()
+
+    if (!target) return c.json(fail('멤버를 찾을 수 없습니다.'), 404)
+    if (target.user_id === userId) return c.json(fail('자기 자신의 역할은 변경할 수 없습니다.'), 400)
+
+    await c.env.DB.prepare(
+      `UPDATE group_members SET role = ?, updated_at = datetime('now') WHERE id = ?`
+    ).bind(role, memberId).run()
+
+    return c.json(ok({ member_id: memberId, role }, `역할이 '${role}'(으)로 변경되었습니다.`))
+  }
+)
+
 export default groups

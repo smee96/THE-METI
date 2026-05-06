@@ -696,8 +696,8 @@ async function loadGroupEvents(groupId) {
   const el = document.getElementById('events-list');
   el.innerHTML = loadingHtml();
   try {
-    const res = await axios.get(`/events?group_id=${groupId}&limit=20`);
-    const events = res.data.data?.events || [];
+    const res = await axios.get(`/api/v1/events/groups/${groupId}/events?limit=20`);
+    const events = res.data.data || [];
     if (events.length === 0) { el.innerHTML = emptyHtml('행사가 없습니다.'); return; }
     el.innerHTML = events.map(ev => `
       <div class="item-card">
@@ -728,7 +728,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const errEl = document.getElementById('event-form-error');
     errEl.classList.add('hidden');
     try {
-      const res = await axios.post('/events', {
+      const res = await axios.post(`/api/v1/events/groups/${currentCtx.id}/events`, {
         group_id:    currentCtx.id,
         title:       document.getElementById('event-title').value.trim(),
         description: document.getElementById('event-desc').value.trim(),
@@ -773,8 +773,8 @@ async function loadGroupLessons(groupId) {
   const el = document.getElementById('lessons-list');
   el.innerHTML = loadingHtml();
   try {
-    const res = await axios.get(`/lessons?group_id=${groupId}&limit=20`);
-    const lessons = res.data.data?.lessons || [];
+    const res = await axios.get(`/api/v1/lessons/groups/${groupId}/lessons?limit=20`);
+    const lessons = res.data.data || [];
     if (lessons.length === 0) { el.innerHTML = emptyHtml('레슨 일정이 없습니다.'); return; }
     el.innerHTML = lessons.map(l => `
       <div class="item-card flex items-center gap-3">
@@ -789,7 +789,102 @@ async function loadGroupLessons(groupId) {
   } catch (e) { el.innerHTML = errorHtml('레슨 목록을 불러오지 못했습니다.'); }
 }
 
-function openCreateLessonModal() { alert('레슨 일정 추가 기능은 준비 중입니다.'); }
+function openLessonCreateModal() {
+  const groupId = currentCtx?.id;
+  if (!groupId) return;
+  // 강사 목록 먼저 로드
+  axios.get(`/api/v1/groups/${groupId}/members?role=instructor&limit=50`).then(res => {
+    const instructors = (res.data.data || []).filter(m =>
+      ['admin','sub_admin','instructor'].includes(m.role)
+    );
+    const optHtml = instructors.length === 0
+      ? '<option value="">강사 없음 (먼저 강사 역할 지정 필요)</option>'
+      : instructors.map(m => `<option value="${m.user_id}">${escHtml(m.name)}</option>`).join('');
+
+    const modal = document.createElement('div');
+    modal.id = 'modal-lesson-create';
+    modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4';
+    modal.innerHTML = `
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-screen overflow-y-auto">
+        <div class="px-5 py-4 border-b flex items-center justify-between">
+          <h3 class="font-bold text-gray-900">레슨 일정 추가</h3>
+          <button onclick="document.getElementById('modal-lesson-create').remove()" class="text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <form id="lesson-create-form" class="px-5 py-4 space-y-3">
+          <div>
+            <label class="block text-sm font-semibold text-gray-600 mb-1">강사 <span class="text-red-500">*</span></label>
+            <select id="lc-instructor" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+              ${optHtml}
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-600 mb-1">레슨명 <span class="text-red-500">*</span></label>
+            <input type="text" id="lc-title" placeholder="레슨명 입력" maxlength="200"
+              class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-600 mb-1">일시 <span class="text-red-500">*</span></label>
+            <input type="datetime-local" id="lc-scheduled"
+              class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+          </div>
+          <div class="flex gap-2">
+            <div class="flex-1">
+              <label class="block text-sm font-semibold text-gray-600 mb-1">시간(분)</label>
+              <input type="number" id="lc-duration" value="60" min="10" max="480"
+                class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div class="flex-1">
+              <label class="block text-sm font-semibold text-gray-600 mb-1">정원</label>
+              <input type="number" id="lc-capacity" placeholder="무제한" min="1"
+                class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-600 mb-1">장소</label>
+            <input type="text" id="lc-location" placeholder="장소 (선택)" maxlength="200"
+              class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+          </div>
+          <p id="lc-error" class="hidden text-red-500 text-sm"></p>
+          <button type="submit"
+            class="w-full py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition">
+            레슨 추가 (500P 차감)
+          </button>
+        </form>
+      </div>`;
+    document.body.appendChild(modal);
+
+    document.getElementById('lesson-create-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errEl = document.getElementById('lc-error');
+      errEl.classList.add('hidden');
+      const instructorId = parseInt(document.getElementById('lc-instructor').value);
+      const title = document.getElementById('lc-title').value.trim();
+      const scheduled = document.getElementById('lc-scheduled').value;
+      if (!title) { errEl.textContent='레슨명을 입력해주세요.'; errEl.classList.remove('hidden'); return; }
+      if (!scheduled) { errEl.textContent='일시를 선택해주세요.'; errEl.classList.remove('hidden'); return; }
+      if (!instructorId) { errEl.textContent='강사를 선택해주세요.'; errEl.classList.remove('hidden'); return; }
+      try {
+        await axios.post(`/api/v1/lessons/groups/${groupId}/lessons`, {
+          instructor_id   : instructorId,
+          title,
+          scheduled_at    : scheduled,
+          duration_minutes: parseInt(document.getElementById('lc-duration').value) || 60,
+          capacity        : parseInt(document.getElementById('lc-capacity').value) || undefined,
+          location        : document.getElementById('lc-location').value.trim() || undefined,
+        });
+        modal.remove();
+        loadGroupLessons(groupId);
+      } catch (err) {
+        errEl.textContent = err.response?.data?.error || '레슨 추가에 실패했습니다.';
+        errEl.classList.remove('hidden');
+      }
+    });
+  }).catch(() => {
+    alert('멤버 목록을 불러오지 못했습니다.');
+  });
+}
 
 // ════════════════════════════════════════════════════════
 // ── [그룹관리] 초대링크

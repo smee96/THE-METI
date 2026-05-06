@@ -7,242 +7,319 @@ import { ok, fail, paginate, parsePagination } from '../middleware/response'
 
 const lessons = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
-// ── GET /lessons/:groupId/schedules ───────────────────
-// 레슨 그룹의 일정 목록 조회
-lessons.get('/:groupId/schedules', authMiddleware, async (c) => {
-  const userId = c.get('userId')
-  const groupId = parseInt(c.req.param('groupId'))
-  const { page, limit, offset } = parsePagination(c.req.query('page'), c.req.query('limit'))
-  const status = c.req.query('status')
-
-  // 그룹 접근권한: 멤버 또는 보호자
-  const member = await c.env.DB.prepare(
+// ══════════════════════════════════════════════════════════════
+// 헬퍼: 그룹 내 역할 확인
+// ══════════════════════════════════════════════════════════════
+async function getMemberRole(db: D1Database, groupId: number, userId: number) {
+  return db.prepare(
     `SELECT role FROM group_members WHERE group_id = ? AND user_id = ? AND status = 'active'`
   ).bind(groupId, userId).first<{ role: string }>()
+}
 
-  const isGuardian = await c.env.DB.prepare(`
-    SELECT ug.id FROM user_guardians ug
-    JOIN group_members gm ON gm.user_id = ug.user_id AND gm.group_id = ? AND gm.status = 'active'
-    WHERE ug.guardian_user_id = ? AND ug.status = 'active'
-    LIMIT 1
-  `).bind(groupId, userId).first()
+const MANAGE_ROLES = ['admin', 'sub_admin', 'instructor']
+const ADMIN_ROLES  = ['admin', 'sub_admin']
 
-  if (!member && !isGuardian) {
-    return c.json(fail('접근 권한이 없습니다.'), 403)
-  }
+// ══════════════════════════════════════════════════════════════
+// GET /api/v1/groups/:groupId/lessons
+// 그룹 내 레슨 목록 (그룹 멤버 전체 조회 가능)
+// ══════════════════════════════════════════════════════════════
+lessons.get('/groups/:groupId/lessons', authMiddleware, async (c) => {
+  const userId  = c.get('userId')
+  const groupId = parseInt(c.req.param('groupId'))
+  const { page, limit, offset } = parsePagination(c.req.query('page'), c.req.query('limit'))
+  const status  = c.req.query('status')
+
+  const member = await getMemberRole(c.env.DB, groupId, userId)
+  if (!member) return c.json(fail('그룹 멤버만 조회할 수 있습니다.'), 403)
 
   let query = `
-    SELECT ls.*, u.name as instructor_name,
-      (SELECT COUNT(*) FROM lesson_attendances WHERE schedule_id = ls.id AND status = 'present') as present_count,
-      (SELECT COUNT(*) FROM lesson_attendances WHERE schedule_id = ls.id) as total_students
-    FROM lesson_schedules ls
-    JOIN users u ON u.id = ls.instructor_id
-    WHERE ls.group_id = ? AND ls.is_deleted = 0
+    SELECT l.*,
+      u.name   AS instructor_name,
+      u.email  AS instructor_email,
+      (SELECT COUNT(*) FROM lesson_registrations WHERE lesson_id = l.id AND status = 'confirmed') AS registered_count
+    FROM lessons l
+    JOIN users u ON u.id = l.instructor_id
+    WHERE l.group_id = ?
   `
   const params: unknown[] = [groupId]
-  if (status) { query += ` AND ls.status = ?`; params.push(status) }
-  query += ` ORDER BY ls.starts_at DESC LIMIT ? OFFSET ?`
+  if (status) { query += ` AND l.status = ?`; params.push(status) }
+  query += ` ORDER BY l.scheduled_at ASC LIMIT ? OFFSET ?`
   params.push(limit, offset)
 
   const [rows, countRow] = await Promise.all([
     c.env.DB.prepare(query).bind(...params).all(),
     c.env.DB.prepare(
-      `SELECT COUNT(*) as total FROM lesson_schedules WHERE group_id = ? AND is_deleted = 0`
+      `SELECT COUNT(*) as total FROM lessons WHERE group_id = ?`
     ).bind(groupId).first<{ total: number }>()
   ])
 
   return c.json(paginate(rows.results, countRow?.total ?? 0, page, limit))
 })
 
-// ── POST /lessons/:groupId/schedules ─────────────────
-// 레슨 일정 생성 (강사/그룹 어드민)
+// ══════════════════════════════════════════════════════════════
+// POST /api/v1/groups/:groupId/lessons
+// 레슨 생성 (admin / sub_admin / instructor)
+// 그룹 포인트 500P 차감
+// ══════════════════════════════════════════════════════════════
 lessons.post(
-  '/:groupId/schedules',
+  '/groups/:groupId/lessons',
   authMiddleware,
   zValidator('json', z.object({
-    title: z.string().min(1).max(200),
-    description: z.string().optional(),
-    starts_at: z.string(),
-    ends_at: z.string().optional(),
-    location: z.string().max(200).optional(),
-    max_students: z.number().int().positive().optional()
+    instructor_id   : z.number().int().positive(),
+    title           : z.string().min(1).max(200),
+    description     : z.string().max(1000).optional(),
+    schedule_type   : z.enum(['one-time', 'repeat']).default('one-time'),
+    scheduled_at    : z.string(),
+    duration_minutes: z.number().int().positive().default(60),
+    capacity        : z.number().int().positive().optional(),
+    location        : z.string().max(200).optional(),
+    point_cost      : z.number().int().min(0).default(500),
   })),
   async (c) => {
-    const userId = c.get('userId')
+    const userId  = c.get('userId')
     const groupId = parseInt(c.req.param('groupId'))
-    const body = c.req.valid('json')
+    const body    = c.req.valid('json')
 
-    // LESSON 그룹인지 확인
-    const group = await c.env.DB.prepare(
-      `SELECT id, group_type FROM groups WHERE id = ? AND status = 'active' AND is_deleted = 0`
-    ).bind(groupId).first<{ id: number; group_type: string }>()
+    // 권한 확인 (admin / sub_admin / instructor)
+    const member = await getMemberRole(c.env.DB, groupId, userId)
+    if (!member || !MANAGE_ROLES.includes(member.role)) {
+      return c.json(fail('레슨은 그룹 관리자 또는 강사만 생성할 수 있습니다.'), 403)
+    }
 
-    if (!group) return c.json(fail('그룹을 찾을 수 없습니다.'), 404)
-    if (group.group_type !== 'LESSON') return c.json(fail('레슨 그룹에서만 일정을 생성할 수 있습니다.'), 400)
+    // 강사가 해당 그룹의 멤버인지 확인
+    const instructorMember = await getMemberRole(c.env.DB, groupId, body.instructor_id)
+    if (!instructorMember || !MANAGE_ROLES.includes(instructorMember.role)) {
+      return c.json(fail('강사는 그룹의 instructor / admin / sub_admin 역할이어야 합니다.'), 400)
+    }
 
-    // 강사(admin/sub_admin) 권한 확인
-    const member = await c.env.DB.prepare(
-      `SELECT role FROM group_members WHERE group_id = ? AND user_id = ? AND status = 'active'`
-    ).bind(groupId, userId).first<{ role: string }>()
+    // 그룹 포인트 확인 및 차감
+    if (body.point_cost > 0) {
+      const groupPoint = await c.env.DB.prepare(
+        `SELECT balance FROM group_points WHERE group_id = ?`
+      ).bind(groupId).first<{ balance: number }>()
 
-    if (!member || !['admin', 'sub_admin'].includes(member.role)) {
-      return c.json(fail('레슨 일정은 강사(그룹 관리자)만 생성할 수 있습니다.'), 403)
+      const balance = groupPoint?.balance ?? 0
+      if (balance < body.point_cost) {
+        return c.json(fail('그룹 포인트가 부족합니다.', {
+          error_code: 'insufficient_group_points',
+          required  : body.point_cost,
+          current   : balance,
+          shortage  : body.point_cost - balance
+        }), 402)
+      }
+
+      await c.env.DB.batch([
+        c.env.DB.prepare(
+          `UPDATE group_points SET balance = balance - ?, updated_at = datetime('now') WHERE group_id = ?`
+        ).bind(body.point_cost, groupId),
+        c.env.DB.prepare(`
+          INSERT INTO point_transactions
+            (owner_type, owner_id, type, amount, description, created_by)
+          VALUES ('group', ?, 'lesson_open_cost', ?, '레슨 개설 비용', ?)
+        `).bind(groupId, -body.point_cost, userId)
+      ])
     }
 
     const result = await c.env.DB.prepare(`
-      INSERT INTO lesson_schedules
-        (group_id, instructor_id, title, description, starts_at, ends_at, location, max_students)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO lessons
+        (group_id, instructor_id, title, description, schedule_type,
+         scheduled_at, duration_minutes, capacity, location, point_cost)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
-      groupId, userId, body.title, body.description ?? null,
-      body.starts_at, body.ends_at ?? null,
-      body.location ?? null, body.max_students ?? null
+      groupId, body.instructor_id, body.title, body.description ?? null,
+      body.schedule_type, body.scheduled_at, body.duration_minutes,
+      body.capacity ?? null, body.location ?? null, body.point_cost
     ).run()
 
-    return c.json(ok({ schedule_id: result.meta.last_row_id }, '레슨 일정이 생성되었습니다.'), 201)
+    return c.json(ok({ lesson_id: result.meta.last_row_id }, '레슨이 생성되었습니다.'), 201)
   }
 )
 
-// ── GET /lessons/:groupId/schedules/:scheduleId ───────
-// 레슨 일정 상세 + 출석 현황
-lessons.get('/:groupId/schedules/:scheduleId', authMiddleware, async (c) => {
-  const userId = c.get('userId')
-  const groupId = parseInt(c.req.param('groupId'))
-  const scheduleId = parseInt(c.req.param('scheduleId'))
+// ══════════════════════════════════════════════════════════════
+// GET /api/v1/lessons/:id
+// 레슨 상세 조회
+// ══════════════════════════════════════════════════════════════
+lessons.get('/:id', authMiddleware, async (c) => {
+  const userId   = c.get('userId')
+  const lessonId = parseInt(c.req.param('id'))
 
-  const member = await c.env.DB.prepare(
-    `SELECT role FROM group_members WHERE group_id = ? AND user_id = ? AND status = 'active'`
-  ).bind(groupId, userId).first<{ role: string }>()
+  const lesson = await c.env.DB.prepare(`
+    SELECT l.*,
+      u.name  AS instructor_name,
+      u.email AS instructor_email,
+      g.name  AS group_name,
+      (SELECT COUNT(*) FROM lesson_registrations WHERE lesson_id = l.id AND status = 'confirmed') AS registered_count
+    FROM lessons l
+    JOIN users u ON u.id = l.instructor_id
+    JOIN groups g ON g.id = l.group_id
+    WHERE l.id = ?
+  `).bind(lessonId).first()
 
-  const isGuardian = await c.env.DB.prepare(`
-    SELECT ug.id FROM user_guardians ug
-    JOIN group_members gm ON gm.user_id = ug.user_id AND gm.group_id = ? AND gm.status = 'active'
-    WHERE ug.guardian_user_id = ? AND ug.status = 'active' LIMIT 1
-  `).bind(groupId, userId).first()
+  if (!lesson) return c.json(fail('레슨을 찾을 수 없습니다.'), 404)
 
-  if (!member && !isGuardian) return c.json(fail('접근 권한이 없습니다.'), 403)
+  // 멤버 확인
+  const member = await getMemberRole(c.env.DB, (lesson as any).group_id, userId)
+  if (!member) return c.json(fail('접근 권한이 없습니다.'), 403)
 
-  const schedule = await c.env.DB.prepare(`
-    SELECT ls.*, u.name as instructor_name
-    FROM lesson_schedules ls
-    JOIN users u ON u.id = ls.instructor_id
-    WHERE ls.id = ? AND ls.group_id = ? AND ls.is_deleted = 0
-  `).bind(scheduleId, groupId).first()
-
-  if (!schedule) return c.json(fail('레슨 일정을 찾을 수 없습니다.'), 404)
-
-  // 강사/관리자면 전체 출석 현황 제공, 일반 멤버면 본인 출석만
-  let attendances
-  if (member && ['admin', 'sub_admin'].includes(member.role)) {
-    attendances = await c.env.DB.prepare(`
-      SELECT la.*, u.name, u.avatar_url, u.user_type
-      FROM lesson_attendances la
-      JOIN users u ON u.id = la.student_id
-      WHERE la.schedule_id = ?
-      ORDER BY u.name ASC
-    `).bind(scheduleId).all()
-  } else {
-    // 보호자: 담당 학생들의 출석만
-    attendances = await c.env.DB.prepare(`
-      SELECT la.*, u.name, u.avatar_url, u.user_type
-      FROM lesson_attendances la
-      JOIN users u ON u.id = la.student_id
-      JOIN user_guardians ug ON ug.user_id = la.student_id AND ug.guardian_user_id = ? AND ug.status = 'active'
-      WHERE la.schedule_id = ?
-    `).bind(userId, scheduleId).all()
+  // 관리자/강사에게는 등록자 목록도 제공
+  let registrations = null
+  if (MANAGE_ROLES.includes(member.role)) {
+    const rows = await c.env.DB.prepare(`
+      SELECT lr.*, u.name, u.email, u.avatar_url
+      FROM lesson_registrations lr
+      JOIN users u ON u.id = lr.user_id
+      WHERE lr.lesson_id = ?
+      ORDER BY lr.created_at ASC
+    `).bind(lessonId).all()
+    registrations = rows.results
   }
 
-  return c.json(ok({ ...schedule, attendances: attendances.results }))
+  return c.json(ok({ ...lesson, registrations }))
 })
 
-// ── POST /lessons/:groupId/schedules/:scheduleId/attendance ──
-// 출석 처리 (강사만)
-lessons.post(
-  '/:groupId/schedules/:scheduleId/attendance',
+// ══════════════════════════════════════════════════════════════
+// PUT /api/v1/lessons/:id
+// 레슨 수정 (admin / sub_admin / 해당 강사)
+// ══════════════════════════════════════════════════════════════
+lessons.put(
+  '/:id',
   authMiddleware,
   zValidator('json', z.object({
-    attendances: z.array(z.object({
-      student_id: z.number().int().positive(),
-      status: z.enum(['present', 'absent', 'late', 'excused']),
-      note: z.string().max(200).optional()
-    })).min(1)
+    title           : z.string().min(1).max(200).optional(),
+    description     : z.string().max(1000).optional(),
+    scheduled_at    : z.string().optional(),
+    duration_minutes: z.number().int().positive().optional(),
+    capacity        : z.number().int().positive().nullable().optional(),
+    location        : z.string().max(200).optional(),
+    status          : z.enum(['upcoming', 'ongoing', 'ended', 'cancelled']).optional(),
   })),
   async (c) => {
-    const userId = c.get('userId')
-    const groupId = parseInt(c.req.param('groupId'))
-    const scheduleId = parseInt(c.req.param('scheduleId'))
-    const { attendances } = c.req.valid('json')
+    const userId   = c.get('userId')
+    const lessonId = parseInt(c.req.param('id'))
+    const body     = c.req.valid('json')
 
-    const member = await c.env.DB.prepare(
-      `SELECT role FROM group_members WHERE group_id = ? AND user_id = ? AND status = 'active'`
-    ).bind(groupId, userId).first<{ role: string }>()
+    const lesson = await c.env.DB.prepare(
+      `SELECT id, group_id, instructor_id FROM lessons WHERE id = ?`
+    ).bind(lessonId).first<{ id: number; group_id: number; instructor_id: number }>()
 
-    if (!member || !['admin', 'sub_admin'].includes(member.role)) {
-      return c.json(fail('출석 처리는 강사(그룹 관리자)만 가능합니다.'), 403)
+    if (!lesson) return c.json(fail('레슨을 찾을 수 없습니다.'), 404)
+
+    const member = await getMemberRole(c.env.DB, lesson.group_id, userId)
+    const isInstructor = lesson.instructor_id === userId
+    if (!member || (!ADMIN_ROLES.includes(member.role) && !isInstructor)) {
+      return c.json(fail('수정 권한이 없습니다.'), 403)
     }
 
-    // 일정 존재 확인
-    const schedule = await c.env.DB.prepare(
-      `SELECT id FROM lesson_schedules WHERE id = ? AND group_id = ? AND is_deleted = 0`
-    ).bind(scheduleId, groupId).first()
-    if (!schedule) return c.json(fail('레슨 일정을 찾을 수 없습니다.'), 404)
+    const fields: string[] = []
+    const vals: unknown[]  = []
 
-    // 배치 upsert 처리
-    const stmts = attendances.map(a =>
-      c.env.DB.prepare(`
-        INSERT INTO lesson_attendances (schedule_id, student_id, status, checked_by, checked_at, note)
-        VALUES (?, ?, ?, ?, datetime('now'), ?)
-        ON CONFLICT(schedule_id, student_id)
-        DO UPDATE SET status = excluded.status, checked_by = excluded.checked_by,
-          checked_at = excluded.checked_at, note = excluded.note,
-          updated_at = datetime('now')
-      `).bind(scheduleId, a.student_id, a.status, userId, a.note ?? null)
-    )
-    await c.env.DB.batch(stmts)
+    if (body.title !== undefined)            { fields.push('title = ?');            vals.push(body.title) }
+    if (body.description !== undefined)      { fields.push('description = ?');      vals.push(body.description) }
+    if (body.scheduled_at !== undefined)     { fields.push('scheduled_at = ?');     vals.push(body.scheduled_at) }
+    if (body.duration_minutes !== undefined) { fields.push('duration_minutes = ?'); vals.push(body.duration_minutes) }
+    if (body.capacity !== undefined)         { fields.push('capacity = ?');         vals.push(body.capacity) }
+    if (body.location !== undefined)         { fields.push('location = ?');         vals.push(body.location) }
+    if (body.status !== undefined)           { fields.push('status = ?');           vals.push(body.status) }
 
-    // 일정 상태를 'ongoing'으로 업데이트
+    if (fields.length === 0) return c.json(fail('수정할 내용이 없습니다.'), 400)
+
     await c.env.DB.prepare(
-      `UPDATE lesson_schedules SET status = 'ongoing', updated_at = datetime('now') WHERE id = ? AND status = 'scheduled'`
-    ).bind(scheduleId).run()
+      `UPDATE lessons SET ${fields.join(', ')} WHERE id = ?`
+    ).bind(...vals, lessonId).run()
 
-    return c.json(ok({ processed: attendances.length }, '출석이 처리되었습니다.'))
+    return c.json(ok(null, '레슨이 수정되었습니다.'))
   }
 )
 
-// ── GET /lessons/:groupId/students ────────────────────
-// 레슨 그룹의 학생 목록 (강사 전용)
-lessons.get('/:groupId/students', authMiddleware, async (c) => {
-  const userId = c.get('userId')
-  const groupId = parseInt(c.req.param('groupId'))
+// ══════════════════════════════════════════════════════════════
+// DELETE /api/v1/lessons/:id
+// 레슨 삭제 (admin / sub_admin 전용)
+// ══════════════════════════════════════════════════════════════
+lessons.delete('/:id', authMiddleware, async (c) => {
+  const userId   = c.get('userId')
+  const lessonId = parseInt(c.req.param('id'))
 
-  const member = await c.env.DB.prepare(
-    `SELECT role FROM group_members WHERE group_id = ? AND user_id = ? AND status = 'active'`
-  ).bind(groupId, userId).first<{ role: string }>()
+  const lesson = await c.env.DB.prepare(
+    `SELECT id, group_id FROM lessons WHERE id = ?`
+  ).bind(lessonId).first<{ id: number; group_id: number }>()
 
-  if (!member || !['admin', 'sub_admin'].includes(member.role)) {
-    return c.json(fail('강사(그룹 관리자)만 학생 목록을 조회할 수 있습니다.'), 403)
+  if (!lesson) return c.json(fail('레슨을 찾을 수 없습니다.'), 404)
+
+  const member = await getMemberRole(c.env.DB, lesson.group_id, userId)
+  if (!member || !ADMIN_ROLES.includes(member.role)) {
+    return c.json(fail('삭제 권한이 없습니다.'), 403)
   }
 
-  const rows = await c.env.DB.prepare(`
-    SELECT
-      gm.id as member_id, gm.role, gm.joined_at, gm.guardian_user_id,
-      u.id, u.name, u.email, u.user_type, u.birth_date, u.avatar_url,
-      g_u.name as guardian_name, g_u.email as guardian_email,
-      ug.relation as guardian_relation,
-      (SELECT COUNT(*) FROM lesson_attendances la
-        JOIN lesson_schedules ls ON ls.id = la.schedule_id
-        WHERE la.student_id = u.id AND ls.group_id = ? AND la.status = 'present'
-      ) as present_count,
-      (SELECT COUNT(*) FROM lesson_schedules WHERE group_id = ? AND is_deleted = 0) as total_lessons
-    FROM group_members gm
-    JOIN users u ON u.id = gm.user_id
-    LEFT JOIN users g_u ON g_u.id = gm.guardian_user_id
-    LEFT JOIN user_guardians ug ON ug.user_id = u.id AND ug.guardian_user_id = gm.guardian_user_id AND ug.status = 'active'
-    WHERE gm.group_id = ? AND gm.status = 'active'
-    ORDER BY u.name ASC
-  `).bind(groupId, groupId, groupId).all()
+  await c.env.DB.prepare(
+    `UPDATE lessons SET status = 'cancelled' WHERE id = ?`
+  ).bind(lessonId).run()
 
-  return c.json(ok(rows.results))
+  return c.json(ok(null, '레슨이 취소되었습니다.'))
+})
+
+// ══════════════════════════════════════════════════════════════
+// POST /api/v1/lessons/:id/register
+// 레슨 수강 신청 (그룹 멤버)
+// ══════════════════════════════════════════════════════════════
+lessons.post('/:id/register', authMiddleware, async (c) => {
+  const userId   = c.get('userId')
+  const lessonId = parseInt(c.req.param('id'))
+
+  const lesson = await c.env.DB.prepare(`
+    SELECT id, group_id, status, capacity FROM lessons WHERE id = ?
+  `).bind(lessonId).first<{ id: number; group_id: number; status: string; capacity: number | null }>()
+
+  if (!lesson) return c.json(fail('레슨을 찾을 수 없습니다.'), 404)
+  if (lesson.status === 'cancelled') return c.json(fail('취소된 레슨입니다.'), 400)
+  if (lesson.status === 'ended')     return c.json(fail('종료된 레슨입니다.'), 400)
+
+  const member = await getMemberRole(c.env.DB, lesson.group_id, userId)
+  if (!member) return c.json(fail('그룹 멤버만 수강 신청할 수 있습니다.'), 403)
+
+  // 중복 신청 확인
+  const existing = await c.env.DB.prepare(
+    `SELECT status FROM lesson_registrations WHERE lesson_id = ? AND user_id = ?`
+  ).bind(lessonId, userId).first<{ status: string }>()
+
+  if (existing?.status === 'confirmed') return c.json(fail('이미 수강 신청한 레슨입니다.'), 409)
+
+  // 정원 확인
+  if (lesson.capacity) {
+    const cnt = await c.env.DB.prepare(
+      `SELECT COUNT(*) as cnt FROM lesson_registrations WHERE lesson_id = ? AND status = 'confirmed'`
+    ).bind(lessonId).first<{ cnt: number }>()
+    if ((cnt?.cnt ?? 0) >= lesson.capacity) {
+      return c.json(fail('수강 정원이 가득 찼습니다.'), 409)
+    }
+  }
+
+  await c.env.DB.prepare(`
+    INSERT OR REPLACE INTO lesson_registrations (lesson_id, user_id, status)
+    VALUES (?, ?, 'confirmed')
+  `).bind(lessonId, userId).run()
+
+  return c.json(ok(null, '수강 신청이 완료되었습니다.'), 201)
+})
+
+// ══════════════════════════════════════════════════════════════
+// DELETE /api/v1/lessons/:id/register
+// 수강 신청 취소
+// ══════════════════════════════════════════════════════════════
+lessons.delete('/:id/register', authMiddleware, async (c) => {
+  const userId   = c.get('userId')
+  const lessonId = parseInt(c.req.param('id'))
+
+  const existing = await c.env.DB.prepare(
+    `SELECT id FROM lesson_registrations WHERE lesson_id = ? AND user_id = ? AND status = 'confirmed'`
+  ).bind(lessonId, userId).first()
+
+  if (!existing) return c.json(fail('수강 신청 내역이 없습니다.'), 404)
+
+  await c.env.DB.prepare(
+    `UPDATE lesson_registrations SET status = 'cancelled' WHERE lesson_id = ? AND user_id = ?`
+  ).bind(lessonId, userId).run()
+
+  return c.json(ok(null, '수강 신청이 취소되었습니다.'))
 })
 
 export default lessons

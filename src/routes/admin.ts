@@ -415,4 +415,34 @@ admin.patch(
   }
 )
 
+// ══════════════════════════════════════════════════════════════
+// GET /admin/lessons  — 전체 레슨 목록 (어드민 전용)
+// ══════════════════════════════════════════════════════════════
+admin.get('/lessons', superAdminMiddleware, async (c) => {
+  const { page, limit, offset } = parsePagination(c.req.query('page'), c.req.query('limit'))
+  const status = c.req.query('status')
+
+  let query = `
+    SELECT l.*,
+      g.name  AS group_name,
+      u.name  AS instructor_name,
+      (SELECT COUNT(*) FROM lesson_registrations WHERE lesson_id = l.id AND status = 'confirmed') AS registered_count
+    FROM lessons l
+    JOIN groups g ON g.id = l.group_id
+    JOIN users  u ON u.id = l.instructor_id
+    WHERE 1=1
+  `
+  const params: unknown[] = []
+  if (status) { query += ` AND l.status = ?`; params.push(status) }
+  query += ` ORDER BY l.scheduled_at DESC LIMIT ? OFFSET ?`
+  params.push(limit, offset)
+
+  const [rows, countRow] = await Promise.all([
+    c.env.DB.prepare(query).bind(...params).all(),
+    c.env.DB.prepare(`SELECT COUNT(*) as total FROM lessons`).first<{ total: number }>()
+  ])
+
+  return c.json(paginate(rows.results, countRow?.total ?? 0, page, limit))
+})
+
 export default admin

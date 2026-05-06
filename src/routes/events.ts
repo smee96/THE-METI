@@ -7,226 +7,396 @@ import { ok, fail, paginate, parsePagination } from '../middleware/response'
 
 const events = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
-// ── 행사 목록 ─────────────────────────────────────────
-events.get('/', async (c) => {
+const ADMIN_ROLES = ['admin', 'sub_admin']
+
+async function getMemberRole(db: D1Database, groupId: number, userId: number) {
+  return db.prepare(
+    `SELECT role FROM group_members WHERE group_id = ? AND user_id = ? AND status = 'active'`
+  ).bind(groupId, userId).first<{ role: string }>()
+}
+
+// ══════════════════════════════════════════════════════════════
+// GET /api/v1/groups/:groupId/events
+// 그룹 내 행사 목록
+// ══════════════════════════════════════════════════════════════
+events.get('/groups/:groupId/events', authMiddleware, async (c) => {
+  const userId  = c.get('userId')
+  const groupId = parseInt(c.req.param('groupId'))
   const { page, limit, offset } = parsePagination(c.req.query('page'), c.req.query('limit'))
-  const groupId = c.req.query('group_id')
-  const status = c.req.query('status') ?? 'upcoming'
+  const status  = c.req.query('status')
+
+  const member = await getMemberRole(c.env.DB, groupId, userId)
+  if (!member) return c.json(fail('그룹 멤버만 조회할 수 있습니다.'), 403)
 
   let query = `
-    SELECT e.*, g.name as group_name, u.name as organizer_name,
-      (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id AND status = 'registered') as participant_count
+    SELECT e.*,
+      u.name AS creator_name,
+      (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id AND status = 'confirmed') AS participant_count
     FROM events e
-    JOIN groups g ON g.id = e.group_id
-    JOIN users u ON u.id = e.organizer_id
-    WHERE e.is_deleted = 0 AND e.visibility = 'public'
+    JOIN users u ON u.id = e.created_by
+    WHERE e.group_id = ?
   `
-  const params: unknown[] = []
+  const params: unknown[] = [groupId]
   if (status) { query += ` AND e.status = ?`; params.push(status) }
-  if (groupId) { query += ` AND e.group_id = ?`; params.push(groupId) }
   query += ` ORDER BY e.starts_at ASC LIMIT ? OFFSET ?`
   params.push(limit, offset)
 
   const [rows, countRow] = await Promise.all([
     c.env.DB.prepare(query).bind(...params).all(),
-    c.env.DB.prepare(`SELECT COUNT(*) as total FROM events WHERE is_deleted = 0 AND visibility = 'public'`).first<{ total: number }>()
+    c.env.DB.prepare(
+      `SELECT COUNT(*) as total FROM events WHERE group_id = ?`
+    ).bind(groupId).first<{ total: number }>()
   ])
 
   return c.json(paginate(rows.results, countRow?.total ?? 0, page, limit))
 })
 
-// ── 행사 생성 (그룹 관리자) ──────────────────────────
+// ══════════════════════════════════════════════════════════════
+// POST /api/v1/groups/:groupId/events
+// 행사 생성 (admin / sub_admin)
+// 그룹 포인트 차감: 정원에 따라 1000 / 3000 / 5000 P
+// ══════════════════════════════════════════════════════════════
 events.post(
-  '/',
+  '/groups/:groupId/events',
   authMiddleware,
   zValidator('json', z.object({
-    group_id: z.number().int().positive(),
-    title: z.string().min(2).max(200),
-    description: z.string().optional(),
-    thumbnail_url: z.string().url().optional(),
-    location: z.string().max(200).optional(),
-    starts_at: z.string(),
-    ends_at: z.string().optional(),
-    visibility: z.enum(['public', 'group_only']).default('public'),
+    title            : z.string().min(2).max(200),
+    description      : z.string().max(2000).optional(),
+    location         : z.string().max(200).optional(),
+    starts_at        : z.string(),
+    ends_at          : z.string().optional(),
+    capacity         : z.number().int().positive().optional(),   // undefined = 무제한
+    visibility       : z.enum(['public', 'group_only']).default('group_only'),
     registration_type: z.enum(['free', 'pre_required']).default('free'),
-    entry_method: z.enum(['nfc_qr', 'qr', 'manual']).default('qr'),
-    max_participants: z.number().int().positive().optional()
+    entry_method     : z.enum(['qr', 'nfc_qr', 'manual']).default('qr'),
+    entry_fee        : z.number().int().min(0).default(0),      // 참가비 (포인트)
   })),
   async (c) => {
-    const userId = c.get('userId')
-    const body = c.req.valid('json')
+    const userId  = c.get('userId')
+    const groupId = parseInt(c.req.param('groupId'))
+    const body    = c.req.valid('json')
 
-    // 관리자 확인
-    const member = await c.env.DB.prepare(
-      `SELECT role FROM group_members WHERE group_id = ? AND user_id = ? AND status = 'active'`
-    ).bind(body.group_id, userId).first<{ role: string }>()
-
-    if (!member || !['admin', 'sub_admin'].includes(member.role)) {
+    // 권한 확인
+    const member = await getMemberRole(c.env.DB, groupId, userId)
+    if (!member || !ADMIN_ROLES.includes(member.role)) {
       return c.json(fail('그룹 관리자만 행사를 생성할 수 있습니다.'), 403)
     }
 
+    // 개설 비용 계산 (정원 기준)
+    let pointCost = 1000
+    if (!body.capacity) {
+      pointCost = 5000        // 무제한
+    } else if (body.capacity > 100) {
+      pointCost = 5000
+    } else if (body.capacity > 30) {
+      pointCost = 3000
+    }
+
+    // 그룹 포인트 확인 및 차감
+    const groupPoint = await c.env.DB.prepare(
+      `SELECT balance FROM group_points WHERE group_id = ?`
+    ).bind(groupId).first<{ balance: number }>()
+
+    const balance = groupPoint?.balance ?? 0
+    if (balance < pointCost) {
+      return c.json(fail('그룹 포인트가 부족합니다.', {
+        error_code: 'insufficient_group_points',
+        required  : pointCost,
+        current   : balance,
+        shortage  : pointCost - balance
+      }), 402)
+    }
+
+    await c.env.DB.batch([
+      c.env.DB.prepare(
+        `UPDATE group_points SET balance = balance - ?, updated_at = datetime('now') WHERE group_id = ?`
+      ).bind(pointCost, groupId),
+      c.env.DB.prepare(`
+        INSERT INTO point_transactions
+          (owner_type, owner_id, type, amount, description, created_by)
+        VALUES ('group', ?, 'event_open_cost', ?, '행사 개설 비용', ?)
+      `).bind(groupId, -pointCost, userId)
+    ])
+
     const result = await c.env.DB.prepare(`
-      INSERT INTO events (group_id, organizer_id, title, description, thumbnail_url, location,
-        starts_at, ends_at, visibility, registration_type, entry_method, max_participants)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO events
+        (group_id, created_by, title, description, location,
+         starts_at, ends_at, capacity, visibility, registration_type,
+         entry_method, point_cost, entry_fee)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
-      body.group_id, userId, body.title, body.description ?? null, body.thumbnail_url ?? null,
+      groupId, userId, body.title, body.description ?? null,
       body.location ?? null, body.starts_at, body.ends_at ?? null,
-      body.visibility, body.registration_type, body.entry_method, body.max_participants ?? null
+      body.capacity ?? null, body.visibility, body.registration_type,
+      body.entry_method, pointCost, body.entry_fee
     ).run()
 
-    return c.json(ok({ event_id: result.meta.last_row_id }, '행사가 생성되었습니다.'), 201)
+    return c.json(ok({
+      event_id  : result.meta.last_row_id,
+      point_cost: pointCost,
+      entry_fee : body.entry_fee
+    }, '행사가 생성되었습니다.'), 201)
   }
 )
 
-// ── 행사 상세 조회 ────────────────────────────────────
-events.get('/:id', async (c) => {
-  const eventId = c.req.param('id')
+// ══════════════════════════════════════════════════════════════
+// GET /api/v1/events/:id
+// 행사 상세 조회
+// ══════════════════════════════════════════════════════════════
+events.get('/:id', authMiddleware, async (c) => {
+  const userId  = c.get('userId')
+  const eventId = parseInt(c.req.param('id'))
 
   const event = await c.env.DB.prepare(`
-    SELECT e.*, g.name as group_name, u.name as organizer_name,
-      (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id AND status = 'registered') as participant_count
+    SELECT e.*,
+      u.name AS creator_name,
+      g.name AS group_name,
+      (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id AND status = 'confirmed') AS participant_count
     FROM events e
+    JOIN users u ON u.id = e.created_by
     JOIN groups g ON g.id = e.group_id
-    JOIN users u ON u.id = e.organizer_id
-    WHERE e.id = ? AND e.is_deleted = 0
+    WHERE e.id = ?
   `).bind(eventId).first()
 
   if (!event) return c.json(fail('행사를 찾을 수 없습니다.'), 404)
 
+  const member = await getMemberRole(c.env.DB, (event as any).group_id, userId)
+  if (!member && (event as any).visibility === 'group_only') {
+    return c.json(fail('접근 권한이 없습니다.'), 403)
+  }
+
   return c.json(ok(event))
 })
 
-// ── 행사 참가 신청 ────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// PUT /api/v1/events/:id
+// 행사 수정 (admin / sub_admin)
+// ══════════════════════════════════════════════════════════════
+events.put(
+  '/:id',
+  authMiddleware,
+  zValidator('json', z.object({
+    title            : z.string().min(2).max(200).optional(),
+    description      : z.string().max(2000).optional(),
+    location         : z.string().max(200).optional(),
+    starts_at        : z.string().optional(),
+    ends_at          : z.string().optional(),
+    status           : z.enum(['upcoming', 'ongoing', 'ended', 'cancelled']).optional(),
+    visibility       : z.enum(['public', 'group_only']).optional(),
+    registration_type: z.enum(['free', 'pre_required']).optional(),
+  })),
+  async (c) => {
+    const userId  = c.get('userId')
+    const eventId = parseInt(c.req.param('id'))
+    const body    = c.req.valid('json')
+
+    const event = await c.env.DB.prepare(
+      `SELECT id, group_id FROM events WHERE id = ?`
+    ).bind(eventId).first<{ id: number; group_id: number }>()
+    if (!event) return c.json(fail('행사를 찾을 수 없습니다.'), 404)
+
+    const member = await getMemberRole(c.env.DB, event.group_id, userId)
+    if (!member || !ADMIN_ROLES.includes(member.role)) {
+      return c.json(fail('수정 권한이 없습니다.'), 403)
+    }
+
+    const fields: string[] = []
+    const vals: unknown[]  = []
+
+    if (body.title !== undefined)             { fields.push('title = ?');             vals.push(body.title) }
+    if (body.description !== undefined)       { fields.push('description = ?');       vals.push(body.description) }
+    if (body.location !== undefined)          { fields.push('location = ?');          vals.push(body.location) }
+    if (body.starts_at !== undefined)         { fields.push('starts_at = ?');         vals.push(body.starts_at) }
+    if (body.ends_at !== undefined)           { fields.push('ends_at = ?');           vals.push(body.ends_at) }
+    if (body.status !== undefined)            { fields.push('status = ?');            vals.push(body.status) }
+    if (body.visibility !== undefined)        { fields.push('visibility = ?');        vals.push(body.visibility) }
+    if (body.registration_type !== undefined) { fields.push('registration_type = ?'); vals.push(body.registration_type) }
+
+    if (fields.length === 0) return c.json(fail('수정할 내용이 없습니다.'), 400)
+
+    await c.env.DB.prepare(
+      `UPDATE events SET ${fields.join(', ')} WHERE id = ?`
+    ).bind(...vals, eventId).run()
+
+    return c.json(ok(null, '행사가 수정되었습니다.'))
+  }
+)
+
+// ══════════════════════════════════════════════════════════════
+// DELETE /api/v1/events/:id
+// 행사 취소 (admin / sub_admin)
+// ══════════════════════════════════════════════════════════════
+events.delete('/:id', authMiddleware, async (c) => {
+  const userId  = c.get('userId')
+  const eventId = parseInt(c.req.param('id'))
+
+  const event = await c.env.DB.prepare(
+    `SELECT id, group_id FROM events WHERE id = ?`
+  ).bind(eventId).first<{ id: number; group_id: number }>()
+  if (!event) return c.json(fail('행사를 찾을 수 없습니다.'), 404)
+
+  const member = await getMemberRole(c.env.DB, event.group_id, userId)
+  if (!member || !ADMIN_ROLES.includes(member.role)) {
+    return c.json(fail('취소 권한이 없습니다.'), 403)
+  }
+
+  await c.env.DB.prepare(
+    `UPDATE events SET status = 'cancelled' WHERE id = ?`
+  ).bind(eventId).run()
+
+  return c.json(ok(null, '행사가 취소되었습니다.'))
+})
+
+// ══════════════════════════════════════════════════════════════
+// POST /api/v1/events/:id/join
+// 행사 참가 신청 (그룹 멤버)
+// entry_fee > 0 이면 개인 포인트 차감
+// ══════════════════════════════════════════════════════════════
 events.post('/:id/join', authMiddleware, async (c) => {
-  const userId = c.get('userId')
+  const userId  = c.get('userId')
   const eventId = parseInt(c.req.param('id'))
 
   const event = await c.env.DB.prepare(`
-    SELECT id, status, max_participants FROM events WHERE id = ? AND is_deleted = 0
-  `).bind(eventId).first<{ id: number; status: string; max_participants: number | null }>()
+    SELECT id, group_id, status, capacity, entry_fee FROM events WHERE id = ?
+  `).bind(eventId).first<{
+    id: number; group_id: number; status: string;
+    capacity: number | null; entry_fee: number
+  }>()
 
-  if (!event) return c.json(fail('행사를 찾을 수 없습니다.'), 404)
+  if (!event)                       return c.json(fail('행사를 찾을 수 없습니다.'), 404)
   if (event.status === 'cancelled') return c.json(fail('취소된 행사입니다.'), 400)
-  if (event.status === 'ended') return c.json(fail('종료된 행사입니다.'), 400)
+  if (event.status === 'ended')     return c.json(fail('종료된 행사입니다.'), 400)
 
-  // 중복 신청 확인
+  const member = await getMemberRole(c.env.DB, event.group_id, userId)
+  if (!member) return c.json(fail('그룹 멤버만 참가 신청할 수 있습니다.'), 403)
+
+  // 중복 확인
   const existing = await c.env.DB.prepare(
-    'SELECT status FROM event_participants WHERE event_id = ? AND user_id = ?'
+    `SELECT status FROM event_participants WHERE event_id = ? AND user_id = ?`
   ).bind(eventId, userId).first<{ status: string }>()
-
-  if (existing && existing.status === 'registered') {
-    return c.json(fail('이미 참가 신청한 행사입니다.'), 409)
-  }
+  if (existing?.status === 'confirmed') return c.json(fail('이미 참가 신청한 행사입니다.'), 409)
 
   // 정원 확인
-  if (event.max_participants) {
-    const count = await c.env.DB.prepare(
-      `SELECT COUNT(*) as cnt FROM event_participants WHERE event_id = ? AND status = 'registered'`
+  if (event.capacity) {
+    const cnt = await c.env.DB.prepare(
+      `SELECT COUNT(*) as cnt FROM event_participants WHERE event_id = ? AND status = 'confirmed'`
     ).bind(eventId).first<{ cnt: number }>()
-    if ((count?.cnt ?? 0) >= event.max_participants) {
+    if ((cnt?.cnt ?? 0) >= event.capacity) {
       return c.json(fail('행사 정원이 가득 찼습니다.'), 409)
     }
   }
 
+  // 참가비 차감
+  if (event.entry_fee > 0) {
+    const userPoint = await c.env.DB.prepare(
+      `SELECT balance FROM user_points WHERE user_id = ?`
+    ).bind(userId).first<{ balance: number }>()
+    const balance = userPoint?.balance ?? 0
+    if (balance < event.entry_fee) {
+      return c.json(fail('포인트가 부족합니다.', {
+        error_code: 'insufficient_points',
+        required  : event.entry_fee,
+        current   : balance,
+        shortage  : event.entry_fee - balance
+      }), 402)
+    }
+
+    await c.env.DB.batch([
+      c.env.DB.prepare(
+        `UPDATE user_points SET balance = balance - ?, updated_at = datetime('now') WHERE user_id = ?`
+      ).bind(event.entry_fee, userId),
+      c.env.DB.prepare(`
+        INSERT INTO point_transactions
+          (owner_type, owner_id, type, amount, description, ref_id)
+        VALUES ('user', ?, 'event_entry_fee', ?, '행사 참가비', ?)
+      `).bind(userId, -event.entry_fee, eventId),
+      // 행사 포인트 → 그룹 포인트로 이체
+      c.env.DB.prepare(
+        `UPDATE group_points SET balance = balance + ?, updated_at = datetime('now') WHERE group_id = ?`
+      ).bind(event.entry_fee, event.group_id),
+    ])
+  }
+
   await c.env.DB.prepare(`
     INSERT OR REPLACE INTO event_participants (event_id, user_id, status)
-    VALUES (?, ?, 'registered')
+    VALUES (?, ?, 'confirmed')
   `).bind(eventId, userId).run()
 
   return c.json(ok(null, '행사 참가 신청이 완료되었습니다.'), 201)
 })
 
-// ── 행사 입장 처리 (QR 스캔) ─────────────────────────
-events.post('/:id/checkin', authMiddleware, async (c) => {
-  const adminId = c.get('userId')
+// ══════════════════════════════════════════════════════════════
+// DELETE /api/v1/events/:id/join
+// 행사 참가 취소 (참가비 환불)
+// ══════════════════════════════════════════════════════════════
+events.delete('/:id/join', authMiddleware, async (c) => {
+  const userId  = c.get('userId')
   const eventId = parseInt(c.req.param('id'))
-  const { qr_token, user_id: targetUserId, entry_method } = await c.req.json()
 
-  // 행사 관리자 확인
-  const event = await c.env.DB.prepare(`
-    SELECT e.group_id FROM events e WHERE e.id = ? AND e.is_deleted = 0
-  `).bind(eventId).first<{ group_id: number }>()
-
+  const event = await c.env.DB.prepare(
+    `SELECT id, group_id, entry_fee FROM events WHERE id = ?`
+  ).bind(eventId).first<{ id: number; group_id: number; entry_fee: number }>()
   if (!event) return c.json(fail('행사를 찾을 수 없습니다.'), 404)
 
-  const adminMember = await c.env.DB.prepare(
-    `SELECT role FROM group_members WHERE group_id = ? AND user_id = ? AND status = 'active'`
-  ).bind(event.group_id, adminId).first<{ role: string }>()
+  const existing = await c.env.DB.prepare(
+    `SELECT id FROM event_participants WHERE event_id = ? AND user_id = ? AND status = 'confirmed'`
+  ).bind(eventId, userId).first()
+  if (!existing) return c.json(fail('참가 신청 내역이 없습니다.'), 404)
 
-  if (!adminMember || !['admin', 'sub_admin'].includes(adminMember.role)) {
-    return c.json(fail('권한이 없습니다.'), 403)
+  await c.env.DB.prepare(
+    `UPDATE event_participants SET status = 'cancelled' WHERE event_id = ? AND user_id = ?`
+  ).bind(eventId, userId).run()
+
+  // 참가비 환불
+  if (event.entry_fee > 0) {
+    await c.env.DB.batch([
+      c.env.DB.prepare(
+        `UPDATE user_points SET balance = balance + ?, updated_at = datetime('now') WHERE user_id = ?`
+      ).bind(event.entry_fee, userId),
+      c.env.DB.prepare(`
+        INSERT INTO point_transactions
+          (owner_type, owner_id, type, amount, description, ref_id)
+        VALUES ('user', ?, 'event_entry_refund', ?, '행사 참가 취소 환불', ?)
+      `).bind(userId, event.entry_fee, eventId),
+      c.env.DB.prepare(
+        `UPDATE group_points SET balance = balance - ?, updated_at = datetime('now') WHERE group_id = ?`
+      ).bind(event.entry_fee, event.group_id),
+    ])
   }
 
-  let resolvedUserId = targetUserId
-
-  // QR 토큰으로 유저 확인
-  if (qr_token) {
-    const tokenRecord = await c.env.DB.prepare(`
-      SELECT user_id FROM qr_tokens
-      WHERE token = ? AND purpose = 'event_entry' AND event_id = ?
-        AND used_at IS NULL AND expires_at > datetime('now')
-    `).bind(qr_token, eventId).first<{ user_id: number }>()
-
-    if (!tokenRecord) return c.json(fail('유효하지 않은 QR 코드입니다.'), 400)
-    resolvedUserId = tokenRecord.user_id
-
-    await c.env.DB.prepare(
-      `UPDATE qr_tokens SET used_at = datetime('now') WHERE token = ?`
-    ).bind(qr_token).run()
-  }
-
-  if (!resolvedUserId) return c.json(fail('유저 정보가 필요합니다.'), 400)
-
-  // 체크인 처리
-  await c.env.DB.batch([
-    c.env.DB.prepare(`
-      UPDATE event_participants SET status = 'checked_in', checked_in_at = datetime('now'), entry_method = ?, updated_at = datetime('now')
-      WHERE event_id = ? AND user_id = ?
-    `).bind(entry_method || 'qr', eventId, resolvedUserId),
-    c.env.DB.prepare(`
-      INSERT INTO event_entry_logs (event_id, user_id, entry_method, processed_by)
-      VALUES (?, ?, ?, ?)
-    `).bind(eventId, resolvedUserId, entry_method || 'qr', adminId)
-  ])
-
-  const user = await c.env.DB.prepare('SELECT id, name, email FROM users WHERE id = ?').bind(resolvedUserId).first()
-
-  return c.json(ok({ user, checked_in: true }, '입장 처리가 완료되었습니다.'))
+  return c.json(ok(null, '참가 취소가 완료되었습니다.'))
 })
 
-// ── 입장 현황 조회 (관리자) ──────────────────────────
+// ══════════════════════════════════════════════════════════════
+// GET /api/v1/events/:id/participants
+// 참가자 목록 조회 (admin / sub_admin)
+// ══════════════════════════════════════════════════════════════
 events.get('/:id/participants', authMiddleware, async (c) => {
-  const userId = c.get('userId')
+  const userId  = c.get('userId')
   const eventId = parseInt(c.req.param('id'))
   const { page, limit, offset } = parsePagination(c.req.query('page'), c.req.query('limit'))
-  const status = c.req.query('status')
 
-  const event = await c.env.DB.prepare(`SELECT group_id FROM events WHERE id = ?`).bind(eventId).first<{ group_id: number }>()
+  const event = await c.env.DB.prepare(
+    `SELECT id, group_id FROM events WHERE id = ?`
+  ).bind(eventId).first<{ id: number; group_id: number }>()
   if (!event) return c.json(fail('행사를 찾을 수 없습니다.'), 404)
 
-  const member = await c.env.DB.prepare(
-    `SELECT role FROM group_members WHERE group_id = ? AND user_id = ? AND status = 'active'`
-  ).bind(event.group_id, userId).first<{ role: string }>()
-
-  if (!member || !['admin', 'sub_admin'].includes(member.role)) {
+  const member = await getMemberRole(c.env.DB, event.group_id, userId)
+  if (!member || !ADMIN_ROLES.includes(member.role)) {
     return c.json(fail('권한이 없습니다.'), 403)
   }
 
-  let query = `
-    SELECT ep.*, u.name, u.email, u.avatar_url
-    FROM event_participants ep
-    JOIN users u ON u.id = ep.user_id
-    WHERE ep.event_id = ?
-  `
-  const params: unknown[] = [eventId]
-  if (status) { query += ` AND ep.status = ?`; params.push(status) }
-  query += ` ORDER BY ep.created_at DESC LIMIT ? OFFSET ?`
-  params.push(limit, offset)
-
   const [rows, countRow] = await Promise.all([
-    c.env.DB.prepare(query).bind(...params).all(),
-    c.env.DB.prepare('SELECT COUNT(*) as total FROM event_participants WHERE event_id = ?').bind(eventId).first<{ total: number }>()
+    c.env.DB.prepare(`
+      SELECT ep.*, u.name, u.email, u.avatar_url
+      FROM event_participants ep
+      JOIN users u ON u.id = ep.user_id
+      WHERE ep.event_id = ?
+      ORDER BY ep.joined_at ASC LIMIT ? OFFSET ?
+    `).bind(eventId, limit, offset).all(),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) as total FROM event_participants WHERE event_id = ?`
+    ).bind(eventId).first<{ total: number }>()
   ])
 
   return c.json(paginate(rows.results, countRow?.total ?? 0, page, limit))

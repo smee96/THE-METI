@@ -74,6 +74,7 @@ function renderApp() {
           ${navItem('users', 'users', '유저 관리')}
           ${navItem('groups', 'building', '그룹 관리')}
           ${navItem('events', 'calendar-alt', '행사 관리')}
+          ${navItem('lessons', 'chalkboard-teacher', '레슨 관리')}
           <p class="text-slate-500 text-sm uppercase font-semibold px-2 pt-2 pb-0.5">운영</p>
           ${navItem('reports', 'flag', '신고 관리')}
           ${navItem('nfc-cards', 'credit-card', 'NFC 카드')}
@@ -164,7 +165,7 @@ function navigateTo(section) {
 
   const titles = {
     dashboard: '대시보드', users: '유저 관리', groups: '그룹 관리',
-    events: '행사 관리', reports: '신고 관리', 'nfc-cards': 'NFC 카드 관리',
+    events: '행사 관리', lessons: '레슨 관리', reports: '신고 관리', 'nfc-cards': 'NFC 카드 관리',
     partners: '파트너 서비스', rewards: '리워드 내역'
   };
   const titleEl = document.getElementById('page-title');
@@ -172,7 +173,7 @@ function navigateTo(section) {
 
   const pages = {
     dashboard: loadDashboard, users: loadUsers, groups: loadGroups,
-    events: loadEvents, reports: loadReports, 'nfc-cards': loadNfcCards,
+    events: loadEvents, lessons: loadLessons, reports: loadReports, 'nfc-cards': loadNfcCards,
     partners: loadPartners, rewards: loadRewards, 'plan-configs': loadPlanConfigs
   };
   if (pages[section]) pages[section]();
@@ -1127,6 +1128,70 @@ async function loadRewards(page = 1) {
   } catch (err) {
     setContent(errorBox('리워드 내역을 불러오지 못했습니다.'));
   }
+}
+
+// ── 레슨 관리 ─────────────────────────────────────────────
+async function loadLessons(page = 1) {
+  setContent(loadingSpinner());
+  try {
+    // 전체 그룹에서 레슨 조회 (어드민: admin API 통해 전체 조회)
+    const { data } = await axios.get(`/admin/lessons?limit=20&page=${page}`);
+    const rows = data.data || [];
+    const pagination = data.pagination;
+    setContent(`
+      <div class="space-y-3">
+        <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+          <div class="px-4 py-3 border-b flex items-center justify-between">
+            <span class="text-sm font-semibold text-gray-700">전체 레슨 목록</span>
+            <span class="text-sm text-gray-500">총 ${pagination?.total ?? rows.length}개</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-50 border-b">
+                <tr>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">레슨명</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">그룹</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">강사</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">일시</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">정원</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">상태</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                ${rows.length === 0 ? `<tr><td colspan="6" class="px-4 py-10 text-center text-gray-400 text-sm">레슨이 없습니다.</td></tr>` : ''}
+                ${rows.map(r => `
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 text-sm font-medium text-gray-900">${r.title ?? '-'}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">${r.group_name ?? '-'}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">${r.instructor_name ?? '-'}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">${r.scheduled_at ? formatDate(r.scheduled_at) : '-'}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">
+                      ${r.registered_count ?? 0} / ${r.capacity ?? '∞'}
+                    </td>
+                    <td class="px-4 py-3">${lessonStatusBadge(r.status)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        ${pagination ? renderPagination(pagination, 'loadLessons') : ''}
+      </div>
+    `);
+  } catch (err) {
+    setContent(errorBox('레슨 목록을 불러오지 못했습니다.'));
+  }
+}
+
+function lessonStatusBadge(status) {
+  const map = {
+    upcoming  : 'bg-blue-100 text-blue-700',
+    ongoing   : 'bg-green-100 text-green-700',
+    ended     : 'bg-gray-100 text-gray-500',
+    cancelled : 'bg-red-100 text-red-500'
+  };
+  const labels = { upcoming: '예정', ongoing: '진행중', ended: '종료', cancelled: '취소' };
+  return `<span class="px-2 py-0.5 ${map[status] || 'bg-gray-100 text-gray-500'} text-sm rounded-full">${labels[status] || status || '-'}</span>`;
 }
 
 // ── API 액션 함수들 ─────────────────────────────────────
