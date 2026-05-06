@@ -1,124 +1,80 @@
-# METI 네이티브 앱 에이전트 프롬프트 v2.6
-> 작성일: 2026-05-06 | 이전 버전: v2.5
+# METI NativeApp Agent Prompt — v2.6 변경 패치
+
+> **문서 성격**: 이 문서는 **v2.5 대비 변경된 부분만** 기술합니다.  
+> 앱 에이전트는 **v2.5 전체 문서를 기본(Base)으로 유지**하면서, 아래 지시에 따라 해당 섹션을 교체·추가하세요.  
+> 변경되지 않은 섹션(인증 API, 명함 API, 채팅 API, 포인트 API 등)은 v2.5 그대로 사용합니다.
+
+> **버전**: v2.6  
+> **기준 버전**: v2.5 (2026-05-05)  
+> **패치 작성일**: 2026-05-06
 
 ---
 
-## 서비스 개요
+## 변경 요약
 
-**METI**는 디지털 명함 + 그룹 네트워킹 + 레슨·행사 관리 + 포인트·결제를 통합한 Flutter 네이티브 앱입니다.
-
-- **백엔드 API 베이스 URL**: `https://the-meti.pages.dev/api/v1`
-- **앱 번들 ID**: `com.meti.app`
-- **인앱결제 상품 ID**: `com.meti.pro_monthly`, `com.meti.business_monthly`
-
----
-
-## 1. 인증 (Auth)
-
-### 1.1 토큰 구조
-- **Access Token**: JWT, 만료 1시간, Authorization 헤더에 Bearer로 전달
-- **Refresh Token**: 로컬 저장, 자동 갱신
-
-### 1.2 핵심 API
-```
-POST /auth/login          { email, password } → { access_token, refresh_token, user }
-POST /auth/register       { email, password, name, account_type }
-POST /auth/refresh        { refresh_token } → { access_token }
-POST /auth/logout
-GET  /auth/me
-```
-
-### 1.3 딥링크 처리 (앱 시작 시)
-앱 시작 시 `Uri.base`를 파싱하여 딥링크를 감지합니다.
-
-```dart
-// main.dart 또는 router 초기화 시
-final uri = Uri.base;
-
-if (uri.path.startsWith('/invite/')) {
-  final token = uri.pathSegments.last;
-  if (isLoggedIn) {
-    // 바로 그룹 미리보기 → 가입 모달
-    showInviteJoinModal(token);
-  } else {
-    // SharedPreferences에 임시 저장 → 로그인 완료 후 처리
-    await prefs.setString('pending_invite_token', token);
-    navigateTo('/login');
-  }
-}
-
-if (uri.path.startsWith('/card/')) {
-  final cardId = uri.pathSegments.last;
-  // 명함 공개 페이지 표시 (인증 불필요)
-  navigateTo('/card/$cardId');
-}
-```
-
-**초대 관련 API**
-```
-GET  /auth/invite-preview/:token   인증 불필요, 그룹 미리보기
-POST /auth/invite-join             { token } 인증 필요, 실제 가입
-```
+| # | 대상 섹션 | 변경 유형 | 한 줄 요약 |
+|---|---------|---------|----------|
+| 1 | §7 그룹 멤버 역할 | **교체** | role ENUM에 `instructor` 추가 + 강사 지정 API 신규 |
+| 2 | §8 레슨 API | **전체 교체** | API 경로 변경, 생성 권한 명확화, 수강 신청/취소 추가 |
+| 3 | §9 행사 API | **전체 교체** | API 경로 변경, 개설 비용 정책, 참가비 포인트 흐름 추가 |
+| 4 | 신규 §10 상품·주문·결제 | **섹션 신규 추가** | products, orders, payments API 전체 |
+| 5 | §16 DB 스키마 | **내용 추가** | migration 0014, 0015 테이블 목록 |
+| 6 | §18 로드맵 | **상태 업데이트** | 레슨·행사·상품·결제 완료 표시 |
 
 ---
 
-## 2. 명함 (Cards)
+## PATCH 1 — §7 그룹 멤버 역할(role) 교체
+
+**v2.5의 §7 그룹 멤버 역할 표를 아래로 교체하세요.**
+
+### 그룹 내 역할 (group_members.role)
+
+| 값 | 설명 | 레슨 생성 | 행사 생성 |
+|----|------|:---:|:---:|
+| `admin` | 그룹 오너. 역할 변경 포함 모든 기능 | ✅ | ✅ |
+| `sub_admin` | 부관리자 | ✅ | ✅ |
+| `instructor` | 강사. 담당 레슨 생성만 가능 | ✅ | ❌ |
+| `member` | 일반 멤버 | ❌ | ❌ |
+
+> ~~v2.5: instructor 역할 없음~~  
+> **v2.6 추가**: `instructor` 역할 신규. `admin`이 지정.
+
+### 강사 지정 API (신규)
 
 ```
-GET    /cards               내 명함 목록
-POST   /cards               명함 생성
-GET    /cards/:id           명함 상세
-PUT    /cards/:id           명함 수정
-DELETE /cards/:id           명함 삭제
-GET    /cards/public/:id    공개 명함 조회 (인증 불필요)
-```
-
----
-
-## 3. 그룹 (Groups)
-
-```
-GET    /groups                   공개 그룹 목록
-POST   /groups                   그룹 생성 (group_admin 플랜 필요)
-GET    /groups/:id               그룹 상세
-GET    /groups/:id/members       멤버 목록
-POST   /groups/:id/join          가입 신청
-DELETE /groups/:id/join          탈퇴
-PATCH  /groups/:id/members/:memberId         가입 승인/거절
-PATCH  /groups/:id/members/:memberId/role    역할 변경 (admin 전용)
-```
-
-### 3.1 그룹 내 역할 (role)
-| 값 | 설명 |
-|----|------|
-| `admin` | 그룹 오너. 역할 변경, 모든 기능 |
-| `sub_admin` | 부관리자. 행사·레슨 생성 |
-| `instructor` | 강사. 담당 레슨 생성 |
-| `member` | 일반 멤버 |
-
-### 3.2 강사 지정
-```
-PATCH /groups/:id/members/:memberId/role
-Body: { "role": "instructor" }
+PATCH /api/v1/groups/:id/members/:memberId/role
 권한: admin만 가능
+Body: { "role": "instructor" }   // "sub_admin" | "instructor" | "member"
 ```
+
+**레슨 생성 주체 정리**:
+- 강사가 직접 그룹을 만든 경우 → 자동으로 `admin` 역할 → 별도 지정 없이 레슨 생성 가능
+- 기존 그룹에 강사를 추가하는 경우 → `admin`이 위 API로 `instructor` 역할 부여 후 레슨 생성 가능
 
 ---
 
-## 4. 레슨 (Lessons)
+## PATCH 2 — §8 레슨 API 전체 교체
 
-### 4.1 API
+**v2.5의 §8 레슨 API 전체를 아래로 교체하세요.**
+
+### 8-1. 레슨 목록
+
 ```
-GET    /lessons/groups/:groupId/lessons       레슨 목록 (그룹 멤버)
-POST   /lessons/groups/:groupId/lessons       레슨 생성 (admin/sub_admin/instructor, 그룹포인트 500P 차감)
-GET    /lessons/:id                           레슨 상세 (관리자·강사는 등록자 목록 포함)
-PUT    /lessons/:id                           레슨 수정 (admin/sub_admin/강사 본인)
-DELETE /lessons/:id                           레슨 취소 (admin/sub_admin)
-POST   /lessons/:id/register                  수강 신청 (그룹 멤버)
-DELETE /lessons/:id/register                  수강 취소 (신청자 본인)
+GET /api/v1/lessons/groups/:groupId/lessons
+권한: 그룹 멤버 전체
+Query: page, limit, status(upcoming|ongoing|ended|cancelled)
 ```
 
-### 4.2 레슨 생성 요청 Body
+> ~~v2.5: `GET /lessons/:groupId/schedules`~~ → **v2.6: 경로 변경**
+
+### 8-2. 레슨 생성
+
+```
+POST /api/v1/lessons/groups/:groupId/lessons
+권한: admin / sub_admin / instructor
+효과: 그룹 포인트 500P 자동 차감
+```
+
 ```json
 {
   "instructor_id": 123,
@@ -132,26 +88,103 @@ DELETE /lessons/:id/register                  수강 취소 (신청자 본인)
 }
 ```
 
-### 4.3 레슨 상태
-`upcoming` → `ongoing` → `ended` | `cancelled`
+**포인트 부족 응답** (그룹 포인트 부족 시):
+```json
+{
+  "success": false,
+  "error": "그룹 포인트가 부족합니다.",
+  "data": {
+    "error_code": "insufficient_group_points",
+    "required": 500,
+    "current": 200,
+    "shortage": 300
+  }
+}
+```
+
+> ~~v2.5: 레슨 생성 비용 없음~~ → **v2.6: 그룹 포인트 500P 차감**
+
+### 8-3. 레슨 상세
+
+```
+GET /api/v1/lessons/:id
+권한: 그룹 멤버
+응답: 레슨 정보 + 강사 정보 + registered_count
+      (admin/sub_admin/instructor에게는 등록자 목록도 포함)
+```
+
+### 8-4. 레슨 수정
+
+```
+PUT /api/v1/lessons/:id
+권한: admin / sub_admin / 강사 본인
+Body: title, description, scheduled_at, duration_minutes, capacity, location, status (모두 optional)
+```
+
+### 8-5. 레슨 취소
+
+```
+DELETE /api/v1/lessons/:id
+권한: admin / sub_admin
+효과: status → 'cancelled' (포인트 환불 없음)
+```
+
+### 8-6. 수강 신청 (신규)
+
+```
+POST /api/v1/lessons/:id/register
+권한: 그룹 멤버
+```
+
+응답:
+```json
+{ "success": true, "message": "수강 신청이 완료되었습니다." }
+```
+
+에러:
+```json
+{ "success": false, "error": "수강 정원이 가득 찼습니다." }   // 409
+{ "success": false, "error": "이미 수강 신청한 레슨입니다." } // 409
+```
+
+### 8-7. 수강 취소 (신규)
+
+```
+DELETE /api/v1/lessons/:id/register
+권한: 신청자 본인
+```
+
+### 8-8. 레슨 상태
+
+```
+upcoming → ongoing → ended
+                   → cancelled
+```
 
 ---
 
-## 5. 행사 (Events)
+## PATCH 3 — §9 행사 API 전체 교체
 
-### 5.1 API
+**v2.5의 §9 행사 API 전체를 아래로 교체하세요.**
+
+### 9-1. 행사 목록
+
 ```
-GET    /events/groups/:groupId/events       행사 목록 (그룹 멤버)
-POST   /events/groups/:groupId/events       행사 생성 (admin/sub_admin, 그룹포인트 차감)
-GET    /events/:id                          행사 상세
-PUT    /events/:id                          행사 수정 (admin/sub_admin)
-DELETE /events/:id                          행사 취소 (admin/sub_admin)
-POST   /events/:id/join                     참가 신청 (그룹 멤버, entry_fee 차감)
-DELETE /events/:id/join                     참가 취소 (참가비 환불)
-GET    /events/:id/participants             참가자 목록 (admin/sub_admin)
+GET /api/v1/events/groups/:groupId/events
+권한: 그룹 멤버 전체
+Query: page, limit, status
 ```
 
-### 5.2 행사 생성 요청 Body
+> ~~v2.5: `GET /events?group_id=X`~~ → **v2.6: 경로 변경**
+
+### 9-2. 행사 생성
+
+```
+POST /api/v1/events/groups/:groupId/events
+권한: admin / sub_admin
+효과: 그룹 포인트 자동 차감 (정원에 따라 다름)
+```
+
 ```json
 {
   "title": "2026 하계 수영 대회",
@@ -167,14 +200,17 @@ GET    /events/:id/participants             참가자 목록 (admin/sub_admin)
 }
 ```
 
-### 5.3 행사 개설 비용 (그룹 포인트 자동 차감)
+**행사 개설 비용 (그룹 포인트 자동 차감)**:
+
 | 정원 | 차감 포인트 |
 |------|------------|
 | ≤30명 | 1,000 P |
 | 31~100명 | 3,000 P |
-| >100명 또는 무제한 | 5,000 P |
+| >100명 또는 무제한(미입력) | 5,000 P |
 
-### 5.4 에러 응답 (포인트 부족)
+> ~~v2.5: 행사 개설 비용 없음~~ → **v2.6: 정원 기준 포인트 차감**
+
+**포인트 부족 응답**:
 ```json
 {
   "success": false,
@@ -188,46 +224,138 @@ GET    /events/:id/participants             참가자 목록 (admin/sub_admin)
 }
 ```
 
+### 9-3. 행사 상세
+
+```
+GET /api/v1/events/:id
+권한: public 행사 → 누구나 / group_only → 그룹 멤버
+```
+
+### 9-4. 행사 수정
+
+```
+PUT /api/v1/events/:id
+권한: admin / sub_admin
+Body: title, description, location, starts_at, ends_at, status, visibility, registration_type (모두 optional)
+```
+
+### 9-5. 행사 취소
+
+```
+DELETE /api/v1/events/:id
+권한: admin / sub_admin
+효과: status → 'cancelled'
+```
+
+### 9-6. 행사 참가 신청 (신규)
+
+```
+POST /api/v1/events/:id/join
+권한: 그룹 멤버
+효과: entry_fee > 0 이면 개인 포인트 차감 → 그룹 포인트로 적립
+```
+
+에러:
+```json
+{ "success": false, "error": "행사 정원이 가득 찼습니다." }     // 409
+{ "success": false, "error": "이미 참가 신청한 행사입니다." }   // 409
+{
+  "success": false,
+  "error": "포인트가 부족합니다.",
+  "data": {
+    "error_code": "insufficient_points",
+    "required": 500, "current": 100, "shortage": 400
+  }
+}
+```
+
+### 9-7. 행사 참가 취소 (신규)
+
+```
+DELETE /api/v1/events/:id/join
+권한: 신청자 본인
+효과: entry_fee > 0 이면 개인 포인트 환불, 그룹 포인트 차감
+```
+
+### 9-8. 참가자 목록
+
+```
+GET /api/v1/events/:id/participants
+권한: admin / sub_admin
+Query: page, limit
+```
+
 ---
 
-## 6. 상품·주문·결제 (Products / Orders / Payments)
+## PATCH 4 — §10 상품·주문·결제 섹션 신규 추가
 
-### 6.1 상품
+**v2.5 §9 뒤에 §10을 새로 삽입하세요. 기존 §10 이후 번호는 한 칸씩 밀립니다.**
+
+### 10-1. 상품 (Products)
+
+그룹 관리자가 레슨·행사에 대한 **결제 상품**을 등록합니다.  
+예) 수영 초급 10회 이용권 100,000원 / 체험 1회 10,000원
+
 ```
-GET  /groups/:groupId/products          그룹 상품 목록 (그룹 멤버)
-POST /groups/:groupId/products          상품 등록 (admin/sub_admin)
-PUT  /products/:id                      상품 수정
+GET  /api/v1/groups/:groupId/products     그룹 상품 목록 (그룹 멤버)
+POST /api/v1/groups/:groupId/products     상품 등록 (admin / sub_admin)
+PUT  /api/v1/products/:id                 상품 수정 (admin / sub_admin)
 ```
 
-### 6.2 주문
+상품 등록 Body:
+```json
+{
+  "type": "lesson",
+  "target_id": 1,
+  "title": "수영 초급 10회 이용권",
+  "price": 100000,
+  "stock": null,
+  "expires_days": 90
+}
 ```
-POST /orders                            주문 생성
-GET  /orders                            내 주문 목록
-GET  /orders/:id                        주문 상세
+
+### 10-2. 주문 (Orders)
+
+```
+POST /api/v1/orders       주문 생성
+GET  /api/v1/orders       내 주문 목록
+GET  /api/v1/orders/:id   주문 상세
 ```
 
 주문 생성 Body:
 ```json
-{
-  "items": [
-    { "product_id": 1, "quantity": 1 }
-  ]
-}
+{ "items": [{ "product_id": 1, "quantity": 1 }] }
 ```
 
 응답:
 ```json
-{
-  "success": true,
-  "data": { "order_id": 42, "total_amount": 100000, "item_count": 1 }
-}
+{ "success": true, "data": { "order_id": 42, "total_amount": 100000, "item_count": 1 } }
 ```
 
-### 6.3 결제
+### 10-3. 결제 (Payments)
 
 #### 웹 결제 (레슨·행사 상품 — PG사 미확정)
+
+> **앱에서 웹 결제를 유도하는 이유**: 인앱결제 수수료 30% 절감 (PG사 약 3%)
+
+**앱 내 웹 결제 유도 흐름**:
 ```
-POST /payments/verify-web
+1. 사용자 상품 선택
+   ↓
+2. POST /orders → order_id 획득
+   ↓
+3. 앱 내 WebView로 결제 페이지 열기
+   URL: https://the-meti.pages.dev/payment?order_id={order_id}
+   ↓
+4. PG 결제 완료 콜백
+   ↓
+5. POST /api/v1/payments/verify-web 호출
+   ↓
+6. 결제 완료 → 주문 상태 paid
+```
+
+```
+POST /api/v1/payments/verify-web
 Body: {
   "order_id": 42,
   "pg": "toss",
@@ -236,15 +364,13 @@ Body: {
 }
 ```
 
-**앱에서 웹 결제 유도 흐름**:
-1. 상품 선택 → `POST /orders` → `order_id` 획득
-2. 앱 내 웹뷰로 `https://the-meti.pages.dev/payment?order_id=42` 열기
-3. PG 결제 완료 → `POST /payments/verify-web` 호출
-4. 결제 성공 → 주문 상태 `paid`
+> ⚠️ **필수 준수**: 앱 내에서 "웹에서 결제하세요" 문구 직접 노출 시  
+> Apple/Google 정책 위반 가능 — WebView 방식 또는 외부 브라우저 유도 사용
 
 #### 구독 결제 (Apple IAP)
+
 ```
-POST /payments/subscription/verify-apple
+POST /api/v1/payments/subscription/verify-apple
 Body: {
   "receipt_data": "base64_영수증",
   "product_id": "com.meti.pro_monthly",
@@ -252,9 +378,16 @@ Body: {
 }
 ```
 
+상품 ID:
+| 상품 | product_id |
+|------|-----------|
+| Pro 월간 | `com.meti.pro_monthly` |
+| Business 월간 | `com.meti.business_monthly` |
+
 #### 구독 결제 (Google Play)
+
 ```
-POST /payments/subscription/verify-google
+POST /api/v1/payments/subscription/verify-google
 Body: {
   "purchase_token": "google_구매토큰",
   "product_id": "com.meti.pro_monthly",
@@ -262,130 +395,57 @@ Body: {
 }
 ```
 
----
+### 10-4. 결제 방식 정책
 
-## 7. 포인트 시스템
-
-```
-GET  /points/me                   개인 포인트 잔액·이력
-POST /points/transfer             개인 → 그룹 포인트 이전
-  Body: { "group_id": 1, "amount": 500 }
-GET  /groups/:id/points           그룹 포인트 잔액·이력
-```
+| 항목 | 방식 |
+|------|------|
+| 구독 (pro/business) | Apple IAP + Google Play Billing |
+| 레슨·행사 상품 구매 | 웹 결제 (WebView 유도) |
+| 포인트 직접 충전 | 웹 결제 (Phase 2) |
 
 ---
 
-## 8. 결제 방식 정책
+## PATCH 5 — §16 DB 스키마에 내용 추가
 
-| 항목 | 방식 | 이유 |
-|------|------|------|
-| 구독 (pro/business) | Apple IAP + Google Play | 스토어 정책 |
-| 레슨·행사 상품 구매 | 웹 결제 (웹뷰 유도) | 수수료 절감 (30% vs 3%) |
-| 포인트 직접 충전 | 웹 결제 (Phase 2) | 수수료 절감 |
+**v2.5 §16 DB 스키마 변경 이력 표의 마지막 행 아래에 다음을 추가하세요.**
 
-> ⚠️ 주의: 앱 내에서 "포인트 충전" 버튼은 웹뷰(또는 외부 브라우저)로 연결해야 합니다.
-> 구독 이외의 결제를 앱 내 IAP로 처리하면 스토어 정책 위반이 아니나, 수수료 30%가 발생합니다.
-
----
-
-## 9. 공통 응답 구조
-
-```json
-// 성공
-{ "success": true, "data": { ... }, "message": "..." }
-
-// 실패
-{ "success": false, "error": "오류 메시지" }
-
-// 페이지네이션
-{
-  "success": true,
-  "data": [ ... ],
-  "pagination": {
-    "page": 1, "limit": 20, "total": 50,
-    "total_pages": 3, "has_next": true
-  }
-}
-```
+| Migration | 내용 |
+|-----------|------|
+| *(기존 행 유지)* | *(변경 없음)* |
+| **0014** | `lessons`, `lesson_registrations`, `events`(재설계), `event_participants`, `products`, `orders`, `order_items`, `payments` 신규 / `group_members.role`에 `instructor` 추가 |
+| **0015** | `events.entry_fee` 컬럼 추가 |
 
 ---
 
-## 10. 전체 API 목록 요약
+## PATCH 6 — §18 로드맵 현재 Phase 행 업데이트
 
-### 인증
-| Method | Path |
-|--------|------|
-| POST | /auth/login |
-| POST | /auth/register |
-| POST | /auth/refresh |
-| POST | /auth/logout |
-| GET | /auth/me |
-| GET | /auth/invite-preview/:token |
-| POST | /auth/invite-join |
+**v2.5 §18 로드맵 표의 "현재" 행을 아래로 교체하세요.**
 
-### 명함
-| Method | Path |
-|--------|------|
-| GET/POST | /cards |
-| GET/PUT/DELETE | /cards/:id |
-| GET | /cards/public/:id |
+| Phase | 내용 | 서버 상태 |
+|-------|------|---------|
+| **현재** | 인증, 명함, 그룹, 포인트, 강사 역할 지정, **레슨 CRUD + 수강신청**, **행사 CRUD + 참가신청**, **상품·주문·결제 API** | ✅ 완료 |
 
-### 그룹
-| Method | Path |
-|--------|------|
-| GET/POST | /groups |
-| GET | /groups/:id |
-| GET | /groups/:id/members |
-| POST | /groups/:id/join |
-| DELETE | /groups/:id/join |
-| PATCH | /groups/:id/members/:memberId |
-| PATCH | /groups/:id/members/:memberId/role |
-| GET/POST | /groups/:id/invite-links |
-
-### 레슨
-| Method | Path |
-|--------|------|
-| GET/POST | /lessons/groups/:groupId/lessons |
-| GET/PUT/DELETE | /lessons/:id |
-| POST/DELETE | /lessons/:id/register |
-
-### 행사
-| Method | Path |
-|--------|------|
-| GET/POST | /events/groups/:groupId/events |
-| GET/PUT/DELETE | /events/:id |
-| POST/DELETE | /events/:id/join |
-| GET | /events/:id/participants |
-
-### 상품·주문·결제
-| Method | Path |
-|--------|------|
-| GET/POST | /groups/:groupId/products |
-| PUT | /products/:id |
-| GET/POST | /orders |
-| GET | /orders/:id |
-| POST | /payments/verify-web |
-| POST | /payments/subscription/verify-apple |
-| POST | /payments/subscription/verify-google |
-
-### 포인트
-| Method | Path |
-|--------|------|
-| GET | /points/me |
-| POST | /points/transfer |
-| GET | /groups/:id/points |
+> ~~v2.5: 레슨·행사·결제 미포함~~
 
 ---
 
-## 11. 미구현 / Phase 2 항목
+## 적용 후 검증 체크리스트
 
-| 항목 | 상태 | 비고 |
-|------|------|------|
-| PG사 서버사이드 검증 | ⏳ | PG사 확정 후 구현 (Toss/포트원) |
-| Apple IAP 영수증 검증 | ⏳ | Apple Verify API 연동 필요 |
-| Google Play 구매 검증 | ⏳ | Google Publisher API 연동 필요 |
-| 웹 결제 페이지 | ⏳ | 앱 웹뷰용 결제 페이지 구현 예정 |
-| 포인트 직접 충전 | ⏳ | Phase 2 |
-| 푸시 알림 (FCM) | ⏳ | 미결정 |
-| 채팅 (그룹 채팅) | ⏳ | 미결정 |
-| NFC 태그 입장 처리 | ⏳ | 네이티브 NFC API 필요 |
+- [ ] §7 역할 표에 `instructor` 항목과 강사 지정 API(`PATCH .../role`)가 존재함
+- [ ] §7에 "강사가 직접 그룹을 만들면 admin → 바로 레슨 생성 가능" 설명이 있음
+- [ ] §8 레슨 API 경로가 `/lessons/groups/:groupId/lessons` 형식으로 변경됨
+- [ ] §8에 수강 신청(`POST .../register`) 및 취소(`DELETE .../register`) API가 있음
+- [ ] §8에 레슨 개설 시 그룹 포인트 500P 차감 안내가 있음
+- [ ] §9 행사 API 경로가 `/events/groups/:groupId/events` 형식으로 변경됨
+- [ ] §9에 행사 참가 신청(`POST .../join`) 및 취소(`DELETE .../join`) API가 있음
+- [ ] §9에 행사 개설 비용 표(1000/3000/5000P)가 있음
+- [ ] §10이 신규 삽입되어 상품·주문·결제 API가 기술되어 있음
+- [ ] §10에 웹 결제 유도 흐름 5단계가 있음
+- [ ] §10에 Apple IAP / Google Play 구독 검증 API가 있음
+- [ ] §16에 migration 0014, 0015 행이 추가됨
+- [ ] §18 현재 Phase에 레슨·행사·상품·결제 완료 표시됨
+
+---
+
+*METI NativeApp Agent Prompt v2.6 Patch — 2026-05-06*  
+*Base: v2.5 (2026-05-05) — 변경된 섹션만 기술, 나머지는 v2.5 원본 유지*
