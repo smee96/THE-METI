@@ -244,7 +244,7 @@ products.post(
   authMiddleware,
   zValidator('json', z.object({
     order_id         : z.number().int().positive(),
-    pg               : z.enum(['toss', 'portone']),
+    pg               : z.enum(['toss', 'stripe']),
     pg_transaction_id: z.string().min(1),
     amount           : z.number().int().positive(),
   })),
@@ -289,6 +289,98 @@ products.post(
     }, '결제가 완료되었습니다.'))
   }
 )
+
+// ══════════════════════════════════════════════════════════════
+// POST /api/v1/payments/payment-token
+// 일회성 결제 토큰 발급 (WebView 결제 페이지 인증용)
+// 5분 유효, 1회 사용 즉시 무효화
+// ══════════════════════════════════════════════════════════════
+products.post(
+  '/payments/payment-token',
+  authMiddleware,
+  zValidator('json', z.object({
+    order_id: z.number().int().positive(),
+  })),
+  async (c) => {
+    const userId  = c.get('userId')
+    const { order_id } = c.req.valid('json')
+
+    // 주문 소유자 확인
+    const order = await c.env.DB.prepare(
+      `SELECT id, status FROM orders WHERE id = ? AND user_id = ?`
+    ).bind(order_id, userId).first<{ id: number; status: string }>()
+
+    if (!order)                     return c.json(fail('주문을 찾을 수 없습니다.'), 404)
+    if (order.status !== 'pending') return c.json(fail('이미 처리된 주문입니다.'), 409)
+
+    // 기존 미사용 토큰 무효화 (중복 발급 방지)
+    await c.env.DB.prepare(
+      `UPDATE payment_tokens SET is_used = 1 WHERE user_id = ? AND order_id = ? AND is_used = 0`
+    ).bind(userId, order_id).run()
+
+    // 새 일회성 토큰 생성 (UUID v4 기반)
+    const token     = crypto.randomUUID()
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000) // 5분 후 만료
+
+    await c.env.DB.prepare(`
+      INSERT INTO payment_tokens (token, user_id, order_id, is_used, expires_at)
+      VALUES (?, ?, ?, 0, ?)
+    `).bind(token, userId, order_id, expiresAt.toISOString()).run()
+
+    return c.json(ok({
+      token,
+      expires_in : 300,  // 초
+      expires_at : expiresAt.toISOString(),
+      payment_url: `/payment?token=${token}`,
+    }, '결제 토큰이 발급되었습니다.'), 201)
+  }
+)
+
+// ══════════════════════════════════════════════════════════════
+// GET /api/v1/payments/payment-token/verify
+// 결제 페이지에서 토큰 검증 → 사용자 정보 + 주문 정보 반환
+// ══════════════════════════════════════════════════════════════
+products.get('/payments/payment-token/verify', async (c) => {
+  const token = c.req.query('token')
+  if (!token) return c.json(fail('토큰이 필요합니다.'), 400)
+
+  const row = await c.env.DB.prepare(`
+    SELECT pt.*, u.name, u.email,
+           o.total_amount, o.status as order_status
+    FROM payment_tokens pt
+    JOIN users  u ON u.id = pt.user_id
+    JOIN orders o ON o.id = pt.order_id
+    WHERE pt.token = ? AND pt.is_used = 0
+  `).bind(token).first<{
+    id: number; token: string; user_id: number; order_id: number;
+    expires_at: string; name: string; email: string;
+    total_amount: number; order_status: string;
+  }>()
+
+  if (!row) return c.json(fail('유효하지 않거나 만료된 토큰입니다.'), 401)
+
+  // 만료 시간 확인
+  if (new Date(row.expires_at) < new Date()) {
+    await c.env.DB.prepare(
+      `UPDATE payment_tokens SET is_used = 1 WHERE id = ?`
+    ).bind(row.id).run()
+    return c.json(fail('토큰이 만료되었습니다.'), 401)
+  }
+
+  // 토큰 사용 처리 (1회용)
+  await c.env.DB.prepare(
+    `UPDATE payment_tokens SET is_used = 1 WHERE id = ?`
+  ).bind(row.id).run()
+
+  return c.json(ok({
+    user_id     : row.user_id,
+    user_name   : row.name,
+    user_email  : row.email,
+    order_id    : row.order_id,
+    total_amount: row.total_amount,
+    order_status: row.order_status,
+  }))
+})
 
 // ══════════════════════════════════════════════════════════════
 // POST /api/v1/payments/subscription/verify-apple
