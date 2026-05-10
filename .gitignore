@@ -7,3 +7,8 @@ dist/
 *.env.local
 pids/
 *.pid
+
+# Playwright
+playwright-report/
+test-results/
+tests/.auth/

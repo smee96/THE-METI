@@ -17,7 +17,15 @@
     "db:console:local": "wrangler d1 execute meti-production --local",
     "db:console:prod": "wrangler d1 execute meti-production",
     "git:status": "git status",
-    "git:commit": "git add . && git commit -m"
+    "git:commit": "git add . && git commit -m",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:report": "playwright show-report",
+    "test:setup": "CI=true npx playwright test --project=setup --timeout=60000",
+    "test:run": "CI=true npx playwright test --project=chromium --timeout=60000",
+    "test:all": "CI=true npm test -- --timeout=60000"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.7.6",
@@ -31,6 +39,7 @@
     "@hono/vite-build": "^1.2.0",
     "@hono/vite-cloudflare-pages": "^0.4.3",
     "@hono/vite-dev-server": "^0.18.2",
+    "@playwright/test": "^1.59.1",
     "@types/bcryptjs": "^2.4.6",
     "typescript": "^5.7.3",
     "vite": "^6.3.5",
