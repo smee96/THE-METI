@@ -1313,8 +1313,8 @@ function planBadge(plan) {
 }
 
 function accountTypeBadge(type) {
-  const map = { personal: 'bg-gray-100 text-gray-600', headhunter: 'bg-orange-100 text-orange-700' };
-  const labels = { personal: '일반', headhunter: '헤드헌터' };
+  const map = { personal: 'bg-gray-100 text-gray-600' };
+  const labels = { personal: '일반' };
   return `<span class="px-2 py-0.5 ${map[type] || map.personal} text-sm rounded-full">${labels[type] || type}</span>`;
 }
 

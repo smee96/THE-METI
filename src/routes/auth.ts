@@ -70,10 +70,10 @@ auth.post(
     email: z.string().email('유효한 이메일을 입력해주세요.'),
     password: z.string().min(8, '비밀번호는 8자 이상이어야 합니다.'),
     name: z.string().min(2, '이름은 2자 이상이어야 합니다.').max(50),
-    account_type: z.enum(['personal', 'headhunter']).default('personal')
+    account_type: z.enum(['personal']).default('personal').optional()
   })),
   async (c) => {
-    const { email, password, name, account_type } = c.req.valid('json')
+    const { email, password, name } = c.req.valid('json')
 
     const existing = await c.env.DB.prepare(
       'SELECT id FROM users WHERE email = ? AND is_deleted = 0'
@@ -87,8 +87,8 @@ auth.post(
 
     const result = await c.env.DB.prepare(`
       INSERT INTO users (email, password_hash, name, account_type, plan, is_verified)
-      VALUES (?, ?, ?, ?, 'free', 0)
-    `).bind(email, passwordHash, name, account_type).run()
+      VALUES (?, ?, ?, 'personal', 'free', 0)
+    `).bind(email, passwordHash, name).run()
 
     const userId = result.meta.last_row_id as number
 

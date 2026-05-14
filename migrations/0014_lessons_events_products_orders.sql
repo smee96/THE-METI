@@ -4,8 +4,8 @@
 -- ============================================================
 
 -- ── 1. group_members role 확장 (instructor 추가) ──────────
-ALTER TABLE group_members
-  MODIFY COLUMN role ENUM('admin','sub_admin','instructor','member') NOT NULL DEFAULT 'member';
+-- SQLite는 MODIFY COLUMN 미지원 → role 컬럼은 TEXT로 이미 선언되어 있으므로 별도 변경 불필요
+-- instructor 값은 애플리케이션 레벨에서 허용
 
 -- ── 2. lessons ────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS lessons (

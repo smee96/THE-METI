@@ -145,14 +145,7 @@ export function appRegisterHtml(): string {
           <input type="password" id="password" placeholder="8자 이상"
             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">계정 유형</label>
-          <select id="account_type"
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="personal">개인</option>
-            <option value="business">비즈니스</option>
-          </select>
-        </div>
+
         <button type="submit"
           class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors">
           <span id="btn-text">가입하기</span>
@@ -186,7 +179,7 @@ export function appRegisterHtml(): string {
             name:         document.getElementById('name').value.trim(),
             email:        document.getElementById('email').value.trim(),
             password:     document.getElementById('password').value,
-            account_type: document.getElementById('account_type').value
+            account_type: 'personal'
           })
         });
         const data = await res.json();
