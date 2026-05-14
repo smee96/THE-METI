@@ -122,19 +122,31 @@ admin.post(
 // ── 그룹 승인/거절 ────────────────────────────────────
 admin.get('/groups', async (c) => {
   const { page, limit, offset } = parsePagination(c.req.query('page'), c.req.query('limit'))
-  const status = c.req.query('status') ?? 'pending'
+  const status = c.req.query('status')  // undefined = 전체
 
   const [rows, countRow] = await Promise.all([
-    c.env.DB.prepare(`
-      SELECT g.id, g.name, g.description, g.purpose, g.visibility, g.status,
-        g.max_members, g.has_minor, g.is_featured, g.created_at,
-        u.name as admin_name, u.email as admin_email
-      FROM groups g
-      LEFT JOIN users u ON u.id = g.admin_user_id
-      WHERE g.status = ? AND g.is_deleted = 0
-      ORDER BY g.created_at DESC LIMIT ? OFFSET ?
-    `).bind(status, limit, offset).all(),
-    c.env.DB.prepare('SELECT COUNT(*) as total FROM groups WHERE status = ? AND is_deleted = 0').bind(status).first<{ total: number }>()
+    status
+      ? c.env.DB.prepare(`
+          SELECT g.id, g.name, g.description, g.purpose, g.visibility, g.status,
+            g.max_members, g.has_minor, g.is_featured, g.created_at,
+            u.name as admin_name, u.email as admin_email
+          FROM groups g
+          LEFT JOIN users u ON u.id = g.admin_user_id
+          WHERE g.status = ? AND g.is_deleted = 0
+          ORDER BY g.created_at DESC LIMIT ? OFFSET ?
+        `).bind(status, limit, offset).all()
+      : c.env.DB.prepare(`
+          SELECT g.id, g.name, g.description, g.purpose, g.visibility, g.status,
+            g.max_members, g.has_minor, g.is_featured, g.created_at,
+            u.name as admin_name, u.email as admin_email
+          FROM groups g
+          LEFT JOIN users u ON u.id = g.admin_user_id
+          WHERE g.is_deleted = 0
+          ORDER BY g.created_at DESC LIMIT ? OFFSET ?
+        `).bind(limit, offset).all(),
+    status
+      ? c.env.DB.prepare('SELECT COUNT(*) as total FROM groups WHERE status = ? AND is_deleted = 0').bind(status).first<{ total: number }>()
+      : c.env.DB.prepare('SELECT COUNT(*) as total FROM groups WHERE is_deleted = 0').first<{ total: number }>()
   ])
 
   return c.json(paginate(rows.results, countRow?.total ?? 0, page, limit))

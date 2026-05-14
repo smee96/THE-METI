@@ -386,10 +386,10 @@ async function loadUsers(page = 1, search = '') {
 }
 
 // ── 그룹 관리 ────────────────────────────────────────────
-async function loadGroups(page = 1, status = 'pending') {
+async function loadGroups(page = 1, status = 'all') {
   setContent(loadingSpinner());
   try {
-    const { data } = await axios.get(`/admin/groups?page=${page}&limit=20&status=${status}`);
+    const { data } = await axios.get(`/admin/groups?page=${page}&limit=20${status !== 'all' ? '&status=' + status : ''}`);
     const { data: groups, pagination } = data;
 
     setContent(`
@@ -397,11 +397,11 @@ async function loadGroups(page = 1, status = 'pending') {
         <!-- 상단 액션 바 -->
         <div class="flex items-center justify-between gap-2 flex-wrap">
           <div class="flex gap-2 flex-wrap">
-            ${['pending', 'active', 'suspended'].map(s => `
+            ${['all', 'pending', 'active', 'suspended'].map(s => `
               <button onclick="loadGroups(1,'${s}')"
                 class="px-3 py-1.5 rounded-lg text-sm font-medium transition
                        ${status === s ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border hover:bg-gray-50'}">
-                ${s === 'pending' ? '⏳ 승인대기' : s === 'active' ? '✅ 활성' : '🚫 정지'}
+                ${s === 'all' ? '전체' : s === 'pending' ? '⏳ 승인대기' : s === 'active' ? '✅ 활성' : '🚫 정지'}
               </button>
             `).join('')}
           </div>
