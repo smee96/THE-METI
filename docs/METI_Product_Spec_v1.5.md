@@ -284,22 +284,29 @@ STRIPE_SECRET_KEY     # Stripe 시크릿 키
 | 인증 (JWT, OAuth, 리프레시) | ✅ 완료 |
 | 명함 (생성·수정·공개) | ✅ 완료 |
 | 그룹 (생성·승인·멤버·초대링크) | ✅ 완료 |
-| 포인트 시스템 | ✅ 완료 (migration 0013) |
-| 강사 역할 지정 API | ✅ 완료 (v2.6) |
-| 레슨 CRUD + 수강 신청 | ✅ 완료 (v2.6) |
-| 행사 CRUD + 참가 신청 | ✅ 완료 (v2.6) |
-| 상품·주문·결제 API | ✅ 완료 (v2.6, PG 검증 Placeholder) |
-| 관리자 웹 레슨 탭 | ✅ 완료 (v2.6) |
-| 앱 웹 레슨 생성 모달 | ✅ 완료 (v2.6) |
-| 포인트 만료 정책 DB | ⏳ migration 0016 예정 |
-| 명함 수량 제한 plan_configs | ⏳ migration 0017 예정 |
+| 포인트 API (잔액·내역·이전·그룹) | ✅ 완료 (migration 0013) |
+| 강사 역할 지정 API | ✅ 완료 |
+| 레슨 CRUD + 수강 신청 | ✅ 완료 |
+| 행사 CRUD + 참가 신청 | ✅ 완료 |
+| 상품·주문·결제 API | ✅ 완료 (PG 검증 Placeholder) |
+| 어드민 웹 — 대시보드·유저·그룹·행사·레슨 | ✅ 완료 |
+| 어드민 웹 — 명함 관리 탭 | ✅ 완료 |
+| 어드민 웹 — 유저 상세 모달 (명함·그룹·포인트) | ✅ 완료 |
+| 어드민 웹 — 포인트 수동 지급/차감 | ✅ 완료 |
+| 어드민 웹 — 그룹 전체 탭 + 상태별 액션 버튼 | ✅ 완료 |
+| 어드민 API — 유저 상세·명함 CRUD·포인트 지급 | ✅ 완료 |
+| 명함 공개 페이지 (/card/:id) | ✅ 완료 |
+| 그룹 초대 페이지 (/invite/:token) | ✅ 완료 |
+| headhunter account_type 제거 (단일화) | ✅ 완료 (migration 0018) |
+| 포인트 만료 정책 DB (expires_at) | ✅ 완료 (migration 0016) |
+| 명함 수량 제한 plan_configs | ✅ 완료 (migration 0017) |
 | 일회성 결제 토큰 API | ⏳ 구현 예정 |
 | 웹 결제 페이지 (/payment) | ⏳ PG 키 수령 후 구현 |
 | Toss 서버사이드 검증 | ⏳ PG 키 수령 후 구현 |
 | Stripe 서버사이드 검증 | ⏳ PG 키 수령 후 구현 |
 | Apple IAP 영수증 서버검증 | ⏳ 구현 예정 |
 | Google Play 서버검증 | ⏳ 구현 예정 |
-| 딥링크 (Flutter) | ⏳ 네이티브 앱 에이전트 구현 예정 |
+| 딥링크 처리 (Flutter) | ⏳ 네이티브 앱 에이전트 구현 예정 |
 | 푸시 알림 | ⏳ 미결정 |
 | 채팅 | ⏳ 미결정 |
 | 구독 웹훅 | ⏳ Phase 2 |
@@ -308,12 +315,13 @@ STRIPE_SECRET_KEY     # Stripe 시크릿 키
 
 ## 12. DB 마이그레이션 목록
 
-| 번호 | 내용 |
-|------|------|
-| 0001~0009 | 기본 스키마 (users, cards, groups, events, chat, recruiting, rewards, plans, user_role) |
-| 0010~0012 | 미성년자/보호자, 초대링크, 그룹 단순화 |
-| 0013 | 포인트 시스템, 플랜 멤버수 제한 |
-| 0014 | lessons, events(재설계), products, orders, payments, lesson_registrations, event_participants |
-| 0015 | events.entry_fee 컬럼 추가 |
-| 0016 | user_points.expires_at, point_type 컬럼 추가 (포인트 만료 정책) |
-| 0017 | plan_configs: extra_card_price, free_card_limit 컬럼 추가 |
+| 번호 | 내용 | 상태 |
+|------|------|------|
+| 0001~0009 | 기본 스키마 (users, cards, groups, events, chat, rewards, plans, user_role) | ✅ 적용 |
+| 0010~0012 | 미성년자/보호자, 초대링크, 그룹 단순화 | ✅ 적용 |
+| 0013 | 포인트 시스템 (point_wallets, point_transactions), 플랜 멤버수 제한 | ✅ 적용 |
+| 0014 | lessons, events(재설계), products, orders, payments, lesson_registrations, event_participants | ✅ 적용 |
+| 0015 | events.entry_fee 컬럼 추가 | ✅ 적용 |
+| 0016 | point_wallets.expires_at, point_type 컬럼 추가 (포인트 만료 정책) | ✅ 적용 |
+| 0017 | plan_configs: extra_card_price, free_card_limit 컬럼 추가 | ✅ 적용 |
+| 0018 | headhunter account_type 제거 — users 전체 personal 단일화, plans.features 정리 | ✅ 적용 |
