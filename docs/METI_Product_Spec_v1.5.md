@@ -34,10 +34,12 @@ METI는 그룹·행사·레슨 기반의 네트워킹 플랫폼입니다.
 
 | 유형 | 설명 |
 |------|------|
-| `personal` | 일반 사용자 (명함·그룹 멤버) |
-| `headhunter` | 헤드헌터 (확장 명함 기능) |
-| `group_admin` | 그룹 관리자 (그룹 생성·운영 가능) |
-| `super_admin` | 슈퍼어드민 (어드민 웹 전용) |
+| `personal` | 일반 사용자 (명함·그룹 멤버). 모든 회원의 기본 account_type |
+| `group_admin` | 그룹 관리자 역할 — group_members.role = 'admin' 으로 관리 (별도 account_type 아님) |
+| `super_admin` | 슈퍼어드민 (어드민 웹 전용) — users.role = 'super_admin' 으로 관리 |
+
+> **⚠️ v1.5 변경**: `headhunter` account_type 완전 제거. 모든 신규 가입자는 `personal` 고정.
+> 그룹 관리자 권한은 `account_type`이 아닌 `group_members.role` 컬럼으로 구분.
 
 ---
 

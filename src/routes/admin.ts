@@ -127,7 +127,7 @@ admin.get('/groups', async (c) => {
   const [rows, countRow] = await Promise.all([
     status
       ? c.env.DB.prepare(`
-          SELECT g.id, g.name, g.description, g.purpose, g.visibility, g.status,
+          SELECT g.id, g.name, g.description, g.category, g.purpose, g.visibility, g.status,
             g.max_members, g.has_minor, g.is_featured, g.created_at,
             u.name as admin_name, u.email as admin_email
           FROM groups g
@@ -136,7 +136,7 @@ admin.get('/groups', async (c) => {
           ORDER BY g.created_at DESC LIMIT ? OFFSET ?
         `).bind(status, limit, offset).all()
       : c.env.DB.prepare(`
-          SELECT g.id, g.name, g.description, g.purpose, g.visibility, g.status,
+          SELECT g.id, g.name, g.description, g.category, g.purpose, g.visibility, g.status,
             g.max_members, g.has_minor, g.is_featured, g.created_at,
             u.name as admin_name, u.email as admin_email
           FROM groups g
@@ -455,6 +455,139 @@ admin.get('/lessons', superAdminMiddleware, async (c) => {
   ])
 
   return c.json(paginate(rows.results, countRow?.total ?? 0, page, limit))
+})
+
+// ══════════════════════════════════════════════════════════════
+// 유저 상세 (명함 + 그룹 + 포인트 한번에)
+// ══════════════════════════════════════════════════════════════
+admin.get('/users/:id/detail', async (c) => {
+  const userId = Number(c.req.param('id'))
+
+  const [user, cards, groups, wallet] = await Promise.all([
+    c.env.DB.prepare(`
+      SELECT id, email, name, account_type, plan, is_verified, is_active, role, created_at
+      FROM users WHERE id = ? AND is_deleted = 0
+    `).bind(userId).first(),
+    c.env.DB.prepare(`
+      SELECT id, title, job_title, company, is_default, is_active, created_at
+      FROM cards WHERE user_id = ? AND is_deleted = 0 ORDER BY is_default DESC, created_at DESC
+    `).bind(userId).all(),
+    c.env.DB.prepare(`
+      SELECT g.id, g.name, g.status, gm.role, gm.joined_at
+      FROM group_members gm
+      JOIN groups g ON g.id = gm.group_id
+      WHERE gm.user_id = ? AND gm.status = 'active' AND g.is_deleted = 0
+      ORDER BY gm.joined_at DESC
+    `).bind(userId).all(),
+    c.env.DB.prepare(`
+      SELECT balance FROM point_wallets WHERE owner_type = 'user' AND owner_id = ?
+    `).bind(userId).first<{ balance: number }>()
+  ])
+
+  if (!user) return c.json(fail('유저를 찾을 수 없습니다.'), 404)
+
+  return c.json(ok({
+    user,
+    cards:         cards.results,
+    groups:        groups.results,
+    point_balance: wallet?.balance ?? 0
+  }))
+})
+
+// ══════════════════════════════════════════════════════════════
+// 명함 관리
+// ══════════════════════════════════════════════════════════════
+admin.get('/cards', async (c) => {
+  const { page, limit, offset } = parsePagination(c.req.query('page'), c.req.query('limit'))
+  const search    = c.req.query('q')       // 유저 이름/이메일
+  const isActive  = c.req.query('active')  // '1' | '0'
+
+  let query = `
+    SELECT c.id, c.title, c.job_title, c.company, c.is_default, c.is_active, c.created_at,
+           u.id as user_id, u.name as user_name, u.email as user_email
+    FROM cards c
+    JOIN users u ON u.id = c.user_id
+    WHERE c.is_deleted = 0
+  `
+  const params: unknown[] = []
+  if (search)   { query += ` AND (u.name LIKE ? OR u.email LIKE ? OR c.title LIKE ?)`; params.push(`%${search}%`, `%${search}%`, `%${search}%`) }
+  if (isActive !== undefined && isActive !== '') { query += ` AND c.is_active = ?`; params.push(Number(isActive)) }
+  query += ` ORDER BY c.created_at DESC LIMIT ? OFFSET ?`
+  params.push(limit, offset)
+
+  let countQ = `SELECT COUNT(*) as total FROM cards c JOIN users u ON u.id = c.user_id WHERE c.is_deleted = 0`
+  const countParams: unknown[] = []
+  if (search)   { countQ += ` AND (u.name LIKE ? OR u.email LIKE ? OR c.title LIKE ?)`; countParams.push(`%${search}%`, `%${search}%`, `%${search}%`) }
+  if (isActive !== undefined && isActive !== '') { countQ += ` AND c.is_active = ?`; countParams.push(Number(isActive)) }
+
+  const [rows, countRow] = await Promise.all([
+    c.env.DB.prepare(query).bind(...params).all(),
+    c.env.DB.prepare(countQ).bind(...countParams).first<{ total: number }>()
+  ])
+
+  return c.json(paginate(rows.results, countRow?.total ?? 0, page, limit))
+})
+
+// 명함 활성/비활성화
+admin.patch('/cards/:id', zValidator('json', z.object({
+  is_active: z.number().int().min(0).max(1)
+})), async (c) => {
+  const cardId = c.req.param('id')
+  const { is_active } = c.req.valid('json')
+  const exists = await c.env.DB.prepare(`SELECT id FROM cards WHERE id = ? AND is_deleted = 0`).bind(cardId).first()
+  if (!exists) return c.json(fail('명함을 찾을 수 없습니다.'), 404)
+  await c.env.DB.prepare(`UPDATE cards SET is_active = ?, updated_at = datetime('now') WHERE id = ?`).bind(is_active, cardId).run()
+  return c.json(ok(null, is_active ? '명함이 활성화되었습니다.' : '명함이 비활성화되었습니다.'))
+})
+
+// ══════════════════════════════════════════════════════════════
+// 포인트 수동 지급 / 차감
+// ══════════════════════════════════════════════════════════════
+admin.post('/users/:id/points', zValidator('json', z.object({
+  amount:      z.number().int().refine(v => v !== 0, '0은 입력할 수 없습니다.'),
+  description: z.string().min(1, '사유를 입력해주세요.').max(200)
+})), async (c) => {
+  const targetId = Number(c.req.param('id'))
+  const adminId  = c.get('userId')
+  const { amount, description } = c.req.valid('json')
+
+  const user = await c.env.DB.prepare(`SELECT id FROM users WHERE id = ? AND is_deleted = 0`).bind(targetId).first()
+  if (!user) return c.json(fail('유저를 찾을 수 없습니다.'), 404)
+
+  // 지갑 조회 or 생성
+  let wallet = await c.env.DB.prepare(
+    `SELECT id, balance FROM point_wallets WHERE owner_type = 'user' AND owner_id = ?`
+  ).bind(targetId).first<{ id: number; balance: number }>()
+
+  if (!wallet) {
+    const r = await c.env.DB.prepare(
+      `INSERT INTO point_wallets (owner_type, owner_id, balance) VALUES ('user', ?, 0)`
+    ).bind(targetId).run()
+    wallet = { id: r.meta.last_row_id as number, balance: 0 }
+  }
+
+  const newBalance = wallet.balance + amount
+  if (newBalance < 0) return c.json(fail(`잔액 부족 (현재 ${wallet.balance}P)`), 400)
+
+  const now = new Date().toISOString()
+  const type = amount > 0 ? 'charge_admin' : 'use_admin'
+
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      `UPDATE point_wallets SET balance = ?, updated_at = ? WHERE id = ?`
+    ).bind(newBalance, now, wallet.id),
+    c.env.DB.prepare(`
+      INSERT INTO point_transactions
+        (wallet_id, type, point_type, amount, balance_after, ref_type, ref_id, description, created_at)
+      VALUES (?, ?, 'reward', ?, ?, 'admin', ?, ?, ?)
+    `).bind(wallet.id, type, amount, newBalance, adminId, description, now)
+  ])
+
+  return c.json(ok({
+    user_id:     targetId,
+    amount,
+    new_balance: newBalance
+  }, `포인트 ${amount > 0 ? '지급' : '차감'} 완료 (${newBalance}P)`))
 })
 
 export default admin

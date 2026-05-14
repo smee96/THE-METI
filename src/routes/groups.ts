@@ -578,4 +578,55 @@ groups.patch(
   }
 )
 
+// ══════════════════════════════════════════════════════════════
+// GET /invite/:token  — 초대 링크 공개 정보 조회 (인증 불필요)
+//   /invite/:token 웹 페이지와 앱 딥링크에서 사용
+// ══════════════════════════════════════════════════════════════
+groups.get('/invite/:token', async (c) => {
+  const token = c.req.param('token')
+
+  const row = await c.env.DB.prepare(`
+    SELECT
+      gil.id, gil.token, gil.label, gil.max_uses, gil.used_count,
+      gil.expires_at, gil.is_active,
+      g.id   AS group_id,
+      g.name AS group_name,
+      g.description AS group_description,
+      g.visibility,
+      g.status AS group_status
+    FROM group_invite_links gil
+    JOIN groups g ON g.id = gil.group_id
+    WHERE gil.token = ? AND g.is_deleted = 0
+  `).bind(token).first<{
+    id: number; token: string; label: string | null;
+    max_uses: number | null; used_count: number;
+    expires_at: string | null; is_active: number;
+    group_id: number; group_name: string;
+    group_description: string | null; visibility: string;
+    group_status: string;
+  }>()
+
+  if (!row) return c.json(fail('초대 링크를 찾을 수 없습니다.'), 404)
+  if (!row.is_active) return c.json(fail('비활성화된 초대 링크입니다.'), 410)
+  if (row.group_status !== 'active') return c.json(fail('활성 상태가 아닌 그룹입니다.'), 410)
+  if (row.expires_at && new Date(row.expires_at) < new Date()) {
+    return c.json(fail('만료된 초대 링크입니다.'), 410)
+  }
+  if (row.max_uses !== null && row.used_count >= row.max_uses) {
+    return c.json(fail('사용 횟수가 초과된 초대 링크입니다.'), 410)
+  }
+
+  return c.json(ok({
+    token:             row.token,
+    label:             row.label,
+    max_uses:          row.max_uses,
+    used_count:        row.used_count,
+    expires_at:        row.expires_at,
+    group_id:          row.group_id,
+    group_name:        row.group_name,
+    group_description: row.group_description,
+    visibility:        row.visibility
+  }))
+})
+
 export default groups

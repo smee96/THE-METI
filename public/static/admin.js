@@ -73,6 +73,7 @@ function renderApp() {
           ${navItem('dashboard', 'tachometer-alt', '대시보드')}
           ${navItem('users', 'users', '유저 관리')}
           ${navItem('groups', 'building', '그룹 관리')}
+          ${navItem('cards', 'id-card', '명함 관리')}
           ${navItem('events', 'calendar-alt', '행사 관리')}
           ${navItem('lessons', 'chalkboard-teacher', '레슨 관리')}
           <p class="text-slate-500 text-sm uppercase font-semibold px-2 pt-2 pb-0.5">운영</p>
@@ -164,7 +165,7 @@ function navigateTo(section) {
   currentSection = section;
 
   const titles = {
-    dashboard: '대시보드', users: '유저 관리', groups: '그룹 관리',
+    dashboard: '대시보드', users: '유저 관리', groups: '그룹 관리', cards: '명함 관리',
     events: '행사 관리', lessons: '레슨 관리', reports: '신고 관리', 'nfc-cards': 'NFC 카드 관리',
     partners: '파트너 서비스', rewards: '리워드 내역'
   };
@@ -172,7 +173,7 @@ function navigateTo(section) {
   if (titleEl) titleEl.textContent = titles[section] || section;
 
   const pages = {
-    dashboard: loadDashboard, users: loadUsers, groups: loadGroups,
+    dashboard: loadDashboard, users: loadUsers, groups: loadGroups, cards: loadCards,
     events: loadEvents, lessons: loadLessons, reports: loadReports, 'nfc-cards': loadNfcCards,
     partners: loadPartners, rewards: loadRewards, 'plan-configs': loadPlanConfigs
   };
@@ -324,10 +325,14 @@ async function loadUsers(page = 1, search = '') {
                     <td class="px-4 py-3 text-sm text-gray-400">${formatDate(u.created_at)}</td>
                     <td class="px-4 py-3">
                       <div class="flex gap-1">
+                        <button onclick="showUserDetail(${u.id})"
+                          class="text-sm px-2 py-1 border border-gray-200 text-gray-600 rounded hover:bg-gray-50">
+                          상세
+                        </button>
                         <button onclick="toggleUserActive(${u.id}, ${u.is_active})"
                           class="text-sm px-2 py-1 border rounded hover:bg-gray-50
                                  ${u.is_active ? 'text-red-600 border-red-200' : 'text-green-600 border-green-200'}">
-                          ${u.is_active ? '비활성화' : '활성화'}
+                          ${u.is_active ? '비활성' : '활성화'}
                         </button>
                         <button onclick="changeUserPlan(${u.id}, '${u.plan}')"
                           class="text-sm px-2 py-1 border border-blue-200 text-blue-600 rounded hover:bg-blue-50">
@@ -362,10 +367,14 @@ async function loadUsers(page = 1, search = '') {
               <div class="flex items-center justify-between text-sm text-gray-400">
                 <span>${accountTypeBadge(u.account_type)} · ${formatDate(u.created_at)}</span>
                 <div class="flex gap-1">
+                  <button onclick="showUserDetail(${u.id})"
+                    class="px-2 py-1 border border-gray-200 text-gray-600 rounded text-sm">
+                    상세
+                  </button>
                   <button onclick="toggleUserActive(${u.id}, ${u.is_active})"
                     class="px-2 py-1 border rounded text-sm
                            ${u.is_active ? 'text-red-600 border-red-200' : 'text-green-600 border-green-200'}">
-                    ${u.is_active ? '비활성화' : '활성화'}
+                    ${u.is_active ? '비활성' : '활성화'}
                   </button>
                   <button onclick="changeUserPlan(${u.id}, '${u.plan}')"
                     class="px-2 py-1 border border-blue-200 text-blue-600 rounded text-sm">
@@ -445,17 +454,17 @@ async function loadGroups(page = 1, status = 'all') {
                   <td class="px-4 py-3 text-sm text-gray-400">${formatDate(g.created_at)}</td>
                   <td class="px-4 py-3">
                     <div class="flex gap-1">
-                      ${status === 'pending' ? `
+                      ${(status === 'pending' || (status === 'all' && g.status === 'pending')) ? `
                         <button onclick="approveGroup(${g.id},'approve')"
                           class="text-sm px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">승인</button>
                         <button onclick="approveGroup(${g.id},'reject')"
                           class="text-sm px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200">거절</button>
                       ` : ''}
-                      ${status === 'active' ? `
+                      ${(status === 'active' || (status === 'all' && g.status === 'active')) ? `
                         <button onclick="approveGroup(${g.id},'suspend')"
                           class="text-sm px-2 py-1 bg-orange-100 text-orange-700 rounded hover:bg-orange-200">정지</button>
                       ` : ''}
-                      ${status === 'suspended' ? `
+                      ${(status === 'suspended' || (status === 'all' && g.status === 'suspended')) ? `
                         <button onclick="approveGroup(${g.id},'activate')"
                           class="text-sm px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">활성화</button>
                       ` : ''}
@@ -484,17 +493,17 @@ async function loadGroups(page = 1, status = 'all') {
                   <span>${g.admin_name || '-'}</span> · <span>${formatDate(g.created_at)}</span>
                 </div>
                 <div class="flex gap-1">
-                  ${status === 'pending' ? `
+                  ${(status === 'pending' || (status === 'all' && g.status === 'pending')) ? `
                     <button onclick="approveGroup(${g.id},'approve')"
                       class="text-sm px-2 py-1 bg-green-100 text-green-700 rounded">승인</button>
                     <button onclick="approveGroup(${g.id},'reject')"
                       class="text-sm px-2 py-1 bg-red-100 text-red-700 rounded">거절</button>
                   ` : ''}
-                  ${status === 'active' ? `
+                  ${(status === 'active' || (status === 'all' && g.status === 'active')) ? `
                     <button onclick="approveGroup(${g.id},'suspend')"
                       class="text-sm px-2 py-1 bg-orange-100 text-orange-700 rounded">정지</button>
                   ` : ''}
-                  ${status === 'suspended' ? `
+                  ${(status === 'suspended' || (status === 'all' && g.status === 'suspended')) ? `
                     <button onclick="approveGroup(${g.id},'activate')"
                       class="text-sm px-2 py-1 bg-blue-100 text-blue-700 rounded">활성화</button>
                   ` : ''}
@@ -509,6 +518,325 @@ async function loadGroups(page = 1, status = 'all') {
     `);
   } catch (err) {
     setContent(errorBox('그룹 목록을 불러오지 못했습니다.'));
+  }
+}
+
+// ── 명함 관리 탭 ─────────────────────────────────────────
+async function loadCards(page = 1, search = '', activeFilter = '') {
+  setContent(loadingSpinner());
+  try {
+    let url = `/admin/cards?page=${page}&limit=20`;
+    if (search)       url += `&q=${encodeURIComponent(search)}`;
+    if (activeFilter !== '') url += `&active=${activeFilter}`;
+    const { data } = await axios.get(url);
+    const { data: cards, pagination } = data;
+
+    setContent(`
+      <div class="space-y-3">
+        <!-- 필터 바 -->
+        <div class="flex flex-wrap gap-2">
+          <input type="text" id="card-search" placeholder="유저명·이메일·명함명 검색..."
+            value="${search}"
+            onkeydown="if(event.key==='Enter') loadCards(1,this.value,document.getElementById('card-active-filter').value)"
+            class="flex-1 min-w-40 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <select id="card-active-filter"
+            onchange="loadCards(1,document.getElementById('card-search').value,this.value)"
+            class="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="" ${activeFilter===''?'selected':''}>전체</option>
+            <option value="1" ${activeFilter==='1'?'selected':''}>활성</option>
+            <option value="0" ${activeFilter==='0'?'selected':''}>비활성</option>
+          </select>
+          <button onclick="loadCards(1,document.getElementById('card-search').value,document.getElementById('card-active-filter').value)"
+            class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
+            <i class="fas fa-search mr-1"></i>검색
+          </button>
+        </div>
+
+        <!-- 데스크탑 테이블 -->
+        <div class="hidden md:block bg-white rounded-xl shadow-sm border overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-50 border-b">
+                <tr>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">명함</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">소유자</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">기본</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">상태</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">생성일</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">액션</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                ${cards.length === 0 ? `<tr><td colspan="6" class="px-4 py-10 text-center text-gray-400 text-sm">명함이 없습니다.</td></tr>` : ''}
+                ${cards.map(card => `
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3">
+                      <p class="text-sm font-medium text-gray-900">${card.title || '(제목 없음)'}</p>
+                      <p class="text-sm text-gray-400">${card.job_title || ''} ${card.company ? '· ' + card.company : ''}</p>
+                    </td>
+                    <td class="px-4 py-3">
+                      <p class="text-sm text-gray-900">${card.user_name}</p>
+                      <p class="text-sm text-gray-400">${card.user_email}</p>
+                    </td>
+                    <td class="px-4 py-3">
+                      ${card.is_default
+                        ? '<span class="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-sm rounded-full">기본</span>'
+                        : '<span class="text-gray-300 text-sm">-</span>'}
+                    </td>
+                    <td class="px-4 py-3">
+                      ${card.is_active
+                        ? '<span class="px-2 py-0.5 bg-green-100 text-green-700 text-sm rounded-full">활성</span>'
+                        : '<span class="px-2 py-0.5 bg-red-100 text-red-700 text-sm rounded-full">비활성</span>'}
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-400">${formatDate(card.created_at)}</td>
+                    <td class="px-4 py-3">
+                      <button onclick="toggleCardActive(${card.id}, ${card.is_active}, '${search}', '${activeFilter}')"
+                        class="text-sm px-2 py-1 border rounded hover:bg-gray-50
+                               ${card.is_active ? 'text-red-600 border-red-200' : 'text-green-600 border-green-200'}">
+                        ${card.is_active ? '비활성화' : '활성화'}
+                      </button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 모바일 카드 -->
+        <div class="md:hidden space-y-2">
+          ${cards.length === 0 ? `<div class="bg-white rounded-xl p-6 text-center text-gray-400 text-sm">명함이 없습니다.</div>` : ''}
+          ${cards.map(card => `
+            <div class="bg-white rounded-xl p-4 shadow-sm border">
+              <div class="flex items-start justify-between mb-2">
+                <div class="flex-1 min-w-0">
+                  <p class="font-medium text-gray-900 text-sm">${card.title || '(제목 없음)'}</p>
+                  <p class="text-sm text-gray-400">${card.user_name} · ${card.user_email}</p>
+                </div>
+                <div class="flex gap-1 flex-shrink-0 ml-2">
+                  ${card.is_active
+                    ? '<span class="px-2 py-0.5 bg-green-100 text-green-700 text-sm rounded-full">활성</span>'
+                    : '<span class="px-2 py-0.5 bg-red-100 text-red-700 text-sm rounded-full">비활성</span>'}
+                </div>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-gray-400">${formatDate(card.created_at)}</span>
+                <button onclick="toggleCardActive(${card.id}, ${card.is_active}, '${search}', '${activeFilter}')"
+                  class="text-sm px-2 py-1 border rounded
+                         ${card.is_active ? 'text-red-600 border-red-200' : 'text-green-600 border-green-200'}">
+                  ${card.is_active ? '비활성화' : '활성화'}
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        ${renderPagination(pagination, 'loadCards')}
+      </div>
+    `);
+  } catch (err) {
+    setContent(errorBox('명함 목록을 불러오지 못했습니다.'));
+  }
+}
+
+async function toggleCardActive(cardId, currentActive, search = '', activeFilter = '') {
+  const action = currentActive ? '비활성화' : '활성화';
+  if (!confirm(`이 명함을 ${action}하시겠습니까?`)) return;
+  try {
+    await axios.patch(`/admin/cards/${cardId}`, { is_active: currentActive ? 0 : 1 });
+    showToast(`명함이 ${action}되었습니다.`, 'success');
+    loadCards(1, search, activeFilter);
+  } catch (err) {
+    showToast('오류가 발생했습니다.', 'error');
+  }
+}
+
+// ── 유저 상세 모달 ────────────────────────────────────────
+async function showUserDetail(userId) {
+  // 모달 먼저 열기 (로딩 상태)
+  const modal = document.createElement('div');
+  modal.id = 'user-detail-modal';
+  modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center p-4 overflow-y-auto';
+  modal.innerHTML = `
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mt-8 mb-4">
+      <div class="flex items-center justify-between px-5 py-4 border-b">
+        <h3 class="font-bold text-gray-900">유저 상세 정보</h3>
+        <button onclick="document.getElementById('user-detail-modal').remove()" class="text-gray-400 hover:text-gray-600">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div id="user-detail-body" class="p-5">
+        <div class="flex items-center justify-center py-10">
+          <i class="fas fa-spinner fa-spin text-blue-500 text-2xl"></i>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+  try {
+    const { data } = await axios.get(`/admin/users/${userId}/detail`);
+    const { user, cards, groups, point_balance } = data.data;
+
+    document.getElementById('user-detail-body').innerHTML = `
+      <!-- 유저 기본 정보 -->
+      <div class="flex items-start gap-4 mb-5">
+        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+          <i class="fas fa-user text-blue-600 text-lg"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h4 class="text-lg font-bold text-gray-900">${user.name}</h4>
+            ${planBadge(user.plan)}
+            ${user.is_active
+              ? '<span class="px-2 py-0.5 bg-green-100 text-green-700 text-sm rounded-full">활성</span>'
+              : '<span class="px-2 py-0.5 bg-red-100 text-red-700 text-sm rounded-full">비활성</span>'}
+          </div>
+          <p class="text-sm text-gray-500 mt-0.5">${user.email}</p>
+          <p class="text-sm text-gray-400">가입일: ${formatDate(user.created_at)} · ID: #${user.id}</p>
+        </div>
+        <div class="flex-shrink-0 text-right">
+          <p class="text-2xl font-bold text-blue-600">${point_balance.toLocaleString()}<span class="text-sm font-normal text-gray-400 ml-1">P</span></p>
+          <p class="text-sm text-gray-400">보유 포인트</p>
+        </div>
+      </div>
+
+      <!-- 탭 -->
+      <div class="border-b mb-4">
+        <div class="flex gap-1">
+          <button onclick="switchDetailTab('cards')" id="tab-cards"
+            class="detail-tab px-4 py-2 text-sm font-medium border-b-2 border-blue-600 text-blue-600">
+            <i class="fas fa-id-card mr-1"></i>명함 (${cards.length})
+          </button>
+          <button onclick="switchDetailTab('groups')" id="tab-groups"
+            class="detail-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+            <i class="fas fa-building mr-1"></i>그룹 (${groups.length})
+          </button>
+          <button onclick="switchDetailTab('points')" id="tab-points"
+            class="detail-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+            <i class="fas fa-coins mr-1"></i>포인트 지급/차감
+          </button>
+        </div>
+      </div>
+
+      <!-- 명함 탭 -->
+      <div id="detail-cards" class="detail-pane">
+        ${cards.length === 0
+          ? '<p class="text-sm text-gray-400 py-4 text-center">등록된 명함이 없습니다.</p>'
+          : `<div class="space-y-2">
+              ${cards.map(card => `
+                <div class="flex items-center justify-between p-3 border rounded-xl hover:bg-gray-50">
+                  <div>
+                    <p class="text-sm font-medium text-gray-900">${card.title || '(제목 없음)'}
+                      ${card.is_default ? '<span class="ml-1 px-1.5 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded">기본</span>' : ''}
+                    </p>
+                    <p class="text-sm text-gray-400">${card.job_title || ''} ${card.company ? '· ' + card.company : ''}</p>
+                  </div>
+                  <span class="text-sm ${card.is_active ? 'text-green-600' : 'text-red-500'}">${card.is_active ? '활성' : '비활성'}</span>
+                </div>
+              `).join('')}
+             </div>`
+        }
+      </div>
+
+      <!-- 그룹 탭 -->
+      <div id="detail-groups" class="detail-pane hidden">
+        ${groups.length === 0
+          ? '<p class="text-sm text-gray-400 py-4 text-center">소속 그룹이 없습니다.</p>'
+          : `<div class="space-y-2">
+              ${groups.map(g => `
+                <div class="flex items-center justify-between p-3 border rounded-xl hover:bg-gray-50">
+                  <div>
+                    <p class="text-sm font-medium text-gray-900">${g.name}</p>
+                    <p class="text-sm text-gray-400">가입: ${formatDate(g.joined_at)}</p>
+                  </div>
+                  <div class="flex gap-2 items-center">
+                    <span class="text-sm px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">${g.role}</span>
+                    <span class="text-sm ${g.status === 'active' ? 'text-green-600' : 'text-gray-400'}">${g.status}</span>
+                  </div>
+                </div>
+              `).join('')}
+             </div>`
+        }
+      </div>
+
+      <!-- 포인트 지급/차감 탭 -->
+      <div id="detail-points" class="detail-pane hidden">
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4 text-sm text-blue-700">
+          <i class="fas fa-info-circle mr-1"></i>
+          현재 잔액: <strong>${point_balance.toLocaleString()} P</strong>
+          · 양수 = 지급, 음수 = 차감 (예: -500)
+        </div>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm font-semibold text-gray-600 mb-1">포인트 금액 <span class="text-red-500">*</span></label>
+            <input type="number" id="pt-amount-${userId}" placeholder="양수: 지급 / 음수: 차감 (예: 1000 또는 -500)"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-600 mb-1">사유 <span class="text-red-500">*</span></label>
+            <input type="text" id="pt-desc-${userId}" placeholder="포인트 지급/차감 사유 입력"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div id="pt-error-${userId}" class="hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
+          <button onclick="submitUserPoints(${userId})"
+            class="w-full py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition">
+            <i class="fas fa-coins mr-1"></i>포인트 처리
+          </button>
+        </div>
+      </div>
+    `;
+  } catch (err) {
+    document.getElementById('user-detail-body').innerHTML = `
+      <div class="text-center py-10 text-red-500 text-sm">
+        <i class="fas fa-exclamation-circle mr-2"></i>유저 정보를 불러오지 못했습니다.
+      </div>`;
+  }
+}
+
+function switchDetailTab(tab) {
+  // 모든 탭 비활성화
+  document.querySelectorAll('.detail-tab').forEach(btn => {
+    btn.classList.remove('border-blue-600', 'text-blue-600');
+    btn.classList.add('border-transparent', 'text-gray-500');
+  });
+  document.querySelectorAll('.detail-pane').forEach(pane => pane.classList.add('hidden'));
+  // 선택한 탭 활성화
+  const activeTab = document.getElementById(`tab-${tab}`);
+  if (activeTab) {
+    activeTab.classList.add('border-blue-600', 'text-blue-600');
+    activeTab.classList.remove('border-transparent', 'text-gray-500');
+  }
+  const activePane = document.getElementById(`detail-${tab}`);
+  if (activePane) activePane.classList.remove('hidden');
+}
+
+async function submitUserPoints(userId) {
+  const amountEl = document.getElementById(`pt-amount-${userId}`);
+  const descEl   = document.getElementById(`pt-desc-${userId}`);
+  const errEl    = document.getElementById(`pt-error-${userId}`);
+
+  const amount = parseInt(amountEl?.value ?? '');
+  const description = descEl?.value.trim() ?? '';
+
+  if (isNaN(amount) || amount === 0) {
+    errEl.textContent = '0이 아닌 정수를 입력해주세요.'; errEl.classList.remove('hidden'); return;
+  }
+  if (!description) {
+    errEl.textContent = '사유를 입력해주세요.'; errEl.classList.remove('hidden'); return;
+  }
+  errEl.classList.add('hidden');
+
+  try {
+    const { data } = await axios.post(`/admin/users/${userId}/points`, { amount, description });
+    showToast(data.message || `포인트 처리 완료`, 'success');
+    document.getElementById('user-detail-modal')?.remove();
+    // 유저 목록 새로고침
+    loadUsers(1, document.getElementById('user-search')?.value || '');
+  } catch (err) {
+    const msg = err.response?.data?.message || err.response?.data?.error || '포인트 처리에 실패했습니다.';
+    errEl.textContent = msg; errEl.classList.remove('hidden');
   }
 }
 
