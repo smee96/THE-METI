@@ -166,7 +166,7 @@ function navigateTo(section) {
   const titles = {
     dashboard: '대시보드', users: '유저 관리', groups: '그룹 관리', cards: '명함 관리',
     events: '행사 관리', lessons: '레슨 관리', reports: '신고 관리', 'nfc-cards': 'NFC 카드 관리',
-    'plan-configs': '플랜 설정'
+    'plan-configs': '플랜 설정', 'group-detail': '그룹 상세'
   };
   const titleEl = document.getElementById('page-title');
   if (titleEl) titleEl.textContent = titles[section] || section;
@@ -177,6 +177,7 @@ function navigateTo(section) {
     reports: loadReports,
     'nfc-cards': loadNfcCards,
     'plan-configs': loadPlanConfigs
+    // 'group-detail': admin-groups.js의 loadGroupDetailPage()가 소비
   };
   if (pages[section]) pages[section]();
 }
@@ -455,7 +456,7 @@ async function loadGroups(page = 1, status = 'all') {
                   <td class="px-4 py-3 text-sm text-gray-400">${formatDate(g.created_at)}</td>
                   <td class="px-4 py-3">
                     <div class="flex gap-1 flex-wrap">
-                      <button onclick="showGroupDetail(${g.id})"
+                      <button onclick="loadGroupDetailPage(${g.id})"
                         class="text-sm px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200">상세</button>
                       ${(status === 'pending' || (status === 'all' && g.status === 'pending')) ? `
                         <button onclick="approveGroup(${g.id},'approve')"
@@ -496,7 +497,7 @@ async function loadGroups(page = 1, status = 'all') {
                   <span>${g.admin_name || '-'}</span> · <span>${formatDate(g.created_at)}</span>
                 </div>
                 <div class="flex gap-1 flex-wrap">
-                  <button onclick="showGroupDetail(${g.id})"
+                  <button onclick="loadGroupDetailPage(${g.id})"
                     class="text-sm px-2 py-1 bg-indigo-100 text-indigo-700 rounded">상세</button>
                   ${(status === 'pending' || (status === 'all' && g.status === 'pending')) ? `
                     <button onclick="approveGroup(${g.id},'approve')"

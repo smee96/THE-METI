@@ -1,80 +1,89 @@
-// v2
 /**
- * admin-groups.js — 그룹 상세 관리 UI
- * admin.js의 loadGroups() 목록 행 클릭 → showGroupDetail(groupId) 호출
+ * admin-groups.js — 그룹 상세 관리 UI (페이지 방식)
+ * loadGroupDetailPage(groupId) 호출 → setContent()로 전체 페이지 렌더
  *
  * 탭 구성:
  *  [멤버]   — 멤버 목록 / 역할 변경 / 강제 탈퇴 / 가입 대기 승인
  *  [포인트] — 그룹 포인트 잔액 / 지급·차감 / 내역
- *  [정보]   — 그룹 상세 정보 (읽기 전용)
+ *  [그룹 정보] — 그룹 기본 정보 (읽기 전용)
  */
 
 // ── 상태 전역 ─────────────────────────────────────────────
-let _grpId           = null;   // 현재 열린 그룹 ID
+let _grpId           = null;
 let _grpMemberStatus = 'active';
 let _grpMemberPage   = 1;
 let _grpPtPage       = 1;
+let _grpCurrentTab   = 'members';
 
-// ── 그룹 상세 모달 열기 ───────────────────────────────────
-async function showGroupDetail(groupId) {
+// ── 그룹 상세 페이지 진입점 ───────────────────────────────
+async function loadGroupDetailPage(groupId) {
   _grpId           = groupId;
   _grpMemberStatus = 'active';
   _grpMemberPage   = 1;
   _grpPtPage       = 1;
+  _grpCurrentTab   = 'members';
 
-  document.getElementById('group-modal')?.remove();
+  // 페이지 뼈대 렌더 (탭 + 컨텐츠 영역)
+  setContent(`
+    <div class="space-y-4">
+      <!-- 뒤로가기 -->
+      <button onclick="navigateTo('groups')"
+        class="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 transition">
+        <i class="fas fa-arrow-left"></i> 그룹 목록으로
+      </button>
 
-  const modal = document.createElement('div');
-  modal.id = 'group-modal';
-  modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
-  modal.innerHTML = `
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col">
-
-      <!-- 헤더 -->
-      <div class="flex items-center justify-between px-5 py-4 border-b flex-shrink-0">
-        <h3 id="grp-modal-title" class="font-bold text-gray-900 text-lg">그룹 상세</h3>
-        <button onclick="document.getElementById('group-modal').remove()"
-          class="text-gray-400 hover:text-gray-600 text-2xl leading-none w-8 h-8 flex items-center justify-center">&times;</button>
+      <!-- 그룹명 헤더 -->
+      <div class="flex items-center gap-3">
+        <div id="grp-header-icon" class="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
+          <i class="fas fa-users text-indigo-600"></i>
+        </div>
+        <div>
+          <h2 id="grp-page-title" class="text-xl font-bold text-gray-900">그룹 상세</h2>
+          <p id="grp-page-sub" class="text-sm text-gray-400"></p>
+        </div>
       </div>
 
       <!-- 탭 바 -->
-      <div class="flex border-b flex-shrink-0 px-5">
-        ${[['members','멤버'],['points','포인트'],['info','그룹 정보']].map(([t,l]) => `
-          <button id="grptab-btn-${t}" onclick="switchGroupTab('${t}')"
-            class="mr-1 px-4 py-2.5 text-sm font-medium border-b-2 transition
-                   ${t === 'members' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}">
-            ${l}
-          </button>
-        `).join('')}
+      <div class="border-b border-gray-200">
+        <nav class="flex gap-0">
+          ${[['members','멤버'],['points','포인트'],['info','그룹 정보']].map(([t,l]) => `
+            <button id="grptab-btn-${t}" onclick="switchGroupTab('${t}')"
+              class="px-5 py-3 text-sm font-medium border-b-2 transition ${t === 'members'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'}">
+              ${l}
+            </button>
+          `).join('')}
+        </nav>
       </div>
 
       <!-- 탭 콘텐츠 -->
-      <div class="flex-1 overflow-y-auto">
-        <div id="grptab-members" class="p-4">
-          <div class="flex items-center justify-center py-8">
-            <i class="fas fa-spinner fa-spin text-blue-500 text-2xl"></i>
-          </div>
-        </div>
-        <div id="grptab-points"  class="p-4 hidden"></div>
-        <div id="grptab-info"    class="p-4 hidden"></div>
+      <div id="grptab-members" class="min-h-64">
+        ${loadingSpinner()}
       </div>
+      <div id="grptab-points"  class="min-h-64 hidden"></div>
+      <div id="grptab-info"    class="min-h-64 hidden"></div>
     </div>
-  `;
-  document.body.appendChild(modal);
+  `);
 
-  // 그룹 기본정보 + 멤버 탭 동시 로드
-  const [detailRes] = await Promise.all([
+  // 그룹 기본 정보 + 멤버 탭 동시 로드
+  const [detailData] = await Promise.all([
     _loadGroupDetail(groupId),
     _loadGroupMembers(groupId, 'active', 1),
   ]);
 
-  if (detailRes?.name) {
-    document.getElementById('grp-modal-title').textContent = detailRes.name;
+  if (detailData) {
+    const el = document.getElementById('grp-page-title');
+    if (el) el.textContent = detailData.name || '그룹 상세';
+    const sub = document.getElementById('grp-page-sub');
+    if (sub) sub.textContent = detailData.description || '';
   }
 }
 
 // ── 탭 전환 ───────────────────────────────────────────────
 function switchGroupTab(tab) {
+  _grpCurrentTab = tab;
+
   ['members', 'points', 'info'].forEach(t => {
     document.getElementById(`grptab-${t}`)?.classList.toggle('hidden', t !== tab);
     const btn = document.getElementById(`grptab-btn-${t}`);
@@ -98,7 +107,7 @@ function switchGroupTab(tab) {
   }
 }
 
-// ── 그룹 상세 정보 로드 ───────────────────────────────────
+// ── 그룹 기본 정보 fetch ─────────────────────────────────
 async function _loadGroupDetail(groupId) {
   try {
     const { data } = await axios.get(`/admin/groups/${groupId}/detail`);
@@ -110,20 +119,20 @@ async function _loadGroupDetail(groupId) {
 async function _renderGroupInfo(groupId) {
   const el = document.getElementById('grptab-info');
   if (!el) return;
-  el.innerHTML = `<div class="flex justify-center py-8"><i class="fas fa-spinner fa-spin text-blue-500 text-2xl"></i></div>`;
+  el.innerHTML = loadingSpinner();
 
   try {
     const { data } = await axios.get(`/admin/groups/${groupId}/detail`);
     const g = data.data;
 
     const row = (label, val) =>
-      `<div class="flex justify-between py-2 border-b border-gray-100 last:border-0">
-         <span class="text-sm text-gray-500 flex-shrink-0 w-28">${label}</span>
+      `<div class="flex justify-between py-2.5 border-b border-gray-100 last:border-0">
+         <span class="text-sm text-gray-500 w-28 flex-shrink-0">${label}</span>
          <span class="text-sm text-gray-900 text-right">${val ?? '-'}</span>
        </div>`;
 
-    const visLabel = { public: '공개', group_only: '비공개' };
-    const statusBadgeMap = {
+    const visLabel  = { public: '공개', group_only: '비공개', private: '비공개' };
+    const statusCls = {
       active:    'bg-green-100 text-green-700',
       pending:   'bg-yellow-100 text-yellow-700',
       suspended: 'bg-red-100 text-red-600',
@@ -131,52 +140,37 @@ async function _renderGroupInfo(groupId) {
     };
 
     el.innerHTML = `
-      <div class="space-y-4">
-        <!-- 기본 정보 -->
-        <section>
-          <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">기본 정보</h4>
-          <div class="bg-gray-50 rounded-xl px-4 py-1">
-            ${row('그룹명',   escHtml(g.name))}
-            ${row('설명',     escHtml(g.description))}
-            ${row('목적',     escHtml(g.purpose))}
-            ${row('카테고리', escHtml(g.category))}
-            ${row('공개 설정', visLabel[g.visibility] ?? g.visibility)}
-            ${row('상태', `<span class="px-2 py-0.5 text-xs rounded-full font-medium ${statusBadgeMap[g.status] ?? 'bg-gray-100 text-gray-500'}">${g.status}</span>`)}
-            ${row('최대 멤버', g.max_members ? g.max_members + '명' : '무제한')}
-            ${row('미성년자',  g.has_minor ? '포함' : '성인 전용')}
-            ${row('추천 그룹', g.is_featured ? '✅ 추천' : '-')}
-          </div>
-        </section>
-
-        <!-- 관리자 정보 -->
-        <section>
-          <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">그룹 관리자</h4>
-          <div class="bg-gray-50 rounded-xl px-4 py-1">
-            ${row('이름',   escHtml(g.admin_name))}
-            ${row('이메일', escHtml(g.admin_email))}
-          </div>
-        </section>
-
-        <!-- 멤버·포인트 요약 -->
-        <section>
-          <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">현황</h4>
-          <div class="bg-gray-50 rounded-xl px-4 py-1">
-            ${row('전체 멤버', (g.member_count?.total ?? 0) + '명')}
-            ${row('활성 멤버', (g.member_count?.active ?? 0) + '명')}
-            ${row('가입 대기', (g.member_count?.pending ?? 0) + '명')}
-            ${row('그룹 포인트', (g.point_balance ?? 0).toLocaleString() + ' P')}
-          </div>
-        </section>
-
-        <!-- 날짜 -->
-        <section>
-          <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">날짜</h4>
-          <div class="bg-gray-50 rounded-xl px-4 py-1">
-            ${row('생성일',  formatDateTime(g.created_at))}
-            ${row('승인일',  g.approved_at ? formatDateTime(g.approved_at) : '-')}
-            ${row('수정일',  formatDateTime(g.updated_at))}
-          </div>
-        </section>
+      <div class="max-w-xl space-y-4">
+        <div class="bg-white rounded-2xl border p-4 space-y-0">
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide pb-2 mb-1 border-b">기본 정보</p>
+          ${row('그룹명',   escHtml(g.name))}
+          ${row('설명',     escHtml(g.description))}
+          ${row('목적',     escHtml(g.purpose))}
+          ${row('카테고리', escHtml(g.category))}
+          ${row('공개 설정', visLabel[g.visibility] ?? g.visibility)}
+          ${row('상태', `<span class="px-2 py-0.5 text-xs rounded-full font-medium ${statusCls[g.status] ?? 'bg-gray-100 text-gray-500'}">${g.status}</span>`)}
+          ${row('최대 멤버', g.max_members ? g.max_members + '명' : '무제한')}
+          ${row('미성년자',  g.has_minor ? '포함' : '성인 전용')}
+          ${row('추천 그룹', g.is_featured ? '✅ 추천' : '-')}
+        </div>
+        <div class="bg-white rounded-2xl border p-4 space-y-0">
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide pb-2 mb-1 border-b">그룹 관리자</p>
+          ${row('이름',   escHtml(g.admin_name))}
+          ${row('이메일', escHtml(g.admin_email))}
+        </div>
+        <div class="bg-white rounded-2xl border p-4 space-y-0">
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide pb-2 mb-1 border-b">현황</p>
+          ${row('전체 멤버', (g.member_count?.total ?? 0) + '명')}
+          ${row('활성 멤버', (g.member_count?.active ?? 0) + '명')}
+          ${row('가입 대기', (g.member_count?.pending ?? 0) + '명')}
+          ${row('그룹 포인트', (g.point_balance ?? 0).toLocaleString() + ' P')}
+        </div>
+        <div class="bg-white rounded-2xl border p-4 space-y-0">
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide pb-2 mb-1 border-b">날짜</p>
+          ${row('생성일',  formatDateTime(g.created_at))}
+          ${row('승인일',  g.approved_at ? formatDateTime(g.approved_at) : '-')}
+          ${row('수정일',  formatDateTime(g.updated_at))}
+        </div>
       </div>
     `;
   } catch {
@@ -191,7 +185,7 @@ async function _loadGroupMembers(groupId, status = 'active', page = 1) {
 
   const el = document.getElementById('grptab-members');
   if (!el) return;
-  el.innerHTML = `<div class="flex justify-center py-8"><i class="fas fa-spinner fa-spin text-blue-500 text-2xl"></i></div>`;
+  el.innerHTML = loadingSpinner();
 
   try {
     const { data } = await axios.get(
@@ -213,10 +207,9 @@ async function _loadGroupMembers(groupId, status = 'active', page = 1) {
         ? 'bg-blue-600 text-white border-blue-600'
         : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50';
       return `<button onclick="_loadGroupMembers(${groupId},'${t.key}',1)"
-        class="px-3 py-1 rounded-lg text-xs font-medium transition border ${cls}">${t.label}</button>`;
+        class="px-3 py-1.5 rounded-lg text-xs font-medium transition border ${cls}">${t.label}</button>`;
     }).join('');
 
-    // 역할 레이블
     const roleLabel = { admin: '관리자', sub_admin: '부관리자', instructor: '강사', member: '멤버' };
     const roleCls   = {
       admin:      'bg-purple-100 text-purple-700',
@@ -228,7 +221,7 @@ async function _loadGroupMembers(groupId, status = 'active', page = 1) {
     // 역할 변경 셀렉트 (active 상태만)
     const roleSel = (m) => status === 'active' ? `
       <select onchange="changeGroupMemberRole(${groupId}, ${m.id}, this.value)"
-        class="text-xs border rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400">
+        class="text-xs border rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white">
         ${['admin','sub_admin','instructor','member'].map(r =>
           `<option value="${r}" ${m.role === r ? 'selected' : ''}>${roleLabel[r]}</option>`
         ).join('')}
@@ -252,25 +245,26 @@ async function _loadGroupMembers(groupId, status = 'active', page = 1) {
       return '<span class="text-xs text-gray-300">-</span>';
     };
 
-    // 행
+    // 데스크탑 테이블 행
     const rowsHtml = members.length === 0
-      ? `<tr><td colspan="5" class="px-4 py-8 text-center text-gray-400 text-sm">멤버가 없습니다.</td></tr>`
+      ? `<tr><td colspan="5" class="px-4 py-10 text-center text-gray-400 text-sm">멤버가 없습니다.</td></tr>`
       : members.map(m => `
-        <tr class="hover:bg-gray-50">
-          <td class="px-3 py-2.5">
+        <tr class="hover:bg-gray-50 transition">
+          <td class="px-4 py-3">
             <p class="text-sm font-medium text-gray-900">${escHtml(m.user_name)}</p>
             <p class="text-xs text-gray-400">${escHtml(m.user_email)}</p>
           </td>
-          <td class="px-3 py-2.5">${roleSel(m)}</td>
-          <td class="px-3 py-2.5 text-xs text-gray-400">
+          <td class="px-4 py-3">${roleSel(m)}</td>
+          <td class="px-4 py-3 text-xs text-gray-400">
             ${m.joined_at ? formatDate(m.joined_at) : formatDate(m.created_at)}
           </td>
-          <td class="px-3 py-2.5">
-            <span class="text-xs px-1.5 py-0.5 rounded ${m.user_status === 'active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}">
+          <td class="px-4 py-3">
+            <span class="text-xs px-1.5 py-0.5 rounded ${m.user_status === 'active'
+              ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}">
               ${m.user_status === 'active' ? '정상' : '정지'}
             </span>
           </td>
-          <td class="px-3 py-2.5">
+          <td class="px-4 py-3">
             <div class="flex gap-1">${actionBtns(m)}</div>
           </td>
         </tr>
@@ -278,19 +272,21 @@ async function _loadGroupMembers(groupId, status = 'active', page = 1) {
 
     // 모바일 카드
     const cardsHtml = members.length === 0
-      ? `<p class="text-center text-gray-400 text-sm py-8">멤버가 없습니다.</p>`
+      ? `<p class="text-center text-gray-400 text-sm py-10">멤버가 없습니다.</p>`
       : members.map(m => `
-        <div class="bg-white border rounded-xl p-3 space-y-2">
+        <div class="bg-white border rounded-xl p-3 shadow-sm space-y-2">
           <div class="flex items-start justify-between">
             <div>
               <p class="font-medium text-sm text-gray-900">${escHtml(m.user_name)}</p>
               <p class="text-xs text-gray-400">${escHtml(m.user_email)}</p>
             </div>
-            <span class="text-xs px-1.5 py-0.5 rounded-full font-medium ${roleCls[m.role] ?? 'bg-gray-100 text-gray-600'}">${roleLabel[m.role] ?? m.role}</span>
+            <span class="text-xs px-2 py-0.5 rounded-full font-medium ${roleCls[m.role] ?? 'bg-gray-100 text-gray-600'}">
+              ${roleLabel[m.role] ?? m.role}
+            </span>
           </div>
           <div class="flex items-center justify-between">
             <span class="text-xs text-gray-400">${m.joined_at ? formatDate(m.joined_at) : formatDate(m.created_at)}</span>
-            <div class="flex gap-1">
+            <div class="flex gap-1 flex-wrap">
               ${status === 'active' ? roleSel(m) : ''}
               ${actionBtns(m)}
             </div>
@@ -298,25 +294,25 @@ async function _loadGroupMembers(groupId, status = 'active', page = 1) {
         </div>
       `).join('');
 
-    // 페이지네이션 (모달 내부용)
-    const pgHtml = _grpPagination(pagination, (p) => `_loadGroupMembers(${groupId},'${status}',${p})`);
+    const pgHtml = _grpPagination(pagination,
+      (p) => `_loadGroupMembers(${groupId},'${status}',${p})`);
 
     el.innerHTML = `
-      <div class="space-y-3">
+      <div class="space-y-4">
         <!-- 상태 필터 탭 -->
         <div class="flex gap-1.5 flex-wrap">${tabsHtml}</div>
 
-        <!-- 테이블 (md 이상) -->
-        <div class="hidden md:block bg-white rounded-xl border overflow-hidden">
+        <!-- 데스크탑 테이블 -->
+        <div class="hidden md:block bg-white rounded-2xl border overflow-hidden shadow-sm">
           <div class="overflow-x-auto">
             <table class="w-full">
               <thead class="bg-gray-50 border-b">
                 <tr>
-                  <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase">멤버</th>
-                  <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase">역할</th>
-                  <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase">가입일</th>
-                  <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase">계정</th>
-                  <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase">액션</th>
+                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">멤버</th>
+                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">역할</th>
+                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">가입일</th>
+                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">계정</th>
+                  <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">액션</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100">${rowsHtml}</tbody>
@@ -324,7 +320,7 @@ async function _loadGroupMembers(groupId, status = 'active', page = 1) {
           </div>
         </div>
 
-        <!-- 카드 (모바일) -->
+        <!-- 모바일 카드 -->
         <div class="md:hidden space-y-2">${cardsHtml}</div>
 
         ${pgHtml}
@@ -338,15 +334,14 @@ async function _loadGroupMembers(groupId, status = 'active', page = 1) {
 // ── 멤버 역할 변경 ────────────────────────────────────────
 async function changeGroupMemberRole(groupId, memberId, role) {
   const roleLabel = { admin: '관리자', sub_admin: '부관리자', instructor: '강사', member: '일반 멤버' };
-  if (!confirm(`역할을 "${roleLabel[role]}"(으)로 변경하시겠습니까?${role === 'admin' ? '\n\n⚠️ 기존 관리자는 부관리자로 강등됩니다.' : ''}`)) {
-    // 취소 시 원래 값으로 복원을 위해 목록 새로고침
+  if (!confirm(`역할을 "${roleLabel[role]}"(으)로 변경하시겠습니까?${role === 'admin'
+    ? '\n\n⚠️ 기존 관리자는 부관리자로 강등됩니다.' : ''}`)) {
     _loadGroupMembers(groupId, _grpMemberStatus, _grpMemberPage);
     return;
   }
   try {
     const { data } = await axios.patch(
-      `/admin/groups/${groupId}/members/${memberId}/role`,
-      { role }
+      `/admin/groups/${groupId}/members/${memberId}/role`, { role }
     );
     showToast(data.message || '역할이 변경되었습니다.', 'success');
     _loadGroupMembers(groupId, _grpMemberStatus, _grpMemberPage);
@@ -374,8 +369,7 @@ async function approveGroupMember(groupId, memberId, action) {
   if (!confirm(`가입 신청을 ${label}하시겠습니까?`)) return;
   try {
     const { data } = await axios.patch(
-      `/admin/groups/${groupId}/members/${memberId}/approve`,
-      { action }
+      `/admin/groups/${groupId}/members/${memberId}/approve`, { action }
     );
     showToast(data.message || `${label}되었습니다.`, 'success');
     _loadGroupMembers(groupId, _grpMemberStatus, _grpMemberPage);
@@ -389,13 +383,12 @@ async function _loadGroupPoints(groupId, page = 1) {
   _grpPtPage = page;
   const el = document.getElementById('grptab-points');
   if (!el) return;
-  el.innerHTML = `<div class="flex justify-center py-8"><i class="fas fa-spinner fa-spin text-blue-500 text-2xl"></i></div>`;
+  el.innerHTML = loadingSpinner();
 
   try {
     const { data } = await axios.get(`/admin/groups/${groupId}/point-history?page=${page}&limit=20`);
     const { balance, transactions, pagination } = data.data;
 
-    // 거래 유형 레이블
     const txType = {
       admin_grant:    { label: '어드민 지급', cls: 'text-blue-600' },
       admin_deduct:   { label: '어드민 차감', cls: 'text-red-500'  },
@@ -407,17 +400,17 @@ async function _loadGroupPoints(groupId, page = 1) {
     };
 
     const rowsHtml = transactions.length === 0
-      ? `<p class="text-center text-gray-400 text-sm py-6">포인트 거래 내역이 없습니다.</p>`
+      ? `<p class="text-center text-gray-400 text-sm py-8">포인트 거래 내역이 없습니다.</p>`
       : transactions.map(t => {
           const { label, cls } = txType[t.type] || { label: t.type, cls: 'text-gray-600' };
           const sign = t.amount > 0 ? '+' : '';
           return `
-            <div class="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-0">
+            <div class="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-gray-800">${escHtml(t.description || label)}</p>
                 <p class="text-xs text-gray-400">${label} · ${formatDateTime(t.created_at)}${t.actor_name ? ' · ' + escHtml(t.actor_name) : ''}</p>
               </div>
-              <div class="text-right flex-shrink-0 ml-3">
+              <div class="text-right flex-shrink-0 ml-4">
                 <p class="text-sm font-bold ${cls}">${sign}${t.amount.toLocaleString()} P</p>
                 <p class="text-xs text-gray-400">잔액 ${t.balance_after.toLocaleString()} P</p>
               </div>
@@ -428,19 +421,19 @@ async function _loadGroupPoints(groupId, page = 1) {
     const pgHtml = _grpPagination(pagination, (p) => `_loadGroupPoints(${groupId},${p})`);
 
     el.innerHTML = `
-      <div class="space-y-4">
+      <div class="space-y-4 max-w-xl">
         <!-- 잔액 + 지급/차감 폼 -->
-        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
-          <div class="flex items-center justify-between mb-3">
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-5">
+          <div class="flex items-center justify-between mb-4">
             <p class="text-sm font-semibold text-gray-700">그룹 포인트 잔액</p>
             <p class="text-2xl font-bold text-blue-600">${balance.toLocaleString()} P</p>
           </div>
           <div class="space-y-2">
             <div class="flex gap-2">
               <input id="grp-pt-amount-${groupId}" type="number" placeholder="양수: 지급 / 음수: 차감"
-                class="flex-1 px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-300 outline-none">
+                class="flex-1 px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-300 outline-none bg-white">
               <input id="grp-pt-desc-${groupId}" type="text" placeholder="사유 (필수)"
-                class="flex-1 px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-300 outline-none">
+                class="flex-1 px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-300 outline-none bg-white">
             </div>
             <button onclick="submitGroupPoints(${groupId})"
               class="w-full py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 font-medium transition">
@@ -451,8 +444,8 @@ async function _loadGroupPoints(groupId, page = 1) {
 
         <!-- 내역 -->
         <div>
-          <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">거래 내역</h4>
-          <div class="bg-white rounded-xl border px-4 max-h-72 overflow-y-auto">
+          <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">거래 내역</h4>
+          <div class="bg-white rounded-2xl border px-4">
             ${rowsHtml}
           </div>
           ${pgHtml}
@@ -464,7 +457,7 @@ async function _loadGroupPoints(groupId, page = 1) {
   }
 }
 
-// ── 그룹 포인트 지급/차감 제출 ───────────────────────────
+// ── 포인트 지급/차감 제출 ─────────────────────────────────
 async function submitGroupPoints(groupId) {
   const amountEl = document.getElementById(`grp-pt-amount-${groupId}`);
   const descEl   = document.getElementById(`grp-pt-desc-${groupId}`);
@@ -488,31 +481,36 @@ async function submitGroupPoints(groupId) {
   }
 }
 
-// ── 모달 내 페이지네이션 헬퍼 ────────────────────────────
+// ── 페이지네이션 헬퍼 ─────────────────────────────────────
 function _grpPagination(pg, callbackExpr) {
   if (!pg || pg.totalPages <= 1) return '';
   const { page, totalPages } = pg;
 
   const btnCls = (disabled) =>
-    `px-3 py-1 text-sm rounded border ${disabled ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'text-gray-600 border-gray-300 hover:bg-gray-50'}`;
+    `px-3 py-1 text-sm rounded border ${disabled
+      ? 'text-gray-300 border-gray-200 cursor-not-allowed'
+      : 'text-gray-600 border-gray-300 hover:bg-gray-50'}`;
 
   const pages = [];
   const start = Math.max(1, page - 2);
   const end   = Math.min(totalPages, page + 2);
 
+  // callbackExpr은 함수 (p) => string 형태로 넘어옴
+  const expr = typeof callbackExpr === 'function' ? callbackExpr : (p) => callbackExpr.replace(/\$\{p\}/g, p).replace('${p}', p);
+
   if (start > 1) {
-    pages.push(`<button onclick="${callbackExpr.replace('${p}', 1).replace(/\$\{p\}/g, 1)}" class="${btnCls(false)}">1</button>`);
+    pages.push(`<button onclick="${expr(1)}" class="${btnCls(false)}">1</button>`);
     if (start > 2) pages.push(`<span class="px-1 text-gray-400">…</span>`);
   }
   for (let p = start; p <= end; p++) {
     const active = p === page;
-    pages.push(`<button onclick="${callbackExpr.replace(/\$\{p\}/g, p).replace('${p}', p)}"
+    pages.push(`<button onclick="${expr(p)}"
       class="${active ? 'px-3 py-1 text-sm rounded bg-blue-600 text-white' : btnCls(false)}">${p}</button>`);
   }
   if (end < totalPages) {
     if (end < totalPages - 1) pages.push(`<span class="px-1 text-gray-400">…</span>`);
-    pages.push(`<button onclick="${callbackExpr.replace(/\$\{p\}/g, totalPages).replace('${p}', totalPages)}" class="${btnCls(false)}">${totalPages}</button>`);
+    pages.push(`<button onclick="${expr(totalPages)}" class="${btnCls(false)}">${totalPages}</button>`);
   }
 
-  return `<div class="flex justify-center gap-1 mt-3">${pages.join('')}</div>`;
+  return `<div class="flex justify-center gap-1 mt-4">${pages.join('')}</div>`;
 }
