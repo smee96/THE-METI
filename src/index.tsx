@@ -14,6 +14,7 @@ import adminRoutes    from './routes/admin'
 import lessonsRoutes  from './routes/lessons'
 import productsRoutes from './routes/products'
 import pointsRoutes   from './routes/points'
+import staticRouter   from './static-serve'
 
 // Web UI HTML 템플릿
 import { adminLoginHtml, adminAppHtml }               from './web/admin'
@@ -123,12 +124,8 @@ app.use('/api/*', cors({
   credentials: true,
 }))
 
-// ── 정적 파일 (Cloudflare Pages ASSETS 바인딩) ────────────
-// _routes.json의 exclude에 의해 Worker에 도달하지 않는 것이 기본이지만,
-// fallback으로 ASSETS.fetch()를 통해 서빙
-app.use('/static/*', async (c) => {
-  return c.env.ASSETS.fetch(c.req.raw)
-})
+// ── 정적 파일 (인라인 번들링) ───────────────────────────────
+app.route('/static', staticRouter)
 
 // ── API 라우트 (v1) ───────────────────────────────────────
 app.route('/api/v1/auth',    authRoutes)

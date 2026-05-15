@@ -5,7 +5,6 @@
 export type Bindings = {
   DB: D1Database
   STORAGE: R2Bucket
-  ASSETS: Fetcher          // Cloudflare Pages 정적 자산 바인딩
   JWT_SECRET: string
   APP_ENV: string
   APP_NAME: string

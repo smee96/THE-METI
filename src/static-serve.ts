@@ -1,0 +1,29 @@
+/**
+ * static-serve.ts
+ * public/static/ 파일들을 Worker 번들에 인라인으로 포함해서 직접 서빙.
+ * Cloudflare Pages의 ASSETS 바인딩 없이도 동작함.
+ */
+import { Hono } from 'hono'
+import type { Bindings, Variables } from './types'
+
+// Vite의 ?raw 임포트 — 빌드 시 파일 내용이 문자열로 번들에 포함됨
+import adminJs         from '../public/static/admin.js?raw'
+import adminNfcJs      from '../public/static/admin-nfc.js?raw'
+import adminReportsJs  from '../public/static/admin-reports.js?raw'
+import adminGroupsJs   from '../public/static/admin-groups.js?raw'
+import appJs           from '../public/static/app.js?raw'
+import styleCss        from '../public/static/style.css?raw'
+
+const staticRouter = new Hono<{ Bindings: Bindings; Variables: Variables }>()
+
+const JS_HEADERS  = { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'public, max-age=3600' }
+const CSS_HEADERS = { 'Content-Type': 'text/css; charset=utf-8',              'Cache-Control': 'public, max-age=3600' }
+
+staticRouter.get('/admin.js',          (c) => c.body(adminJs,        200, JS_HEADERS))
+staticRouter.get('/admin-nfc.js',      (c) => c.body(adminNfcJs,     200, JS_HEADERS))
+staticRouter.get('/admin-reports.js',  (c) => c.body(adminReportsJs, 200, JS_HEADERS))
+staticRouter.get('/admin-groups.js',   (c) => c.body(adminGroupsJs,  200, JS_HEADERS))
+staticRouter.get('/app.js',            (c) => c.body(appJs,          200, JS_HEADERS))
+staticRouter.get('/style.css',         (c) => c.body(styleCss,       200, CSS_HEADERS))
+
+export default staticRouter
