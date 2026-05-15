@@ -590,4 +590,148 @@ admin.post('/users/:id/points', zValidator('json', z.object({
   }, `포인트 ${amount > 0 ? '지급' : '차감'} 완료 (${newBalance}P)`))
 })
 
+// ══════════════════════════════════════════════════════════════
+// 행사 관리 (어드민 전용 — 그룹 멤버 권한 없이 전체 접근)
+// ══════════════════════════════════════════════════════════════
+
+// POST /admin/events — 행사 직접 생성 (슈퍼어드민)
+admin.post('/events', superAdminMiddleware,
+  zValidator('json', z.object({
+    group_id          : z.number().int().positive(),
+    title             : z.string().min(2).max(200),
+    description       : z.string().max(2000).optional(),
+    location          : z.string().max(200).optional(),
+    starts_at         : z.string(),
+    ends_at           : z.string().optional(),
+    capacity          : z.number().int().positive().optional(),
+    visibility        : z.enum(['public', 'group_only']).default('group_only'),
+    registration_type : z.enum(['free', 'pre_required']).default('free'),
+    entry_method      : z.enum(['qr', 'nfc_qr', 'manual']).default('qr'),
+    entry_fee         : z.number().int().min(0).default(0),
+  })),
+  async (c) => {
+    const adminId = c.get('userId')
+    const body    = c.req.valid('json')
+
+    const group = await c.env.DB.prepare(`SELECT id FROM groups WHERE id = ? AND status = 'active'`).bind(body.group_id).first()
+    if (!group) return c.json(fail('활성 그룹을 찾을 수 없습니다.'), 404)
+
+    const result = await c.env.DB.prepare(`
+      INSERT INTO events
+        (group_id, created_by, title, description, location,
+         starts_at, ends_at, capacity, visibility, registration_type,
+         entry_method, point_cost, entry_fee)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+    `).bind(
+      body.group_id, adminId, body.title, body.description ?? null,
+      body.location ?? null, body.starts_at, body.ends_at ?? null,
+      body.capacity ?? null, body.visibility, body.registration_type,
+      body.entry_method, body.entry_fee
+    ).run()
+
+    return c.json(ok({ event_id: result.meta.last_row_id }, '행사가 생성되었습니다.'), 201)
+  }
+)
+
+// GET /admin/events — 전체 행사 목록
+admin.get('/events', superAdminMiddleware, async (c) => {
+  const { page, limit, offset } = parsePagination(c.req.query('page'), c.req.query('limit'))
+  const status  = c.req.query('status')
+  const groupId = c.req.query('group_id')
+  const q       = c.req.query('q')
+
+  let query = `
+    SELECT e.*,
+      g.name  AS group_name,
+      u.name  AS creator_name,
+      (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id AND status = 'confirmed') AS participant_count
+    FROM events e
+    JOIN groups g ON g.id = e.group_id
+    JOIN users  u ON u.id = e.created_by
+    WHERE 1=1
+  `
+  const params: unknown[] = []
+  if (status)  { query += ` AND e.status = ?`;    params.push(status) }
+  if (groupId) { query += ` AND e.group_id = ?`;  params.push(parseInt(groupId)) }
+  if (q)       { query += ` AND e.title LIKE ?`;  params.push(`%${q}%`) }
+  query += ` ORDER BY e.starts_at DESC LIMIT ? OFFSET ?`
+  params.push(limit, offset)
+
+  let countQ = `SELECT COUNT(*) as total FROM events WHERE 1=1`
+  const countP: unknown[] = []
+  if (status)  { countQ += ` AND status = ?`;    countP.push(status) }
+  if (groupId) { countQ += ` AND group_id = ?`;  countP.push(parseInt(groupId)) }
+  if (q)       { countQ += ` AND title LIKE ?`;  countP.push(`%${q}%`) }
+
+  const [rows, countRow] = await Promise.all([
+    c.env.DB.prepare(query).bind(...params).all(),
+    c.env.DB.prepare(countQ).bind(...countP).first<{ total: number }>()
+  ])
+  return c.json(paginate(rows.results, countRow?.total ?? 0, page, limit))
+})
+
+// GET /admin/events/:id — 행사 상세 (참가자 포함)
+admin.get('/events/:id', superAdminMiddleware, async (c) => {
+  const eventId = parseInt(c.req.param('id'))
+
+  const [event, participants] = await Promise.all([
+    c.env.DB.prepare(`
+      SELECT e.*, g.name AS group_name, u.name AS creator_name,
+        (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id AND status = 'confirmed') AS participant_count
+      FROM events e
+      JOIN groups g ON g.id = e.group_id
+      JOIN users  u ON u.id = e.created_by
+      WHERE e.id = ?
+    `).bind(eventId).first(),
+    c.env.DB.prepare(`
+      SELECT ep.*, u.name, u.email
+      FROM event_participants ep
+      JOIN users u ON u.id = ep.user_id
+      WHERE ep.event_id = ?
+      ORDER BY ep.joined_at ASC
+      LIMIT 100
+    `).bind(eventId).all()
+  ])
+
+  if (!event) return c.json(fail('행사를 찾을 수 없습니다.'), 404)
+  return c.json(ok({ ...event, participants: participants.results }))
+})
+
+// PATCH /admin/events/:id — 행사 수정 (제목/설명/장소/일정/상태)
+admin.patch('/events/:id', superAdminMiddleware,
+  zValidator('json', z.object({
+    title      : z.string().min(2).max(200).optional(),
+    description: z.string().max(2000).optional(),
+    location   : z.string().max(200).optional(),
+    starts_at  : z.string().optional(),
+    ends_at    : z.string().optional(),
+    status     : z.enum(['upcoming', 'ongoing', 'ended', 'cancelled']).optional(),
+    visibility : z.enum(['public', 'group_only']).optional(),
+  })),
+  async (c) => {
+    const eventId = parseInt(c.req.param('id'))
+    const body    = c.req.valid('json')
+
+    const event = await c.env.DB.prepare(`SELECT id FROM events WHERE id = ?`).bind(eventId).first()
+    if (!event) return c.json(fail('행사를 찾을 수 없습니다.'), 404)
+
+    const fields: string[] = []
+    const vals: unknown[]  = []
+    if (body.title !== undefined)       { fields.push('title = ?');       vals.push(body.title) }
+    if (body.description !== undefined) { fields.push('description = ?'); vals.push(body.description) }
+    if (body.location !== undefined)    { fields.push('location = ?');    vals.push(body.location) }
+    if (body.starts_at !== undefined)   { fields.push('starts_at = ?');   vals.push(body.starts_at) }
+    if (body.ends_at !== undefined)     { fields.push('ends_at = ?');     vals.push(body.ends_at) }
+    if (body.status !== undefined)      { fields.push('status = ?');      vals.push(body.status) }
+    if (body.visibility !== undefined)  { fields.push('visibility = ?');  vals.push(body.visibility) }
+    if (fields.length === 0) return c.json(fail('수정할 내용이 없습니다.'), 400)
+
+    await c.env.DB.prepare(
+      `UPDATE events SET ${fields.join(', ')}, updated_at = datetime('now') WHERE id = ?`
+    ).bind(...vals, eventId).run()
+
+    return c.json(ok(null, '행사가 수정되었습니다.'))
+  }
+)
+
 export default admin
