@@ -540,10 +540,10 @@ admin.post('/events', superAdminMiddleware,
 
     const result = await c.env.DB.prepare(`
       INSERT INTO events
-        (group_id, created_by, title, description, location,
-         starts_at, ends_at, capacity, visibility, registration_type,
-         entry_method, point_cost, entry_fee)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+        (group_id, organizer_id, title, description, location,
+         starts_at, ends_at, max_participants, visibility, registration_type,
+         entry_method, entry_fee)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       body.group_id, adminId, body.title, body.description ?? null,
       body.location ?? null, body.starts_at, body.ends_at ?? null,
@@ -566,10 +566,10 @@ admin.get('/events', superAdminMiddleware, async (c) => {
     SELECT e.*,
       g.name  AS group_name,
       u.name  AS creator_name,
-      (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id AND status = 'confirmed') AS participant_count
+      (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id) AS participant_count
     FROM events e
     JOIN groups g ON g.id = e.group_id
-    JOIN users  u ON u.id = e.created_by
+    JOIN users  u ON u.id = e.organizer_id
     WHERE 1=1
   `
   const params: unknown[] = []
@@ -599,10 +599,10 @@ admin.get('/events/:id', superAdminMiddleware, async (c) => {
   const [event, participants] = await Promise.all([
     c.env.DB.prepare(`
       SELECT e.*, g.name AS group_name, u.name AS creator_name,
-        (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id AND status = 'confirmed') AS participant_count
+        (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id) AS participant_count
       FROM events e
       JOIN groups g ON g.id = e.group_id
-      JOIN users  u ON u.id = e.created_by
+      JOIN users  u ON u.id = e.organizer_id
       WHERE e.id = ?
     `).bind(eventId).first(),
     c.env.DB.prepare(`
@@ -610,7 +610,7 @@ admin.get('/events/:id', superAdminMiddleware, async (c) => {
       FROM event_participants ep
       JOIN users u ON u.id = ep.user_id
       WHERE ep.event_id = ?
-      ORDER BY ep.joined_at ASC
+      ORDER BY ep.created_at ASC
       LIMIT 100
     `).bind(eventId).all()
   ])
