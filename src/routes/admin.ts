@@ -432,26 +432,37 @@ admin.patch(
 // ══════════════════════════════════════════════════════════════
 admin.get('/lessons', superAdminMiddleware, async (c) => {
   const { page, limit, offset } = parsePagination(c.req.query('page'), c.req.query('limit'))
-  const status = c.req.query('status')
+  const status   = c.req.query('status')
+  const groupId  = c.req.query('group_id')
+  const search   = c.req.query('q')
 
-  let query = `
+  let baseWhere = `WHERE 1=1`
+  const filterParams: unknown[] = []
+  if (status  && status !== 'all') { baseWhere += ` AND l.status = ?`;   filterParams.push(status) }
+  if (groupId) { baseWhere += ` AND l.group_id = ?`; filterParams.push(Number(groupId)) }
+  if (search)  { baseWhere += ` AND (l.title LIKE ? OR u.name LIKE ?)`; filterParams.push(`%${search}%`, `%${search}%`) }
+
+  const query = `
     SELECT l.*,
       g.name  AS group_name,
-      u.name  AS instructor_name,
+      u.name  AS instructor_name, u.email AS instructor_email,
       (SELECT COUNT(*) FROM lesson_registrations WHERE lesson_id = l.id AND status = 'confirmed') AS registered_count
     FROM lessons l
     JOIN groups g ON g.id = l.group_id
     JOIN users  u ON u.id = l.instructor_id
-    WHERE 1=1
+    ${baseWhere}
+    ORDER BY l.scheduled_at DESC LIMIT ? OFFSET ?
   `
-  const params: unknown[] = []
-  if (status) { query += ` AND l.status = ?`; params.push(status) }
-  query += ` ORDER BY l.scheduled_at DESC LIMIT ? OFFSET ?`
-  params.push(limit, offset)
+
+  const countQuery = `
+    SELECT COUNT(*) as total FROM lessons l
+    JOIN users u ON u.id = l.instructor_id
+    ${baseWhere}
+  `
 
   const [rows, countRow] = await Promise.all([
-    c.env.DB.prepare(query).bind(...params).all(),
-    c.env.DB.prepare(`SELECT COUNT(*) as total FROM lessons`).first<{ total: number }>()
+    c.env.DB.prepare(query).bind(...filterParams, limit, offset).all(),
+    c.env.DB.prepare(countQuery).bind(...filterParams).first<{ total: number }>()
   ])
 
   return c.json(paginate(rows.results, countRow?.total ?? 0, page, limit))
@@ -731,6 +742,131 @@ admin.patch('/events/:id', superAdminMiddleware,
     ).bind(...vals, eventId).run()
 
     return c.json(ok(null, '행사가 수정되었습니다.'))
+  }
+)
+
+// ══════════════════════════════════════════════════════════════
+// 레슨 관리 (어드민 전용 CRUD)
+// ══════════════════════════════════════════════════════════════
+
+// POST /admin/lessons — 어드민 직접 레슨 생성 (그룹 멤버 권한 우회, 포인트 차감 없음)
+admin.post('/lessons', superAdminMiddleware,
+  zValidator('json', z.object({
+    group_id        : z.number().int().positive(),
+    instructor_id   : z.number().int().positive(),
+    title           : z.string().min(1).max(200),
+    description     : z.string().max(1000).optional(),
+    schedule_type   : z.enum(['one-time', 'repeat']).default('one-time'),
+    scheduled_at    : z.string(),
+    duration_minutes: z.number().int().positive().default(60),
+    capacity        : z.number().int().positive().optional(),
+    location        : z.string().max(200).optional(),
+    point_cost      : z.number().int().min(0).default(0),
+  })),
+  async (c) => {
+    const body = c.req.valid('json')
+
+    // 그룹 존재 확인
+    const group = await c.env.DB.prepare(
+      `SELECT id FROM groups WHERE id = ? AND is_deleted = 0`
+    ).bind(body.group_id).first()
+    if (!group) return c.json(fail('존재하지 않는 그룹입니다.'), 404)
+
+    // 강사 존재 확인
+    const instructor = await c.env.DB.prepare(
+      `SELECT id, name FROM users WHERE id = ? AND is_deleted = 0`
+    ).bind(body.instructor_id).first()
+    if (!instructor) return c.json(fail('존재하지 않는 강사입니다.'), 404)
+
+    const result = await c.env.DB.prepare(`
+      INSERT INTO lessons
+        (group_id, instructor_id, title, description, schedule_type,
+         scheduled_at, duration_minutes, capacity, location, point_cost, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'upcoming')
+    `).bind(
+      body.group_id, body.instructor_id, body.title,
+      body.description ?? null, body.schedule_type,
+      body.scheduled_at, body.duration_minutes,
+      body.capacity ?? null, body.location ?? null, body.point_cost
+    ).run()
+
+    return c.json(ok({ id: result.meta.last_row_id }, '레슨이 생성되었습니다.'), 201)
+  }
+)
+
+// GET /admin/lessons — 전체 레슨 목록 (status/group_id/q 필터, 페이지네이션) — 기존 교체
+// 기존 GET /admin/lessons 위에 덮어쓰기 위해 새 버전으로 재등록은 불가 (이미 등록됨)
+// → 아래 상세/수정 API만 추가
+
+// GET /admin/lessons/:id — 레슨 상세 + 수강자 목록
+admin.get('/lessons/:id', superAdminMiddleware, async (c) => {
+  const lessonId = Number(c.req.param('id'))
+
+  const [lesson, registrations] = await Promise.all([
+    c.env.DB.prepare(`
+      SELECT l.*,
+        g.name AS group_name,
+        u.name AS instructor_name, u.email AS instructor_email,
+        (SELECT COUNT(*) FROM lesson_registrations WHERE lesson_id = l.id AND status = 'confirmed') AS registered_count
+      FROM lessons l
+      JOIN groups g ON g.id = l.group_id
+      JOIN users  u ON u.id = l.instructor_id
+      WHERE l.id = ?
+    `).bind(lessonId).first(),
+    c.env.DB.prepare(`
+      SELECT lr.*, u.name, u.email
+      FROM lesson_registrations lr
+      JOIN users u ON u.id = lr.user_id
+      WHERE lr.lesson_id = ?
+      ORDER BY lr.created_at ASC
+      LIMIT 200
+    `).bind(lessonId).all()
+  ])
+
+  if (!lesson) return c.json(fail('레슨을 찾을 수 없습니다.'), 404)
+  return c.json(ok({ ...lesson, registrations: registrations.results }))
+})
+
+// PATCH /admin/lessons/:id — 레슨 수정 (제목/설명/장소/일정/상태/정원)
+admin.patch('/lessons/:id', superAdminMiddleware,
+  zValidator('json', z.object({
+    title           : z.string().min(1).max(200).optional(),
+    description     : z.string().max(1000).optional(),
+    location        : z.string().max(200).optional(),
+    scheduled_at    : z.string().optional(),
+    duration_minutes: z.number().int().positive().optional(),
+    capacity        : z.number().int().positive().nullable().optional(),
+    status          : z.enum(['upcoming', 'ongoing', 'ended', 'cancelled']).optional(),
+    instructor_id   : z.number().int().positive().optional(),
+  })),
+  async (c) => {
+    const lessonId = Number(c.req.param('id'))
+    const body = c.req.valid('json')
+
+    const lesson = await c.env.DB.prepare(
+      `SELECT id FROM lessons WHERE id = ?`
+    ).bind(lessonId).first()
+    if (!lesson) return c.json(fail('레슨을 찾을 수 없습니다.'), 404)
+
+    const fields: string[] = []
+    const vals: unknown[] = []
+
+    if (body.title           !== undefined) { fields.push('title = ?');            vals.push(body.title) }
+    if (body.description     !== undefined) { fields.push('description = ?');      vals.push(body.description) }
+    if (body.location        !== undefined) { fields.push('location = ?');         vals.push(body.location) }
+    if (body.scheduled_at    !== undefined) { fields.push('scheduled_at = ?');     vals.push(body.scheduled_at) }
+    if (body.duration_minutes!== undefined) { fields.push('duration_minutes = ?'); vals.push(body.duration_minutes) }
+    if (body.capacity        !== undefined) { fields.push('capacity = ?');         vals.push(body.capacity) }
+    if (body.status          !== undefined) { fields.push('status = ?');           vals.push(body.status) }
+    if (body.instructor_id   !== undefined) { fields.push('instructor_id = ?');    vals.push(body.instructor_id) }
+
+    if (fields.length === 0) return c.json(fail('변경할 항목이 없습니다.'), 400)
+
+    await c.env.DB.prepare(
+      `UPDATE lessons SET ${fields.join(', ')} WHERE id = ?`
+    ).bind(...vals, lessonId).run()
+
+    return c.json(ok(null, '레슨이 수정되었습니다.'))
   }
 )
 
