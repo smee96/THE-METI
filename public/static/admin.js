@@ -453,7 +453,9 @@ async function loadGroups(page = 1, status = 'all') {
                   </td>
                   <td class="px-4 py-3 text-sm text-gray-400">${formatDate(g.created_at)}</td>
                   <td class="px-4 py-3">
-                    <div class="flex gap-1">
+                    <div class="flex gap-1 flex-wrap">
+                      <button onclick="showGroupDetail(${g.id})"
+                        class="text-sm px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200">상세</button>
                       ${(status === 'pending' || (status === 'all' && g.status === 'pending')) ? `
                         <button onclick="approveGroup(${g.id},'approve')"
                           class="text-sm px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">승인</button>
@@ -492,7 +494,9 @@ async function loadGroups(page = 1, status = 'all') {
                 <div class="text-sm text-gray-400">
                   <span>${g.admin_name || '-'}</span> · <span>${formatDate(g.created_at)}</span>
                 </div>
-                <div class="flex gap-1">
+                <div class="flex gap-1 flex-wrap">
+                  <button onclick="showGroupDetail(${g.id})"
+                    class="text-sm px-2 py-1 bg-indigo-100 text-indigo-700 rounded">상세</button>
                   ${(status === 'pending' || (status === 'all' && g.status === 'pending')) ? `
                     <button onclick="approveGroup(${g.id},'approve')"
                       class="text-sm px-2 py-1 bg-green-100 text-green-700 rounded">승인</button>

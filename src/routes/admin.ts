@@ -4,8 +4,9 @@ import { z } from 'zod'
 import type { Bindings, Variables } from '../types'
 import { authMiddleware, superAdminMiddleware } from '../middleware/auth'
 import { ok, fail, paginate, parsePagination } from '../middleware/response'
-import nfcRouter     from './admin-nfc'
-import reportsRouter from './admin-reports'
+import nfcRouter        from './admin-nfc'
+import reportsRouter   from './admin-reports'
+import groupDetailRouter from './admin-groups'
 
 const admin = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -13,8 +14,9 @@ const admin = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 admin.use('*', authMiddleware, superAdminMiddleware)
 
 // ── 서브 라우터 마운트 ────────────────────────────────────
-admin.route('/nfc-cards', nfcRouter)
-admin.route('/reports',   reportsRouter)
+admin.route('/nfc-cards',       nfcRouter)
+admin.route('/reports',         reportsRouter)
+admin.route('/groups/:groupId', groupDetailRouter)
 
 // ── 대시보드 통계 ─────────────────────────────────────
 admin.get('/dashboard', async (c) => {
