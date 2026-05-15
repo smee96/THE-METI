@@ -21,9 +21,11 @@
     "REFRESH_TOKEN_EXPIRES_IN": "30d"
   },
 
-  // ── 스테이징 (staging 브랜치) ─────────────────────────
+  // ── 스테이징 (staging 브랜치 → Cloudflare preview 환경) ─
+  // Cloudflare Pages는 "preview" / "production" 두 가지만 지원
+  // staging 브랜치 배포 시 --env preview 로 사용
   "env": {
-    "staging": {
+    "preview": {
       "d1_databases": [
         {
           "binding": "DB",
