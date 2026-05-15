@@ -5,7 +5,7 @@
   "pages_build_output_dir": "./dist",
   "compatibility_flags": ["nodejs_compat"],
 
-  // D1 Database
+  // ── 실서버 (main 브랜치) ──────────────────────────────
   "d1_databases": [
     {
       "binding": "DB",
@@ -14,15 +14,30 @@
     }
   ],
 
-  // R2 Storage - 파일 업로드 기능 추가 시 활성화
-  // "r2_buckets": [{ "binding": "STORAGE", "bucket_name": "meti-storage" }],
-
-  // 환경 변수 (비민감)
   "vars": {
     "APP_NAME": "METI",
     "APP_ENV": "production",
     "JWT_EXPIRES_IN": "7d",
     "REFRESH_TOKEN_EXPIRES_IN": "30d"
+  },
+
+  // ── 스테이징 (staging 브랜치) ─────────────────────────
+  "env": {
+    "staging": {
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "the-meti-staging",
+          "database_id": "5ebff506-d8a7-44dd-91ff-6dc805df4511"
+        }
+      ],
+      "vars": {
+        "APP_NAME": "METI",
+        "APP_ENV": "staging",
+        "JWT_EXPIRES_IN": "7d",
+        "REFRESH_TOKEN_EXPIRES_IN": "30d"
+      }
+    }
   }
 
   // Secrets (wrangler secret put 으로 설정):
