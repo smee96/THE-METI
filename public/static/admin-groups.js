@@ -1,3 +1,4 @@
+// v2
 /**
  * admin-groups.js — 그룹 상세 관리 UI
  * admin.js의 loadGroups() 목록 행 클릭 → showGroupDetail(groupId) 호출
