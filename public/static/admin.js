@@ -2114,7 +2114,7 @@ async function showLessonDetail(lessonId) {
               `).join('')}
             </div>`}
       </div>
-    `);
+    `;
   } catch (err) {
     modal.querySelector('.bg-white').innerHTML = `<div class="text-center text-red-500 py-8 p-5">레슨 정보를 불러오지 못했습니다.</div>`;
   }
