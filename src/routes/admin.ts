@@ -4,11 +4,17 @@ import { z } from 'zod'
 import type { Bindings, Variables } from '../types'
 import { authMiddleware, superAdminMiddleware } from '../middleware/auth'
 import { ok, fail, paginate, parsePagination } from '../middleware/response'
+import nfcRouter     from './admin-nfc'
+import reportsRouter from './admin-reports'
 
 const admin = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
 // 모든 admin 라우트는 인증 + 슈퍼관리자 권한 필요
 admin.use('*', authMiddleware, superAdminMiddleware)
+
+// ── 서브 라우터 마운트 ────────────────────────────────────
+admin.route('/nfc-cards', nfcRouter)
+admin.route('/reports',   reportsRouter)
 
 // ── 대시보드 통계 ─────────────────────────────────────
 admin.get('/dashboard', async (c) => {
@@ -241,145 +247,6 @@ admin.post(
     ).run()
 
     return c.json(ok({ event_id: result.meta.last_row_id }, '행사가 생성되었습니다.'), 201)
-  }
-)
-
-// ── 신고 관리 ─────────────────────────────────────────
-admin.get('/reports', async (c) => {
-  const { page, limit, offset } = parsePagination(c.req.query('page'), c.req.query('limit'))
-  const status = c.req.query('status') ?? 'pending'
-
-  const [rows, countRow] = await Promise.all([
-    c.env.DB.prepare(`
-      SELECT r.*, u.name as reporter_name, u.email as reporter_email
-      FROM reports r
-      JOIN users u ON u.id = r.reporter_id
-      WHERE r.status = ?
-      ORDER BY r.created_at DESC LIMIT ? OFFSET ?
-    `).bind(status, limit, offset).all(),
-    c.env.DB.prepare('SELECT COUNT(*) as total FROM reports WHERE status = ?').bind(status).first<{ total: number }>()
-  ])
-
-  return c.json(paginate(rows.results, countRow?.total ?? 0, page, limit))
-})
-
-admin.patch(
-  '/reports/:id',
-  zValidator('json', z.object({
-    status: z.enum(['reviewed', 'resolved', 'dismissed'])
-  })),
-  async (c) => {
-    const adminId = c.get('userId')
-    const reportId = c.req.param('id')
-    const { status } = c.req.valid('json')
-
-    await c.env.DB.prepare(`
-      UPDATE reports SET status = ?, reviewed_by = ?, reviewed_at = datetime('now')
-      WHERE id = ?
-    `).bind(status, adminId, reportId).run()
-
-    return c.json(ok(null, '신고가 처리되었습니다.'))
-  }
-)
-
-// ── 파트너 서비스 관리 ────────────────────────────────
-admin.get('/partners', async (c) => {
-  const partners = await c.env.DB.prepare(
-    'SELECT id, name, description, status, created_at FROM partner_services ORDER BY created_at DESC'
-  ).all()
-  return c.json(ok(partners.results))
-})
-
-admin.post(
-  '/partners',
-  zValidator('json', z.object({
-    name: z.string().min(2),
-    description: z.string().optional()
-  })),
-  async (c) => {
-    const { name, description } = c.req.valid('json')
-    const apiKey = `meti_partner_${crypto.randomUUID().replace(/-/g, '')}`
-
-    const result = await c.env.DB.prepare(`
-      INSERT INTO partner_services (name, description, api_key) VALUES (?, ?, ?)
-    `).bind(name, description ?? null, apiKey).run()
-
-    return c.json(ok({
-      id: result.meta.last_row_id,
-      name,
-      api_key: apiKey
-    }, '파트너 서비스가 등록되었습니다.'), 201)
-  }
-)
-
-// ── 리워드 잔액/이력 조회 ────────────────────────────
-admin.get('/rewards', async (c) => {
-  const { page, limit, offset } = parsePagination(c.req.query('page'), c.req.query('limit'))
-
-  const [rows, countRow] = await Promise.all([
-    c.env.DB.prepare(`
-      SELECT r.*, u.name, u.email, ps.name as partner_name
-      FROM rewards r
-      JOIN users u ON u.id = r.user_id
-      LEFT JOIN partner_services ps ON ps.id = r.partner_id
-      ORDER BY r.created_at DESC LIMIT ? OFFSET ?
-    `).bind(limit, offset).all(),
-    c.env.DB.prepare('SELECT COUNT(*) as total FROM rewards').first<{ total: number }>()
-  ])
-
-  return c.json(paginate(rows.results, countRow?.total ?? 0, page, limit))
-})
-
-// ── NFC 실물카드 관리 ────────────────────────────────
-admin.get('/nfc-cards', async (c) => {
-  const { page, limit, offset } = parsePagination(c.req.query('page'), c.req.query('limit'))
-  const status = c.req.query('status') ?? 'pending'
-
-  const [rows, countRow] = await Promise.all([
-    c.env.DB.prepare(`
-      SELECT n.*, u.name as user_name, u.email as user_email, g.name as group_name
-      FROM nfc_physical_cards n
-      LEFT JOIN users u ON u.id = n.user_id
-      LEFT JOIN groups g ON g.id = n.group_id
-      WHERE n.status = ?
-      ORDER BY n.applied_at DESC LIMIT ? OFFSET ?
-    `).bind(status, limit, offset).all(),
-    c.env.DB.prepare('SELECT COUNT(*) as total FROM nfc_physical_cards WHERE status = ?').bind(status).first<{ total: number }>()
-  ])
-
-  return c.json(paginate(rows.results, countRow?.total ?? 0, page, limit))
-})
-
-admin.patch(
-  '/nfc-cards/:id',
-  zValidator('json', z.object({
-    action: z.enum(['approve', 'issue', 'reject', 'deactivate']),
-    nfc_uid: z.string().optional(),
-    serial_no: z.string().optional()
-  })),
-  async (c) => {
-    const cardId = c.req.param('id')
-    const { action, nfc_uid, serial_no } = c.req.valid('json')
-
-    const statusMap: Record<string, string> = {
-      approve: 'approved', issue: 'issued', reject: 'pending', deactivate: 'deactivated'
-    }
-
-    const updates: string[] = [`status = '${statusMap[action]}'`]
-    const values: unknown[] = []
-
-    if (action === 'issue') {
-      updates.push(`issued_at = datetime('now')`)
-      if (nfc_uid) { updates.push(`nfc_uid = ?`); values.push(nfc_uid) }
-      if (serial_no) { updates.push(`serial_no = ?`); values.push(serial_no) }
-    }
-    if (action === 'deactivate') updates.push(`deactivated_at = datetime('now')`)
-    updates.push(`updated_at = datetime('now')`)
-    values.push(cardId)
-
-    await c.env.DB.prepare(`UPDATE nfc_physical_cards SET ${updates.join(', ')} WHERE id = ?`).bind(...values).run()
-
-    return c.json(ok(null, 'NFC 카드 상태가 변경되었습니다.'))
   }
 )
 

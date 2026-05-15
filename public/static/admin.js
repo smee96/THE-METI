@@ -79,8 +79,6 @@ function renderApp() {
           <p class="text-slate-500 text-sm uppercase font-semibold px-2 pt-2 pb-0.5">운영</p>
           ${navItem('reports', 'flag', '신고 관리')}
           ${navItem('nfc-cards', 'credit-card', 'NFC 카드')}
-          ${navItem('partners', 'handshake', '파트너')}
-          ${navItem('rewards', 'gift', '리워드')}
           <p class="text-slate-500 text-sm uppercase font-semibold px-2 pt-2 pb-0.5">설정</p>
           ${navItem('plan-configs', 'sliders-h', '플랜 설정')}
         </nav>
@@ -167,15 +165,17 @@ function navigateTo(section) {
   const titles = {
     dashboard: '대시보드', users: '유저 관리', groups: '그룹 관리', cards: '명함 관리',
     events: '행사 관리', lessons: '레슨 관리', reports: '신고 관리', 'nfc-cards': 'NFC 카드 관리',
-    partners: '파트너 서비스', rewards: '리워드 내역'
+    'plan-configs': '플랜 설정'
   };
   const titleEl = document.getElementById('page-title');
   if (titleEl) titleEl.textContent = titles[section] || section;
 
   const pages = {
     dashboard: loadDashboard, users: loadUsers, groups: loadGroups, cards: loadCards,
-    events: loadEvents, lessons: loadLessons, reports: loadReports, 'nfc-cards': loadNfcCards,
-    partners: loadPartners, rewards: loadRewards, 'plan-configs': loadPlanConfigs
+    events: loadEvents, lessons: loadLessons,
+    reports: loadReports,
+    'nfc-cards': loadNfcCards,
+    'plan-configs': loadPlanConfigs
   };
   if (pages[section]) pages[section]();
 }
@@ -929,143 +929,7 @@ async function loadPointHistory(userId, page = 1) {
 }
 
 // ── 신고 관리 ────────────────────────────────────────────
-async function loadReports(page = 1, status = 'pending') {
-  setContent(loadingSpinner());
-  try {
-    const { data } = await axios.get(`/admin/reports?page=${page}&limit=20&status=${status}`);
-    const { data: reports, pagination } = data;
-
-    setContent(`
-      <div class="space-y-3">
-        <div class="flex gap-2 flex-wrap">
-          ${['pending', 'reviewed', 'resolved', 'dismissed'].map(s => `
-            <button onclick="loadReports(1,'${s}')"
-              class="px-3 py-1.5 rounded-lg text-sm font-medium transition
-                     ${status === s ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border hover:bg-gray-50'}">
-              ${s === 'pending' ? '대기' : s === 'reviewed' ? '검토중' : s === 'resolved' ? '처리완료' : '기각'}
-            </button>
-          `).join('')}
-        </div>
-        <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-50 border-b">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">신고자</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">대상</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">사유</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">날짜</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">액션</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-100">
-                ${reports.length === 0 ? `<tr><td colspan="5" class="px-4 py-10 text-center text-gray-400 text-sm">신고 내역이 없습니다.</td></tr>` : ''}
-                ${reports.map(r => `
-                  <tr class="hover:bg-gray-50">
-                    <td class="px-4 py-3">
-                      <p class="text-sm font-medium text-gray-900">${r.reporter_name}</p>
-                      <p class="text-sm text-gray-400">${r.reporter_email}</p>
-                    </td>
-                    <td class="px-4 py-3">
-                      <span class="text-sm px-2 py-0.5 bg-gray-100 rounded">${r.target_type} #${r.target_id}</span>
-                    </td>
-                    <td class="px-4 py-3 text-sm text-gray-700">${r.reason}</td>
-                    <td class="px-4 py-3 text-sm text-gray-400">${formatDate(r.created_at)}</td>
-                    <td class="px-4 py-3">
-                      <div class="flex gap-1">
-                        ${status === 'pending' ? `
-                          <button onclick="resolveReport(${r.id},'resolved')"
-                            class="text-sm px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">처리완료</button>
-                          <button onclick="resolveReport(${r.id},'dismissed')"
-                            class="text-sm px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200">기각</button>
-                        ` : `<span class="text-sm text-gray-400">-</span>`}
-                      </div>
-                    </td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        ${renderPagination(pagination, 'loadReports')}
-      </div>
-    `);
-  } catch (err) {
-    setContent(errorBox('신고 목록을 불러오지 못했습니다.'));
-  }
-}
-
-// ── 파트너 관리 ──────────────────────────────────────────
-async function loadPartners() {
-  setContent(loadingSpinner());
-  try {
-    const { data } = await axios.get('/admin/partners');
-    const partners = data.data;
-
-    setContent(`
-      <div class="space-y-3">
-        <div class="flex justify-end">
-          <button onclick="showAddPartnerForm()"
-            class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
-            <i class="fas fa-plus mr-1.5"></i>파트너 등록
-          </button>
-        </div>
-        <div id="partner-form" class="hidden bg-white rounded-xl shadow-sm border p-4">
-          <h3 class="font-semibold text-sm mb-3">새 파트너 서비스 등록</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <input type="text" id="p-name" placeholder="서비스 이름"
-              class="px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <input type="text" id="p-desc" placeholder="서비스 설명"
-              class="px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-          </div>
-          <div class="mt-3 flex gap-2">
-            <button onclick="addPartner()"
-              class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">등록</button>
-            <button onclick="document.getElementById('partner-form').classList.add('hidden')"
-              class="px-4 py-2 border text-sm rounded-lg hover:bg-gray-50">취소</button>
-          </div>
-          <div id="new-apikey" class="hidden mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p class="text-sm font-semibold text-yellow-800 mb-1">⚠️ API 키 (최초 1회만 표시)</p>
-            <code id="apikey-val" class="text-sm font-mono break-all text-yellow-900"></code>
-          </div>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-50 border-b">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">서비스명</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">설명</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">상태</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">등록일</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-100">
-                ${partners.length === 0 ? `<tr><td colspan="4" class="px-4 py-10 text-center text-gray-400 text-sm">등록된 파트너가 없습니다.</td></tr>` : ''}
-                ${partners.map(p => `
-                  <tr class="hover:bg-gray-50">
-                    <td class="px-4 py-3 text-sm font-medium text-gray-900">${p.name}</td>
-                    <td class="px-4 py-3 text-sm text-gray-400">${p.description || '-'}</td>
-                    <td class="px-4 py-3">
-                      ${p.status === 'active'
-                        ? '<span class="px-2 py-0.5 bg-green-100 text-green-700 text-sm rounded-full">활성</span>'
-                        : '<span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-sm rounded-full">비활성</span>'}
-                    </td>
-                    <td class="px-4 py-3 text-sm text-gray-400">${formatDate(p.created_at)}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    `);
-  } catch (err) {
-    setContent(errorBox('파트너 목록을 불러오지 못했습니다.'));
-  }
-}
-
-// ── 행사 / NFC / 리워드 (심플 테이블) ────────────────────
+// ── 행사 관리 ────────────────────────────────────────────
 let _eventsStatus = 'all';
 function loadEventsPage(page) { loadEvents(page, _eventsStatus); }
 
@@ -1753,87 +1617,7 @@ async function updatePlanConfig(planCode, field) {
   }
 }
 
-async function loadNfcCards(page = 1) {
-  setContent(loadingSpinner());
-  try {
-    const { data } = await axios.get(`/admin/nfc-cards?limit=20&page=${page}`);
-    const rows = data.data || [];
-    const pagination = data.pagination;
-    setContent(`
-      <div class="space-y-3">
-        <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-50 border-b">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">유저</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">그룹</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">상태</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">신청일</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-100">
-                ${rows.length === 0 ? `<tr><td colspan="4" class="px-4 py-10 text-center text-gray-400 text-sm">NFC 카드 신청이 없습니다.</td></tr>` : ''}
-                ${rows.map(r => `
-                  <tr class="hover:bg-gray-50">
-                    <td class="px-4 py-3 text-sm text-gray-900">${r.user_name ?? '-'}</td>
-                    <td class="px-4 py-3 text-sm text-gray-500">${r.group_name ?? '-'}</td>
-                    <td class="px-4 py-3 text-sm text-gray-500">${r.status ?? '-'}</td>
-                    <td class="px-4 py-3 text-sm text-gray-500">${r.applied_at ? formatDate(r.applied_at) : '-'}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        ${pagination ? renderPagination(pagination, 'loadNfcCards') : ''}
-      </div>
-    `);
-  } catch (err) {
-    setContent(errorBox('NFC 카드 목록을 불러오지 못했습니다.'));
-  }
-}
-
-async function loadRewards(page = 1) {
-  setContent(loadingSpinner());
-  try {
-    const { data } = await axios.get(`/admin/rewards?limit=20&page=${page}`);
-    const rows = data.data || [];
-    const pagination = data.pagination;
-    setContent(`
-      <div class="space-y-3">
-        <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-50 border-b">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">유저</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">파트너</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">포인트</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-500 uppercase">날짜</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-100">
-                ${rows.length === 0 ? `<tr><td colspan="4" class="px-4 py-10 text-center text-gray-400 text-sm">리워드 내역이 없습니다.</td></tr>` : ''}
-                ${rows.map(r => `
-                  <tr class="hover:bg-gray-50">
-                    <td class="px-4 py-3 text-sm text-gray-900">${r.name ?? '-'}</td>
-                    <td class="px-4 py-3 text-sm text-gray-500">${r.partner_name ?? '-'}</td>
-                    <td class="px-4 py-3 text-sm font-semibold text-blue-600">+${r.points ?? 0}</td>
-                    <td class="px-4 py-3 text-sm text-gray-500">${r.created_at ? formatDate(r.created_at) : '-'}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        ${pagination ? renderPagination(pagination, 'loadRewards') : ''}
-      </div>
-    `);
-  } catch (err) {
-    setContent(errorBox('리워드 내역을 불러오지 못했습니다.'));
-  }
-}
+// loadNfcCards / loadRewards → admin-nfc.js 로 이동
 
 // ── 레슨 관리 ─────────────────────────────────────────────
 let _lessonsStatus = 'all';
@@ -2335,33 +2119,7 @@ async function approveGroup(groupId, action) {
   }
 }
 
-async function resolveReport(reportId, status) {
-  try {
-    await axios.patch(`/admin/reports/${reportId}`, { status });
-    showToast('신고가 처리되었습니다.', 'success');
-    loadReports();
-  } catch (err) {
-    showToast('오류가 발생했습니다.', 'error');
-  }
-}
-
-function showAddPartnerForm() {
-  document.getElementById('partner-form').classList.remove('hidden');
-}
-
-async function addPartner() {
-  const name = document.getElementById('p-name').value.trim();
-  const desc = document.getElementById('p-desc').value.trim();
-  if (!name) { showToast('서비스 이름을 입력하세요.', 'error'); return; }
-  try {
-    const { data } = await axios.post('/admin/partners', { name, description: desc });
-    document.getElementById('new-apikey').classList.remove('hidden');
-    document.getElementById('apikey-val').textContent = data.data.api_key;
-    showToast('파트너 서비스가 등록되었습니다.', 'success');
-  } catch (err) {
-    showToast('오류가 발생했습니다.', 'error');
-  }
-}
+// resolveReport / addPartner → admin-reports.js 로 이동
 
 // ── 유틸리티 ─────────────────────────────────────────────
 function setContent(html) {
