@@ -713,9 +713,9 @@ async function showUserDetail(userId) {
             class="detail-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
             <i class="fas fa-building mr-1"></i>그룹 (${groups.length})
           </button>
-          <button onclick="switchDetailTab('points')" id="tab-points"
+          <button onclick="switchDetailTab('points', ${userId})" id="tab-points"
             class="detail-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
-            <i class="fas fa-coins mr-1"></i>포인트 지급/차감
+            <i class="fas fa-coins mr-1"></i>포인트
           </button>
         </div>
       </div>
@@ -761,29 +761,31 @@ async function showUserDetail(userId) {
         }
       </div>
 
-      <!-- 포인트 지급/차감 탭 -->
+      <!-- 포인트 탭 -->
       <div id="detail-points" class="detail-pane hidden">
-        <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4 text-sm text-blue-700">
-          <i class="fas fa-info-circle mr-1"></i>
-          현재 잔액: <strong>${point_balance.toLocaleString()} P</strong>
-          · 양수 = 지급, 음수 = 차감 (예: -500)
+        <!-- 지급/차감 폼 -->
+        <div class="mb-4 p-3 bg-gray-50 border rounded-xl space-y-2">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-semibold text-gray-600 uppercase tracking-wide">포인트 지급 / 차감</span>
+            <span class="text-sm font-bold text-blue-600">${point_balance.toLocaleString()} P</span>
+          </div>
+          <div class="flex gap-2">
+            <input type="number" id="pt-amount-${userId}" placeholder="양수 지급 · 음수 차감"
+              class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+            <input type="text" id="pt-desc-${userId}" placeholder="사유 입력"
+              class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+            <button onclick="submitUserPoints(${userId})"
+              class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition whitespace-nowrap">
+              처리
+            </button>
+          </div>
+          <div id="pt-error-${userId}" class="hidden text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5"></div>
         </div>
-        <div class="space-y-3">
-          <div>
-            <label class="block text-sm font-semibold text-gray-600 mb-1">포인트 금액 <span class="text-red-500">*</span></label>
-            <input type="number" id="pt-amount-${userId}" placeholder="양수: 지급 / 음수: 차감 (예: 1000 또는 -500)"
-              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <!-- 내역 목록 (동적 로드) -->
+        <div id="pt-history-${userId}">
+          <div class="flex items-center justify-center py-6">
+            <i class="fas fa-spinner fa-spin text-blue-400 text-xl"></i>
           </div>
-          <div>
-            <label class="block text-sm font-semibold text-gray-600 mb-1">사유 <span class="text-red-500">*</span></label>
-            <input type="text" id="pt-desc-${userId}" placeholder="포인트 지급/차감 사유 입력"
-              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-          </div>
-          <div id="pt-error-${userId}" class="hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
-          <button onclick="submitUserPoints(${userId})"
-            class="w-full py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition">
-            <i class="fas fa-coins mr-1"></i>포인트 처리
-          </button>
         </div>
       </div>
     `;
@@ -795,7 +797,7 @@ async function showUserDetail(userId) {
   }
 }
 
-function switchDetailTab(tab) {
+function switchDetailTab(tab, userId) {
   // 모든 탭 비활성화
   document.querySelectorAll('.detail-tab').forEach(btn => {
     btn.classList.remove('border-blue-600', 'text-blue-600');
@@ -810,6 +812,10 @@ function switchDetailTab(tab) {
   }
   const activePane = document.getElementById(`detail-${tab}`);
   if (activePane) activePane.classList.remove('hidden');
+  // 포인트 탭: 내역 자동 로드
+  if (tab === 'points' && userId) {
+    loadPointHistory(userId, 1);
+  }
 }
 
 async function submitUserPoints(userId) {
@@ -831,12 +837,94 @@ async function submitUserPoints(userId) {
   try {
     const { data } = await axios.post(`/admin/users/${userId}/points`, { amount, description });
     showToast(data.message || `포인트 처리 완료`, 'success');
-    document.getElementById('user-detail-modal')?.remove();
-    // 유저 목록 새로고침
-    loadUsers(1, document.getElementById('user-search')?.value || '');
+    // 입력 초기화 + 잔액 갱신 + 내역 갱신
+    amountEl.value = '';
+    descEl.value   = '';
+    // 잔액 표시 갱신
+    const newBal = data.data?.new_balance;
+    if (newBal !== undefined) {
+      const balEls = document.querySelectorAll('#user-detail-modal .point-balance-display');
+      balEls.forEach(el => { el.textContent = newBal.toLocaleString() + ' P'; });
+    }
+    loadPointHistory(userId, 1);
+    showToast(data.message || '포인트 처리 완료', 'success');
   } catch (err) {
     const msg = err.response?.data?.message || err.response?.data?.error || '포인트 처리에 실패했습니다.';
     errEl.textContent = msg; errEl.classList.remove('hidden');
+  }
+}
+
+// 포인트 내역 로드
+async function loadPointHistory(userId, page = 1) {
+  const container = document.getElementById(`pt-history-${userId}`);
+  if (!container) return;
+
+  container.innerHTML = `<div class="flex items-center justify-center py-6">
+    <i class="fas fa-spinner fa-spin text-blue-400 text-xl"></i>
+  </div>`;
+
+  try {
+    const { data } = await axios.get(`/admin/users/${userId}/point-history?page=${page}&limit=20`);
+    const { transactions = [], balance, pagination } = data.data;
+
+    const typeLabel = {
+      charge_subscription : { label: '구독 충전',   color: 'text-blue-600' },
+      charge_purchase     : { label: '구매 충전',   color: 'text-blue-600' },
+      charge_admin        : { label: '관리자 지급', color: 'text-green-600' },
+      charge_transfer_in  : { label: '이체 입금',   color: 'text-green-600' },
+      use_card_extra      : { label: '명함 추가',   color: 'text-orange-500' },
+      use_event_create    : { label: '행사 개설',   color: 'text-orange-500' },
+      use_nfc_card        : { label: 'NFC 카드',    color: 'text-orange-500' },
+      use_partner         : { label: '파트너 이용', color: 'text-orange-500' },
+      use_transfer_out    : { label: '이체 출금',   color: 'text-orange-500' },
+      use_admin           : { label: '관리자 차감', color: 'text-red-500' },
+      expire              : { label: '포인트 만료', color: 'text-gray-400' },
+    };
+
+    if (transactions.length === 0) {
+      container.innerHTML = `<p class="text-sm text-gray-400 py-6 text-center">포인트 거래 내역이 없습니다.</p>`;
+      return;
+    }
+
+    const rows = transactions.map(tx => {
+      const sign   = tx.amount > 0 ? '+' : '';
+      const tInfo  = typeLabel[tx.type] || { label: tx.type, color: 'text-gray-500' };
+      const amtCls = tx.amount > 0 ? 'text-blue-600' : 'text-red-500';
+      return `
+        <div class="flex items-center justify-between py-2.5 border-b last:border-0">
+          <div class="flex-1 min-w-0 mr-3">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-xs font-medium px-1.5 py-0.5 bg-gray-100 rounded ${tInfo.color}">${tInfo.label}</span>
+              <span class="text-xs text-gray-500 truncate">${escHtml(tx.description ?? '')}</span>
+            </div>
+            <p class="text-xs text-gray-400 mt-0.5">${formatDateTime(tx.created_at)}</p>
+          </div>
+          <div class="text-right flex-shrink-0">
+            <p class="text-sm font-bold ${amtCls}">${sign}${tx.amount.toLocaleString()} P</p>
+            <p class="text-xs text-gray-400">${tx.balance_after.toLocaleString()} P</p>
+          </div>
+        </div>`;
+    }).join('');
+
+    const totalPages = pagination?.total_pages ?? 1;
+    const paginationHtml = totalPages > 1 ? `
+      <div class="flex items-center justify-between pt-3 mt-1 border-t">
+        <span class="text-xs text-gray-500">총 ${pagination.total}건</span>
+        <div class="flex gap-1">
+          ${page > 1 ? `<button onclick="loadPointHistory(${userId},${page-1})"
+            class="px-2 py-1 text-xs border rounded hover:bg-gray-50">이전</button>` : ''}
+          <span class="px-2 py-1 text-xs text-gray-600">${page} / ${totalPages}</span>
+          ${page < totalPages ? `<button onclick="loadPointHistory(${userId},${page+1})"
+            class="px-2 py-1 text-xs border rounded hover:bg-gray-50">다음</button>` : ''}
+        </div>
+      </div>` : `<p class="text-xs text-gray-400 pt-2 text-right">총 ${pagination?.total ?? transactions.length}건</p>`;
+
+    container.innerHTML = `
+      <div class="max-h-64 overflow-y-auto">${rows}</div>
+      ${paginationHtml}
+    `;
+  } catch (err) {
+    container.innerHTML = `<p class="text-sm text-red-500 py-4 text-center">내역을 불러오지 못했습니다.</p>`;
   }
 }
 
@@ -2357,6 +2445,14 @@ function formatDate(dateStr) {
   if (!dateStr) return '-';
   return new Date(dateStr).toLocaleDateString('ko-KR', {
     year: 'numeric', month: '2-digit', day: '2-digit'
+  });
+}
+
+function formatDateTime(dateStr) {
+  if (!dateStr) return '-';
+  return new Date(dateStr).toLocaleString('ko-KR', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit'
   });
 }
 
