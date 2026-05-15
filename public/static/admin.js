@@ -578,14 +578,14 @@ async function loadCards(page = 1, search = '', activeFilter = '') {
                   <tr class="hover:bg-gray-50">
                     <td class="px-4 py-3">
                       <p class="text-sm font-medium text-gray-900">${card.title || '(제목 없음)'}</p>
-                      <p class="text-sm text-gray-400">${card.job_title || ''} ${card.company ? '· ' + card.company : ''}</p>
+                      <p class="text-sm text-gray-400">${card.company || ''}</p>
                     </td>
                     <td class="px-4 py-3">
                       <p class="text-sm text-gray-900">${card.user_name}</p>
                       <p class="text-sm text-gray-400">${card.user_email}</p>
                     </td>
                     <td class="px-4 py-3">
-                      ${card.is_default
+                      ${card.is_primary
                         ? '<span class="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-sm rounded-full">기본</span>'
                         : '<span class="text-gray-300 text-sm">-</span>'}
                     </td>
@@ -735,9 +735,9 @@ async function showUserDetail(userId) {
                 <div class="flex items-center justify-between p-3 border rounded-xl hover:bg-gray-50">
                   <div>
                     <p class="text-sm font-medium text-gray-900">${card.title || '(제목 없음)'}
-                      ${card.is_default ? '<span class="ml-1 px-1.5 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded">기본</span>' : ''}
+                      ${card.is_primary ? '<span class="ml-1 px-1.5 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded">기본</span>' : ''}
                     </p>
-                    <p class="text-sm text-gray-400">${card.job_title || ''} ${card.company ? '· ' + card.company : ''}</p>
+                    <p class="text-sm text-gray-400">${card.company || ''}</p>
                   </div>
                   <span class="text-sm ${card.is_active ? 'text-green-600' : 'text-red-500'}">${card.is_active ? '활성' : '비활성'}</span>
                 </div>

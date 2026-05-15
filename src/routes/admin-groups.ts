@@ -91,10 +91,10 @@ groupDetail.get('/members', async (c) => {
         gm.id, gm.group_id, gm.user_id,
         gm.role, gm.custom_role, gm.status,
         gm.joined_at, gm.approved_at, gm.left_at, gm.created_at,
-        u.name    AS user_name,
-        u.email   AS user_email,
-        u.status  AS user_status,
-        u.plan    AS user_plan
+        u.name      AS user_name,
+        u.email     AS user_email,
+        u.is_active AS user_status,
+        u.plan      AS user_plan
       FROM group_members gm
       JOIN users u ON u.id = gm.user_id
       ${where}

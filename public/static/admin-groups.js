@@ -259,9 +259,9 @@ async function _loadGroupMembers(groupId, status = 'active', page = 1) {
             ${m.joined_at ? formatDate(m.joined_at) : formatDate(m.created_at)}
           </td>
           <td class="px-4 py-3">
-            <span class="text-xs px-1.5 py-0.5 rounded ${m.user_status === 'active'
+            <span class="text-xs px-1.5 py-0.5 rounded ${m.user_status == 1
               ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}">
-              ${m.user_status === 'active' ? '정상' : '정지'}
+              ${m.user_status == 1 ? '정상' : '정지'}
             </span>
           </td>
           <td class="px-4 py-3">

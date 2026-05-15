@@ -349,8 +349,8 @@ admin.get('/users/:id/detail', async (c) => {
       FROM users WHERE id = ? AND is_deleted = 0
     `).bind(userId).first(),
     c.env.DB.prepare(`
-      SELECT id, title, job_title, company, is_default, is_active, created_at
-      FROM cards WHERE user_id = ? AND is_deleted = 0 ORDER BY is_default DESC, created_at DESC
+      SELECT id, title, company, is_primary, is_active, created_at
+      FROM cards WHERE user_id = ? AND is_deleted = 0 ORDER BY is_primary DESC, created_at DESC
     `).bind(userId).all(),
     c.env.DB.prepare(`
       SELECT g.id, g.name, g.status, gm.role, gm.joined_at
@@ -383,7 +383,7 @@ admin.get('/cards', async (c) => {
   const isActive  = c.req.query('active')  // '1' | '0'
 
   let query = `
-    SELECT c.id, c.title, c.job_title, c.company, c.is_default, c.is_active, c.created_at,
+    SELECT c.id, c.title, c.company, c.is_primary, c.is_active, c.created_at,
            u.id as user_id, u.name as user_name, u.email as user_email
     FROM cards c
     JOIN users u ON u.id = c.user_id
