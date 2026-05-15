@@ -602,6 +602,48 @@ admin.post('/users/:id/points', zValidator('json', z.object({
 })
 
 // ══════════════════════════════════════════════════════════════
+// GET /admin/users/:id/point-history — 유저 포인트 거래 내역
+// ══════════════════════════════════════════════════════════════
+admin.get('/users/:id/point-history', async (c) => {
+  const targetId = Number(c.req.param('id'))
+  const { page, limit, offset } = parsePagination(c.req.query('page'), c.req.query('limit') ?? '30')
+
+  // 유저 지갑 확인
+  const wallet = await c.env.DB.prepare(
+    `SELECT id, balance FROM point_wallets WHERE owner_type = 'user' AND owner_id = ?`
+  ).bind(targetId).first<{ id: number; balance: number }>()
+
+  if (!wallet) {
+    return c.json(ok({ transactions: [], balance: 0, pagination: { page, limit, total: 0, total_pages: 0 } }))
+  }
+
+  const [rows, countRow] = await Promise.all([
+    c.env.DB.prepare(`
+      SELECT id, type, amount, balance_after, description, ref_type, ref_id, created_at
+      FROM point_transactions
+      WHERE wallet_id = ?
+      ORDER BY created_at DESC
+      LIMIT ? OFFSET ?
+    `).bind(wallet.id, limit, offset).all(),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) as total FROM point_transactions WHERE wallet_id = ?`
+    ).bind(wallet.id).first<{ total: number }>()
+  ])
+
+  const total = countRow?.total ?? 0
+  return c.json(ok({
+    balance:      wallet.balance,
+    transactions: rows.results,
+    pagination: {
+      page,
+      limit,
+      total,
+      total_pages: Math.ceil(total / limit)
+    }
+  }))
+})
+
+// ══════════════════════════════════════════════════════════════
 // 행사 관리 (어드민 전용 — 그룹 멤버 권한 없이 전체 접근)
 // ══════════════════════════════════════════════════════════════
 
