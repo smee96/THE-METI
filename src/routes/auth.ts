@@ -173,7 +173,9 @@ auth.post(
       return c.json(fail('이메일 또는 비밀번호가 올바르지 않습니다.'), 401)
     }
 
-    if (!user.is_verified) {
+    // super_admin(id=1)은 이메일 인증 우회 (관리자 계정)
+    const isSuperAdmin = user.role === 'super_admin' || user.id === 1
+    if (!user.is_verified && !isSuperAdmin) {
       return c.json(fail('이메일 인증이 완료되지 않았습니다. 인증 메일을 확인해주세요.'), 403)
     }
 
