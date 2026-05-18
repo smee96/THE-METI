@@ -99,22 +99,19 @@ function pathToSection(path) {
 // ── 내 그룹 로드 ─────────────────────────────────────────
 async function loadMyGroups() {
   try {
-    // 현재 API: GET /groups 는 공개 그룹 목록
-    // 내 가입 그룹은 멤버십 조회로 가져옴
-    // → 임시로 각 그룹을 순회하는 대신, 멤버 목록에서 역조회
-    // TODO: GET /api/v1/groups/mine 엔드포인트 추가 시 교체
-    const res = await axios.get('/groups?limit=100');
+    const res = await axios.get('/groups/mine');
     if (res.data.success) {
-      // 전체 공개 그룹 중 내가 active 멤버인 것만 필터
-      // (API 개선 전 임시 처리 — 실제론 /groups/mine 필요)
-      myGroups = (Array.isArray(res.data.data) ? res.data.data : (res.data.data?.groups || [])).map(g => ({
-        ...g,
-        my_role:   g.my_role   || null,
-        my_status: g.my_status || null,
-      })).filter(g => g.my_status === 'active');
+      const all = Array.isArray(res.data.data) ? res.data.data : [];
+      // active 멤버십만 사이드바 컨텍스트 메뉴에 사용
+      myGroups = all.filter(g => g.my_status === 'active');
+      // pending(신청대기) 그룹은 별도 보관 (신청내역 섹션용)
+      window._pendingGroups = all.filter(g =>
+        g.my_status === 'pending' || g.my_status === 'group_pending'
+      );
     }
   } catch (e) {
     myGroups = [];
+    window._pendingGroups = [];
   }
 }
 
@@ -991,49 +988,119 @@ async function loadGroups() {
   el.innerHTML = loadingHtml();
   try {
     await loadMyGroups();
+    const pending = window._pendingGroups || [];
+    let html = '';
+
+    // ── ① 소속 그룹 ──────────────────────────────────
+    html += `<div class="flex items-center justify-between mb-3">
+      <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">소속 그룹</h4>
+    </div>`;
     if (myGroups.length === 0) {
-      el.innerHTML = `
-        <div class="text-center py-12">
-          <i class="fas fa-users text-gray-300 text-4xl mb-3"></i>
-          <p class="text-gray-500 mb-4">아직 소속된 그룹이 없습니다.</p>
-          <button onclick="openJoinGroupModal()"
-            class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
-            그룹 탐색하기
-          </button>
-        </div>`;
-      return;
+      html += `<div class="text-center py-6 text-gray-400 text-sm mb-4">
+        <i class="fas fa-users text-gray-200 text-3xl mb-2 block"></i>
+        아직 소속된 그룹이 없습니다.
+      </div>`;
+    } else {
+      html += myGroups.map(g => `
+        <div class="item-card mb-2">
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
+              <i class="fas fa-users text-white text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <p class="font-semibold text-gray-800 text-sm">${escHtml(g.name)}</p>
+                <span class="text-xs px-2 py-0.5 rounded-full ${roleColor(g.my_role)}">${roleLabel(g.my_role)}</span>
+              </div>
+              <p class="text-xs text-gray-500 truncate mt-0.5">${escHtml(g.description || g.purpose || '')}</p>
+              <p class="text-xs text-gray-400">멤버 ${g.member_count || '-'}명</p>
+            </div>
+            <div class="flex flex-col gap-1.5 flex-shrink-0">
+              ${(g.my_role === 'admin' || g.my_role === 'sub_admin') ? `
+                <button onclick="switchContextToGroup(${g.id})"
+                  class="px-2.5 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-medium hover:bg-purple-700 transition whitespace-nowrap">
+                  <i class="fas fa-cog mr-1"></i>관리
+                </button>` : ''}
+              <button onclick="openGroupDetailModal(${g.id})"
+                class="px-2.5 py-1.5 border border-gray-200 text-gray-600 rounded-lg text-xs hover:bg-gray-50 transition whitespace-nowrap">
+                <i class="fas fa-info-circle mr-1"></i>상세
+              </button>
+            </div>
+          </div>
+        </div>`).join('');
     }
 
-    el.innerHTML = myGroups.map(g => `
-      <div class="item-card">
-        <div class="flex items-center gap-3">
-          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
-            <i class="fas fa-users text-white"></i>
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 flex-wrap">
-              <p class="font-semibold text-gray-800">${escHtml(g.name)}</p>
-              <span class="text-xs px-2 py-0.5 rounded-full ${roleColor(g.my_role)}">${roleLabel(g.my_role)}</span>
+    // ── ② 신청 내역 ──────────────────────────────────
+    html += `<div class="flex items-center justify-between mt-5 mb-3">
+      <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">신청 내역</h4>
+    </div>`;
+    if (pending.length === 0) {
+      html += `<div class="text-center py-4 text-gray-400 text-sm mb-4">
+        <i class="fas fa-clock text-gray-200 text-2xl mb-2 block"></i>
+        진행 중인 신청이 없습니다.
+      </div>`;
+    } else {
+      html += pending.map(g => {
+        const isGroupPending = g.my_status === 'group_pending'; // 내가 개설 신청한 그룹
+        return `
+        <div class="item-card mb-2 border-l-4 ${isGroupPending ? 'border-l-blue-400' : 'border-l-yellow-400'}">
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-xl ${isGroupPending ? 'bg-blue-100' : 'bg-yellow-50'} flex items-center justify-center flex-shrink-0">
+              <i class="fas ${isGroupPending ? 'fa-layer-group text-blue-500' : 'fa-clock text-yellow-500'} text-sm"></i>
             </div>
-            <p class="text-sm text-gray-500 truncate mt-0.5">${escHtml(g.description || g.purpose || '')}</p>
-            <p class="text-xs text-gray-400 mt-0.5">멤버 ${g.member_count || '-'}명</p>
+            <div class="flex-1 min-w-0">
+              <p class="font-semibold text-gray-800 text-sm">${escHtml(g.name)}</p>
+              <p class="text-xs text-gray-500 truncate">${escHtml(g.description || g.purpose || '')}</p>
+              <div class="flex items-center gap-1.5 mt-1">
+                ${isGroupPending
+                  ? `<span class="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium">
+                      <i class="fas fa-hourglass-half mr-1"></i>개설 심사 중</span>
+                     <span class="text-xs text-gray-400">관리자 승인 대기</span>`
+                  : `<span class="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-medium">
+                      <i class="fas fa-user-clock mr-1"></i>가입 승인 대기</span>`}
+              </div>
+            </div>
+            ${isGroupPending ? '' : `
+            <button onclick="cancelGroupJoin(${g.id})"
+              class="text-xs px-2 py-1 border border-red-200 text-red-400 rounded-lg hover:bg-red-50 flex-shrink-0">
+              취소
+            </button>`}
           </div>
-          <div class="flex flex-col gap-2 flex-shrink-0">
-            <!-- 관리자인 경우 그룹 관리 버튼 -->
-            ${(g.my_role === 'admin' || g.my_role === 'sub_admin') ? `
-              <button onclick="switchContextToGroup(${g.id})"
-                class="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-medium hover:bg-purple-700 transition whitespace-nowrap">
-                <i class="fas fa-cog mr-1"></i>그룹 관리
-              </button>` : ''}
-            <button onclick="openGroupDetailModal(${g.id})"
-              class="px-3 py-1.5 border border-gray-200 text-gray-600 rounded-lg text-xs hover:bg-gray-50 transition whitespace-nowrap">
-              <i class="fas fa-info-circle mr-1"></i>상세보기
-            </button>
-          </div>
-        </div>
-      </div>`).join('');
+        </div>`;
+      }).join('');
+    }
+
+    // ── ③ 액션 버튼 ──────────────────────────────────
+    html += `<div class="flex gap-2 mt-5 pt-4 border-t">
+      <button onclick="openJoinGroupModal()"
+        class="flex-1 flex items-center justify-center gap-2 py-2.5 border border-blue-200 text-blue-600 rounded-xl text-sm font-medium hover:bg-blue-50 transition">
+        <i class="fas fa-search"></i> 그룹 탐색
+      </button>
+      <button onclick="openCreateGroupModal()"
+        class="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition">
+        <i class="fas fa-plus"></i> 그룹 개설 신청
+      </button>
+    </div>`;
+
+    el.innerHTML = html;
   } catch (e) {
     el.innerHTML = errorHtml('그룹 목록을 불러오지 못했습니다.');
+  }
+}
+
+// 그룹 가입 신청 취소
+async function cancelGroupJoin(groupId) {
+  if (!confirm('가입 신청을 취소하시겠습니까?')) return;
+  try {
+    const res = await axios.delete(`/groups/${groupId}/leave`);
+    if (res.data.success) {
+      showToast('가입 신청이 취소되었습니다.');
+      loadGroups();
+    } else {
+      showToast(res.data.error || '취소에 실패했습니다.', 'error');
+    }
+  } catch(e) {
+    showToast(e.response?.data?.error || '오류가 발생했습니다.', 'error');
   }
 }
 
@@ -1064,6 +1131,58 @@ async function openJoinGroupModal() {
   if (input) input.value = '';
   await loadExploreGroups(true);
 }
+
+// ── 그룹 개설 신청 모달 ──────────────────────────────────
+function openCreateGroupModal() {
+  const modal = document.getElementById('modal-create-group');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  // 폼 초기화
+  const form = document.getElementById('create-group-form');
+  if (form) form.reset();
+  document.getElementById('create-group-error')?.classList.add('hidden');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.getElementById('create-group-form');
+  if (!form) return;
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errEl = document.getElementById('create-group-error');
+    errEl.classList.add('hidden');
+    const name        = document.getElementById('group-name').value.trim();
+    const description = document.getElementById('group-description').value.trim();
+    const purpose     = document.getElementById('group-purpose').value.trim();
+    const visibility  = document.querySelector('input[name="group-visibility"]:checked')?.value || 'public';
+    const maxMembersVal = document.getElementById('group-max-members').value.trim();
+    const maxMembers  = maxMembersVal ? parseInt(maxMembersVal) : undefined;
+
+    const btn = form.querySelector('button[type=submit]');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>신청 중...';
+    try {
+      const res = await axios.post('/groups', {
+        name, description: description || undefined, purpose, visibility,
+        max_members: maxMembers,
+      });
+      if (res.data.success) {
+        closeModal('modal-create-group');
+        form.reset();
+        showToast('그룹 개설 신청이 완료되었습니다! 관리자 심사 후 활성화됩니다.', 'info');
+        loadGroups(); // 신청내역 섹션에 바로 표시
+      } else {
+        errEl.textContent = res.data.error || '신청에 실패했습니다.';
+        errEl.classList.remove('hidden');
+      }
+    } catch(e) {
+      errEl.textContent = e.response?.data?.error || '오류가 발생했습니다.';
+      errEl.classList.remove('hidden');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>개설 신청';
+    }
+  });
+});
 
 function onExploreSearchInput(val) {
   clearTimeout(_exploreSearchTimer);

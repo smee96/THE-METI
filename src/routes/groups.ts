@@ -68,6 +68,59 @@ groups.post(
   }
 )
 
+// ── 내 그룹 목록 (active + pending + 내가 관리자인 pending 그룹) ──
+// GET /api/v1/groups/mine
+groups.get('/mine', authMiddleware, async (c) => {
+  const userId = c.get('userId')
+
+  // ① 내가 멤버로 가입(active) 또는 신청(pending)한 그룹
+  const memberRows = await c.env.DB.prepare(`
+    SELECT
+      g.id, g.name, g.description, g.purpose, g.logo_url, g.visibility,
+      g.status as group_status, g.max_members, g.created_at,
+      u.name as admin_name,
+      (SELECT COUNT(*) FROM group_members WHERE group_id = g.id AND status = 'active') as member_count,
+      gm.role   as my_role,
+      gm.status as my_status,
+      gm.created_at as applied_at,
+      gm.joined_at
+    FROM group_members gm
+    JOIN groups g ON g.id = gm.group_id
+    LEFT JOIN users u ON u.id = g.admin_user_id
+    WHERE gm.user_id = ?
+      AND gm.status IN ('active', 'pending')
+      AND g.is_deleted = 0
+    ORDER BY gm.created_at DESC
+  `).bind(userId).all()
+
+  // ② 내가 개설 신청한 그룹 (pending 상태, 아직 admin_user_id로만 존재)
+  const ownedPendingRows = await c.env.DB.prepare(`
+    SELECT
+      g.id, g.name, g.description, g.purpose, g.logo_url, g.visibility,
+      g.status as group_status, g.max_members, g.created_at,
+      NULL as admin_name,
+      0 as member_count,
+      'admin' as my_role,
+      'group_pending' as my_status,
+      g.created_at as applied_at,
+      NULL as joined_at
+    FROM groups g
+    WHERE g.admin_user_id = ?
+      AND g.status = 'pending'
+      AND g.is_deleted = 0
+    ORDER BY g.created_at DESC
+  `).bind(userId).all()
+
+  // 중복 제거 (group_id 기준): memberRows 우선
+  const memberGroupIds = new Set(memberRows.results.map((r: any) => r.id))
+  const merged = [
+    ...memberRows.results,
+    ...ownedPendingRows.results.filter((r: any) => !memberGroupIds.has(r.id))
+  ]
+
+  return c.json(ok(merged))
+})
+
 // ── 그룹 상세 조회 ────────────────────────────────────
 groups.get('/:id', async (c) => {
   const groupId = c.req.param('id')
@@ -187,11 +240,21 @@ groups.delete('/:id/leave', authMiddleware, async (c) => {
   const groupId = parseInt(c.req.param('id'))
 
   const member = await c.env.DB.prepare(
-    `SELECT role FROM group_members WHERE group_id = ? AND user_id = ? AND status = 'active'`
-  ).bind(groupId, userId).first<{ role: string }>()
+    `SELECT role, status FROM group_members WHERE group_id = ? AND user_id = ? AND status IN ('active','pending')`
+  ).bind(groupId, userId).first<{ role: string; status: string }>()
 
   if (!member) return c.json(fail('그룹 멤버가 아닙니다.'), 404)
-  if (member.role === 'admin') return c.json(fail('관리자는 직접 탈퇴할 수 없습니다. 권한 이임 후 탈퇴해주세요.'), 400)
+  if (member.status === 'active' && member.role === 'admin') {
+    return c.json(fail('관리자는 직접 탈퇴할 수 없습니다. 권한 이임 후 탈퇴해주세요.'), 400)
+  }
+
+  // pending이면 신청 취소(삭제), active이면 left 처리
+  if (member.status === 'pending') {
+    await c.env.DB.prepare(
+      `DELETE FROM group_members WHERE group_id = ? AND user_id = ?`
+    ).bind(groupId, userId).run()
+    return c.json(ok(null, '가입 신청이 취소되었습니다.'))
+  }
 
   await c.env.DB.prepare(`
     UPDATE group_members SET status = 'left', left_at = datetime('now'), updated_at = datetime('now')

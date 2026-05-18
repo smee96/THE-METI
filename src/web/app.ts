@@ -397,13 +397,7 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
 
       <!-- ── [개인] 내 그룹 목록 ── -->
       <section id="section-groups" class="page-section">
-        <div class="flex items-center justify-between mb-5">
-          <h3 class="text-lg font-bold text-gray-800">내 그룹</h3>
-          <button onclick="openJoinGroupModal()"
-            class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium">
-            <i class="fas fa-search"></i> 그룹 탐색
-          </button>
-        </div>
+        <h3 class="text-lg font-bold text-gray-800 mb-5">내 그룹</h3>
         <div id="groups-list">
           <p class="text-sm text-gray-400 text-center py-8">소속된 그룹이 없습니다.</p>
         </div>
@@ -843,6 +837,41 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
       <div id="card-form-error" class="hidden text-sm text-red-600 mt-3"></div>
       <button type="submit" class="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 mt-4">
         명함 생성
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ── 모달: 그룹 개설 신청 ── -->
+<div id="modal-create-group" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-bold">그룹 개설 신청</h3>
+      <button onclick="closeModal('modal-create-group')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+    </div>
+    <!-- 안내 배너 -->
+    <div class="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-700">
+      <i class="fas fa-info-circle mr-1"></i>
+      누구나 그룹을 개설 신청할 수 있습니다. 관리자 심사 후 승인되면 활성화됩니다.
+    </div>
+    <form id="create-group-form" class="space-y-3">
+      <input id="group-name"    type="text" placeholder="그룹 이름 *" class="modal-input" required minlength="2">
+      <textarea id="group-description" placeholder="그룹 소개 (선택)" rows="2" class="modal-input resize-none"></textarea>
+      <textarea id="group-purpose"     placeholder="그룹 용도 * (관리자 심사용, 5자 이상)" rows="2" class="modal-input resize-none" required minlength="5"></textarea>
+      <div class="flex gap-3">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="group-visibility" value="public" checked class="accent-blue-600">
+          <span class="text-sm text-gray-700">공개</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="group-visibility" value="private" class="accent-blue-600">
+          <span class="text-sm text-gray-700">비공개</span>
+        </label>
+      </div>
+      <input id="group-max-members" type="number" placeholder="최대 멤버 수 (선택, 비워두면 무제한)" class="modal-input" min="2">
+      <div id="create-group-error" class="hidden text-sm text-red-600"></div>
+      <button type="submit" class="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">
+        <i class="fas fa-paper-plane mr-2"></i>개설 신청
       </button>
     </form>
   </div>
