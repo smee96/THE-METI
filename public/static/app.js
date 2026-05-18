@@ -530,13 +530,25 @@ async function openCardPreview(cardId) {
     const c = res.data.data;
     const pubUrl = `${window.location.origin}/card/${c.id}`;
     body.innerHTML = `
+      <!-- 숨김 파일 input (아바타 업로드용) -->
+      <input id="preview-avatar-input" type="file" accept="image/*" class="hidden"
+             onchange="onPreviewCardAvatarChange(event, ${c.id})">
       <!-- 카드 헤더 -->
       <div class="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-6 text-white text-center mb-4">
-        <div class="w-20 h-20 rounded-full mx-auto mb-3 overflow-hidden bg-white/20 flex items-center justify-center">
-          ${c.avatar_url
-            ? `<img src="${escHtml(c.avatar_url)}" class="w-20 h-20 object-cover" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-user text-white text-3xl\\'></i>'">`
-            : '<i class="fas fa-user text-white text-3xl"></i>'}
+        <div class="relative w-20 h-20 rounded-full mx-auto mb-3 group cursor-pointer"
+             onclick="document.getElementById('preview-avatar-input').click()"
+             title="사진 변경">
+          <div id="preview-avatar-wrap" class="w-20 h-20 rounded-full overflow-hidden bg-white/20 flex items-center justify-center">
+            ${c.avatar_url
+              ? `<img id="preview-avatar-img" src="${escHtml(c.avatar_url)}" class="w-20 h-20 object-cover" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-user text-white text-3xl\\'></i>'">`
+              : '<i class="fas fa-user text-white text-3xl"></i>'}
+          </div>
+          <!-- 호버/터치 오버레이 -->
+          <div class="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition pointer-events-none">
+            <i class="fas fa-camera text-white text-lg"></i>
+          </div>
         </div>
+        <p id="preview-avatar-status" class="text-xs text-blue-200 -mt-1 mb-2 min-h-[1rem]"></p>
         <h2 class="text-xl font-bold">${escHtml(c.name)}</h2>
         ${c.title   ? `<p class="text-blue-200 text-sm mt-0.5">${escHtml(c.title)}</p>` : ''}
         ${c.company ? `<p class="text-blue-100 text-sm">${escHtml(c.company)}</p>` : ''}
@@ -581,6 +593,46 @@ async function openCardPreview(cardId) {
   } catch (e) {
     body.innerHTML = errorHtml('명함을 불러오지 못했습니다.');
   }
+}
+
+// 명함 미리보기 모달 — 아바타 터치 → 즉시 업로드
+async function onPreviewCardAvatarChange(event, cardId) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const wrap   = document.getElementById('preview-avatar-wrap');
+  const status = document.getElementById('preview-avatar-status');
+
+  // 로컬 미리보기 즉시 표시
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    if (wrap) {
+      wrap.innerHTML = `<img id="preview-avatar-img" src="${e.target.result}" class="w-20 h-20 object-cover rounded-full">`;
+    }
+  };
+  reader.readAsDataURL(file);
+
+  if (status) { status.textContent = '업로드 중...'; }
+
+  try {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    const res = await axios.post(`/cards/${cardId}/avatar`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    if (res.data.success) {
+      if (status) { status.textContent = '✓ 저장됨'; }
+      showToast('명함 사진이 업데이트되었습니다!');
+      loadCards(); // 배경 목록 새로고침
+    } else {
+      if (status) { status.textContent = res.data.error || '업로드 실패'; }
+      showToast(res.data.error || '업로드에 실패했습니다.', 'error');
+    }
+  } catch(e) {
+    if (status) { status.textContent = '오류 발생'; }
+    showToast(e.response?.data?.error || '업로드 중 오류가 발생했습니다.', 'error');
+  }
+  event.target.value = '';
 }
 
 // ── 명함 수정 모달 ────────────────────────────────────────
