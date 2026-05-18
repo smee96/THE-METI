@@ -739,6 +739,50 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
   </div>
 </div>
 
+<!-- ── 모달: 그룹 탐색 ── -->
+<div id="modal-group-explore" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col" style="max-height:90vh">
+    <!-- 헤더 -->
+    <div class="flex items-center justify-between p-5 border-b flex-shrink-0">
+      <h3 class="text-lg font-bold">그룹 탐색</h3>
+      <button onclick="closeModal('modal-group-explore')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+    </div>
+    <!-- 검색바 -->
+    <div class="px-5 pt-4 pb-3 flex-shrink-0">
+      <div class="relative">
+        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+        <input id="explore-search-input" type="text" placeholder="그룹 이름 또는 소개 검색..."
+          class="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          oninput="onExploreSearchInput(this.value)">
+      </div>
+    </div>
+    <!-- 그룹 목록 -->
+    <div id="explore-groups-list" class="overflow-y-auto flex-1 px-5 pb-5 space-y-3">
+      <div class="text-center py-8 text-gray-400 text-sm"><i class="fas fa-spinner fa-spin mr-2"></i>불러오는 중...</div>
+    </div>
+    <!-- 더보기 -->
+    <div id="explore-load-more-wrap" class="hidden px-5 pb-5 flex-shrink-0">
+      <button onclick="loadMoreExploreGroups()"
+        class="w-full py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition">
+        더 보기
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 모달: 그룹 상세 ── -->
+<div id="modal-group-detail" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm flex flex-col" style="max-height:90vh">
+    <div class="flex items-center justify-between p-5 border-b flex-shrink-0">
+      <h3 class="text-lg font-bold">그룹 정보</h3>
+      <button onclick="closeModal('modal-group-detail')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="group-detail-body" class="overflow-y-auto flex-1 p-5">
+      <div class="text-center py-8 text-gray-400 text-sm"><i class="fas fa-spinner fa-spin mr-2"></i>불러오는 중...</div>
+    </div>
+  </div>
+</div>
+
 <!-- ── 모달: 초대링크 생성 ── -->
 <div id="modal-create-invite" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
   <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">

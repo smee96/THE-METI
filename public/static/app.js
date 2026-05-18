@@ -918,12 +918,290 @@ function navToGroup(groupId) {
   }
 }
 
-function openJoinGroupModal() {
-  alert('그룹 탐색 기능은 준비 중입니다.');
+// ════════════════════════════════════════════════════════
+// ── 그룹 탐색
+// ════════════════════════════════════════════════════════
+let _explorePage      = 1;
+let _exploreTotal     = 0;
+let _exploreQuery     = '';
+let _exploreSearchTimer = null;
+
+async function openJoinGroupModal() {
+  document.getElementById('modal-group-explore').classList.remove('hidden');
+  _explorePage  = 1;
+  _exploreTotal = 0;
+  _exploreQuery = '';
+  const input = document.getElementById('explore-search-input');
+  if (input) input.value = '';
+  await loadExploreGroups(true);
 }
 
-function openGroupDetailModal(groupId) {
-  alert('그룹 상세보기 (ID: ' + groupId + ') — 준비 중');
+function onExploreSearchInput(val) {
+  clearTimeout(_exploreSearchTimer);
+  _exploreSearchTimer = setTimeout(async () => {
+    _exploreQuery = val.trim();
+    _explorePage  = 1;
+    _exploreTotal = 0;
+    await loadExploreGroups(true);
+  }, 400);
+}
+
+async function loadExploreGroups(reset = false) {
+  const listEl   = document.getElementById('explore-groups-list');
+  const moreWrap = document.getElementById('explore-load-more-wrap');
+  if (reset) listEl.innerHTML = loadingHtml();
+
+  try {
+    const params = new URLSearchParams({ page: _explorePage, limit: 10 });
+    if (_exploreQuery) params.set('q', _exploreQuery);
+    const res = await axios.get(`/groups?${params}`);
+    if (!res.data.success) { listEl.innerHTML = emptyHtml('그룹을 불러오지 못했습니다.'); return; }
+
+    const groups = Array.isArray(res.data.data) ? res.data.data : [];
+    _exploreTotal = res.data.pagination?.total ?? groups.length;
+
+    if (reset) listEl.innerHTML = '';
+
+    if (groups.length === 0 && reset) {
+      listEl.innerHTML = emptyHtml(_exploreQuery ? `"${_exploreQuery}" 검색 결과가 없습니다.` : '공개 그룹이 없습니다.');
+      moreWrap.classList.add('hidden');
+      return;
+    }
+
+    // 내가 이미 속한 그룹 id 목록
+    const myGroupIds = new Set(myGroups.map(g => g.id));
+
+    groups.forEach(g => {
+      const isMember  = myGroupIds.has(g.id);
+      const isFeatured = g.is_featured;
+      const card = document.createElement('div');
+      card.className = 'border border-gray-100 rounded-2xl p-4 hover:shadow-md transition cursor-pointer';
+      card.onclick = () => openGroupDetailModal(g.id);
+      card.innerHTML = `
+        <div class="flex items-start gap-3">
+          <!-- 로고 -->
+          <div class="w-12 h-12 rounded-xl flex-shrink-0 overflow-hidden
+               ${g.logo_url ? '' : 'bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center'}">
+            ${g.logo_url
+              ? `<img src="${escHtml(g.logo_url)}" class="w-12 h-12 object-cover" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-users text-white\\'></i>'">`
+              : '<i class="fas fa-users text-white"></i>'}
+          </div>
+          <!-- 정보 -->
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="font-semibold text-gray-800 truncate">${escHtml(g.name)}</span>
+              ${isFeatured ? '<span class="text-xs px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded-full flex-shrink-0">⭐ 추천</span>' : ''}
+              ${isMember   ? '<span class="text-xs px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full flex-shrink-0">가입됨</span>' : ''}
+            </div>
+            <p class="text-xs text-gray-500 mt-0.5 line-clamp-2">${escHtml(g.description || g.purpose || '')}</p>
+            <div class="flex items-center gap-3 mt-1.5 text-xs text-gray-400">
+              <span><i class="fas fa-users mr-1"></i>${g.member_count ?? 0}명</span>
+              <span><i class="fas fa-user-tie mr-1"></i>${escHtml(g.admin_name || '-')}</span>
+            </div>
+          </div>
+          <!-- 가입 버튼 -->
+          <div class="flex-shrink-0" onclick="event.stopPropagation()">
+            ${isMember
+              ? `<span class="text-xs px-3 py-1.5 bg-gray-100 text-gray-400 rounded-lg">가입됨</span>`
+              : `<button onclick="joinGroup(${g.id}, this)"
+                   class="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition whitespace-nowrap">
+                   가입 신청
+                 </button>`}
+          </div>
+        </div>`;
+      listEl.appendChild(card);
+    });
+
+    // 더보기 버튼 표시 여부
+    const loaded = (_explorePage - 1) * 10 + groups.length;
+    if (loaded < _exploreTotal) {
+      _explorePage++;
+      moreWrap.classList.remove('hidden');
+    } else {
+      moreWrap.classList.add('hidden');
+      if (!reset && groups.length > 0) {
+        const endMsg = document.createElement('p');
+        endMsg.className = 'text-center text-xs text-gray-400 pt-2';
+        endMsg.textContent = `전체 ${_exploreTotal}개 그룹을 모두 불러왔습니다.`;
+        listEl.appendChild(endMsg);
+      }
+    }
+  } catch(e) {
+    if (reset) listEl.innerHTML = errorHtml('그룹을 불러오지 못했습니다.');
+  }
+}
+
+async function loadMoreExploreGroups() {
+  await loadExploreGroups(false);
+}
+
+// ── 그룹 가입 신청 ─────────────────────────────────────
+async function joinGroup(groupId, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = '신청 중...'; }
+  try {
+    const res = await axios.post(`/groups/${groupId}/join`, {});
+    if (res.data.success) {
+      showToast('가입 신청이 완료되었습니다! 관리자 승인을 기다려주세요.', 'info');
+      if (btn) {
+        btn.textContent = '신청 완료';
+        btn.className = 'text-xs px-3 py-1.5 bg-gray-100 text-gray-400 rounded-lg cursor-default';
+      }
+      await loadMyGroups(); // 내 그룹 목록 갱신
+    } else {
+      showToast(res.data.error || '가입 신청에 실패했습니다.', 'error');
+      if (btn) { btn.disabled = false; btn.textContent = '가입 신청'; }
+    }
+  } catch(e) {
+    const msg = e.response?.data?.error || '오류가 발생했습니다.';
+    showToast(msg, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '가입 신청'; }
+  }
+}
+
+// ── 그룹 상세보기 모달 ─────────────────────────────────
+async function openGroupDetailModal(groupId) {
+  const modal = document.getElementById('modal-group-detail');
+  const body  = document.getElementById('group-detail-body');
+  modal.classList.remove('hidden');
+  body.innerHTML = loadingHtml();
+
+  try {
+    const res = await axios.get(`/groups/${groupId}`);
+    if (!res.data.success) { body.innerHTML = errorHtml('그룹을 불러오지 못했습니다.'); return; }
+    const g = res.data.data;
+
+    const myGroupIds  = new Set(myGroups.map(gr => gr.id));
+    const isMember    = myGroupIds.has(g.id);
+    const myEntry     = myGroups.find(gr => gr.id === g.id);
+    const isAdmin     = myEntry && (myEntry.my_role === 'admin' || myEntry.my_role === 'sub_admin');
+
+    body.innerHTML = `
+      <!-- 로고 + 이름 -->
+      <div class="flex flex-col items-center text-center mb-5">
+        <div class="w-20 h-20 rounded-2xl mb-3 overflow-hidden flex-shrink-0
+             ${g.logo_url ? '' : 'bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center'}">
+          ${g.logo_url
+            ? `<img src="${escHtml(g.logo_url)}" class="w-20 h-20 object-cover">`
+            : '<i class="fas fa-users text-white text-3xl"></i>'}
+        </div>
+        <div class="flex items-center gap-2 flex-wrap justify-center">
+          <h4 class="text-xl font-bold text-gray-800">${escHtml(g.name)}</h4>
+          ${g.is_featured ? '<span class="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full">⭐ 추천</span>' : ''}
+        </div>
+        ${g.description ? `<p class="text-sm text-gray-500 mt-1.5">${escHtml(g.description)}</p>` : ''}
+      </div>
+
+      <!-- 통계 배지 -->
+      <div class="grid grid-cols-3 gap-2 mb-5">
+        <div class="bg-blue-50 rounded-xl p-3 text-center">
+          <p class="text-lg font-bold text-blue-600">${g.member_count ?? 0}</p>
+          <p class="text-xs text-gray-500">멤버</p>
+        </div>
+        <div class="bg-purple-50 rounded-xl p-3 text-center">
+          <p class="text-sm font-semibold text-purple-600 truncate">${escHtml(g.admin_name || '-')}</p>
+          <p class="text-xs text-gray-500">관리자</p>
+        </div>
+        <div class="bg-gray-50 rounded-xl p-3 text-center">
+          <p class="text-sm font-semibold text-gray-600">${g.visibility === 'public' ? '공개' : '비공개'}</p>
+          <p class="text-xs text-gray-500">공개여부</p>
+        </div>
+      </div>
+
+      <!-- 용도 -->
+      ${g.purpose ? `
+      <div class="bg-gray-50 rounded-xl p-4 mb-4">
+        <p class="text-xs font-semibold text-gray-500 mb-1">그룹 소개</p>
+        <p class="text-sm text-gray-700">${escHtml(g.purpose)}</p>
+      </div>` : ''}
+
+      <!-- 정원 안내 -->
+      ${g.max_members ? `
+      <div class="flex items-center gap-2 mb-4 text-sm text-gray-500">
+        <i class="fas fa-door-open text-gray-400"></i>
+        최대 정원: <span class="font-semibold text-gray-700">${g.max_members}명</span>
+        ${(g.member_count ?? 0) >= g.max_members
+          ? '<span class="ml-auto text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded-full">정원 마감</span>'
+          : `<span class="ml-auto text-xs px-2 py-0.5 bg-green-100 text-green-600 rounded-full">잔여 ${g.max_members - (g.member_count ?? 0)}석</span>`}
+      </div>` : ''}
+
+      <!-- 가입 상태별 액션 -->
+      <div id="group-detail-action">
+        ${isAdmin
+          ? `<button onclick="switchContextToGroup(${g.id}); closeModal('modal-group-detail'); closeModal('modal-group-explore')"
+               class="w-full py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 transition">
+               <i class="fas fa-cog mr-2"></i>그룹 관리
+             </button>`
+          : isMember
+            ? `<div class="space-y-2">
+                 <div class="w-full py-3 bg-gray-100 text-gray-500 rounded-xl text-center text-sm">
+                   <i class="fas fa-check-circle mr-2 text-green-500"></i>이미 가입된 그룹입니다
+                 </div>
+                 <button onclick="leaveGroupConfirm(${g.id})"
+                   class="w-full py-2.5 border border-red-200 text-red-500 rounded-xl text-sm hover:bg-red-50 transition">
+                   그룹 탈퇴
+                 </button>
+               </div>`
+            : g.status !== 'active'
+              ? `<div class="w-full py-3 bg-gray-100 text-gray-400 rounded-xl text-center text-sm">
+                   현재 가입이 불가능한 그룹입니다
+                 </div>`
+              : `<button id="detail-join-btn" onclick="joinGroupFromDetail(${g.id})"
+                   class="w-full py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition">
+                   <i class="fas fa-user-plus mr-2"></i>가입 신청
+                 </button>`}
+      </div>`;
+  } catch(e) {
+    body.innerHTML = errorHtml('그룹 정보를 불러오지 못했습니다.');
+  }
+}
+
+async function joinGroupFromDetail(groupId) {
+  const btn = document.getElementById('detail-join-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>신청 중...'; }
+  try {
+    const res = await axios.post(`/groups/${groupId}/join`, {});
+    if (res.data.success) {
+      showToast('가입 신청이 완료되었습니다! 관리자 승인을 기다려주세요.', 'info');
+      const actionEl = document.getElementById('group-detail-action');
+      if (actionEl) {
+        actionEl.innerHTML = `
+          <div class="w-full py-3 bg-blue-50 text-blue-600 rounded-xl text-center text-sm font-medium">
+            <i class="fas fa-clock mr-2"></i>가입 신청 완료 — 관리자 승인 대기 중
+          </div>`;
+      }
+      await loadMyGroups();
+      // 탐색 목록에서도 해당 카드 버튼 업데이트
+      const exploreBtns = document.querySelectorAll(`#explore-groups-list [onclick*="joinGroup(${groupId}"]`);
+      exploreBtns.forEach(b => {
+        b.textContent = '신청 완료';
+        b.className = 'text-xs px-3 py-1.5 bg-gray-100 text-gray-400 rounded-lg cursor-default';
+        b.disabled = true;
+      });
+    } else {
+      showToast(res.data.error || '가입 신청에 실패했습니다.', 'error');
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-user-plus mr-2"></i>가입 신청'; }
+    }
+  } catch(e) {
+    showToast(e.response?.data?.error || '오류가 발생했습니다.', 'error');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-user-plus mr-2"></i>가입 신청'; }
+  }
+}
+
+async function leaveGroupConfirm(groupId) {
+  if (!confirm('정말 이 그룹을 탈퇴하시겠습니까?')) return;
+  try {
+    const res = await axios.delete(`/groups/${groupId}/leave`);
+    if (res.data.success) {
+      showToast('그룹에서 탈퇴했습니다.', 'success');
+      closeModal('modal-group-detail');
+      await loadMyGroups();
+      loadGroups();
+    } else {
+      showToast(res.data.error || '탈퇴에 실패했습니다.', 'error');
+    }
+  } catch(e) {
+    showToast(e.response?.data?.error || '오류가 발생했습니다.', 'error');
+  }
 }
 
 // ════════════════════════════════════════════════════════
