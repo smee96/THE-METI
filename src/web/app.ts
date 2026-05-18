@@ -293,11 +293,18 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
     <!-- 하단 사용자 정보 -->
     <div class="px-4 py-4 border-t border-slate-700">
       <div class="flex items-center gap-3">
-        <div id="sidebar-avatar-wrap" class="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
-          <i id="sidebar-avatar-icon" class="fas fa-user text-white text-sm"></i>
-          <img id="sidebar-avatar-img" src="" class="hidden w-9 h-9 object-cover" onerror="this.classList.add('hidden');document.getElementById('sidebar-avatar-icon').classList.remove('hidden')">
-        </div>
-        <div class="flex-1 min-w-0">
+        <!-- 아바타: 클릭 → 프로필 모달 -->
+        <button onclick="openProfileModal()" title="프로필 수정"
+          class="relative w-9 h-9 rounded-full flex-shrink-0 group">
+          <div id="sidebar-avatar-wrap" class="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden">
+            <i id="sidebar-avatar-icon" class="fas fa-user text-white text-sm"></i>
+            <img id="sidebar-avatar-img" src="" class="hidden w-9 h-9 object-cover" onerror="this.classList.add('hidden');document.getElementById('sidebar-avatar-icon').classList.remove('hidden')">
+          </div>
+          <div class="absolute inset-0 rounded-full bg-black/40 hidden group-hover:flex items-center justify-center">
+            <i class="fas fa-camera text-white text-xs"></i>
+          </div>
+        </button>
+        <div class="flex-1 min-w-0 cursor-pointer" onclick="openProfileModal()">
           <p id="sidebar-username" class="text-sm font-medium text-white truncate">-</p>
           <p id="sidebar-plan"     class="text-xs text-slate-400 truncate">Free</p>
         </div>
@@ -585,6 +592,52 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
       </section>
 
     </main>
+  </div>
+</div>
+
+<!-- ── 모달: 프로필 수정 ── -->
+<div id="modal-profile" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+    <div class="flex items-center justify-between mb-5">
+      <h3 class="text-lg font-bold">내 프로필</h3>
+      <button onclick="closeModal('modal-profile')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+    </div>
+
+    <!-- 아바타 업로드 -->
+    <div class="flex flex-col items-center mb-5">
+      <div class="relative group cursor-pointer" onclick="document.getElementById('avatar-file-input').click()">
+        <div id="profile-avatar-wrap" class="w-24 h-24 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden">
+          <i id="profile-avatar-icon" class="fas fa-user text-white text-3xl"></i>
+          <img id="profile-avatar-img" src="" class="hidden w-24 h-24 object-cover"
+            onerror="this.classList.add('hidden');document.getElementById('profile-avatar-icon').classList.remove('hidden')">
+        </div>
+        <div class="absolute inset-0 rounded-full bg-black/40 hidden group-hover:flex items-center justify-center">
+          <i class="fas fa-camera text-white text-xl"></i>
+        </div>
+      </div>
+      <input id="avatar-file-input" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" onchange="onAvatarFileChange(event)">
+      <p id="avatar-upload-status" class="text-xs text-gray-400 mt-2">클릭하여 사진 변경 (JPG·PNG·WEBP, 최대 5MB)</p>
+    </div>
+
+    <!-- 이름 수정 -->
+    <form id="profile-name-form" class="space-y-3">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">이름</label>
+        <input id="profile-name-input" type="text" class="modal-input" placeholder="이름을 입력하세요" required>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">이메일</label>
+        <input id="profile-email-display" type="text" class="modal-input bg-gray-50 text-gray-400" readonly>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">플랜</label>
+        <input id="profile-plan-display" type="text" class="modal-input bg-gray-50 text-gray-400" readonly>
+      </div>
+      <div id="profile-form-error" class="hidden text-sm text-red-600"></div>
+      <button type="submit" class="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">
+        저장
+      </button>
+    </form>
   </div>
 </div>
 

@@ -409,6 +409,115 @@ async function loadCards() {
   }
 }
 
+// ════════════════════════════════════════════════════════
+// ── 프로필 모달
+// ════════════════════════════════════════════════════════
+function openProfileModal() {
+  const modal = document.getElementById('modal-profile');
+  modal.classList.remove('hidden');
+
+  // 현재 유저 정보 채우기
+  document.getElementById('profile-name-input').value    = currentUser.name  || '';
+  document.getElementById('profile-email-display').value = currentUser.email || '';
+  document.getElementById('profile-plan-display').value  = planLabel(currentUser.plan);
+  document.getElementById('profile-form-error').classList.add('hidden');
+  document.getElementById('avatar-upload-status').textContent = '클릭하여 사진 변경 (JPG·PNG·WEBP, 최대 5MB)';
+
+  // 아바타 미리보기 초기화
+  const img  = document.getElementById('profile-avatar-img');
+  const icon = document.getElementById('profile-avatar-icon');
+  if (currentUser.avatar_url) {
+    img.src = currentUser.avatar_url;
+    img.classList.remove('hidden');
+    icon.classList.add('hidden');
+  } else {
+    img.classList.add('hidden');
+    icon.classList.remove('hidden');
+  }
+
+  // 이름 수정 폼 이벤트 (중복 등록 방지)
+  const form = document.getElementById('profile-name-form');
+  const newForm = form.cloneNode(true);
+  form.parentNode.replaceChild(newForm, form);
+  newForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errEl = document.getElementById('profile-form-error');
+    errEl.classList.add('hidden');
+    const name = document.getElementById('profile-name-input').value.trim();
+    if (!name) return;
+    try {
+      const res = await axios.patch('/auth/me', { name });
+      if (res.data.success) {
+        currentUser = { ...currentUser, ...res.data.data };
+        localStorage.setItem('meti_user', JSON.stringify(currentUser));
+        document.getElementById('sidebar-username').textContent = currentUser.name;
+        document.getElementById('greeting-name').textContent    = currentUser.name;
+        closeModal('modal-profile');
+        showToast('프로필이 저장되었습니다!');
+      } else {
+        errEl.textContent = res.data.error || '저장에 실패했습니다.';
+        errEl.classList.remove('hidden');
+      }
+    } catch(e) {
+      errEl.textContent = e.response?.data?.error || '오류가 발생했습니다.';
+      errEl.classList.remove('hidden');
+    }
+  });
+}
+
+// 파일 선택 → 즉시 업로드
+async function onAvatarFileChange(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const statusEl = document.getElementById('avatar-upload-status');
+  const img      = document.getElementById('profile-avatar-img');
+  const icon     = document.getElementById('profile-avatar-icon');
+
+  // 클라이언트 사이드 미리보기
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    img.src = e.target.result;
+    img.classList.remove('hidden');
+    icon.classList.add('hidden');
+  };
+  reader.readAsDataURL(file);
+
+  statusEl.textContent = '업로드 중...';
+  statusEl.className   = 'text-xs text-blue-500 mt-2';
+
+  try {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    const res = await axios.post('/auth/me/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    if (res.data.success) {
+      const avatarUrl = res.data.data.avatar_url;
+      currentUser = { ...currentUser, avatar_url: avatarUrl };
+      localStorage.setItem('meti_user', JSON.stringify(currentUser));
+
+      // 사이드바 아바타도 즉시 반영
+      const sideImg  = document.getElementById('sidebar-avatar-img');
+      const sideIcon = document.getElementById('sidebar-avatar-icon');
+      sideImg.src = avatarUrl;
+      sideImg.classList.remove('hidden');
+      sideIcon.classList.add('hidden');
+
+      statusEl.textContent = '✓ 업로드 완료!';
+      statusEl.className   = 'text-xs text-green-600 mt-2';
+    } else {
+      statusEl.textContent = res.data.error || '업로드 실패';
+      statusEl.className   = 'text-xs text-red-500 mt-2';
+    }
+  } catch(e) {
+    statusEl.textContent = e.response?.data?.error || '업로드 중 오류가 발생했습니다.';
+    statusEl.className   = 'text-xs text-red-500 mt-2';
+  }
+  // input 초기화 (같은 파일 재선택 허용)
+  event.target.value = '';
+}
+
 // ── 명함 미리보기 모달 ────────────────────────────────────
 async function openCardPreview(cardId) {
   const modal = document.getElementById('modal-card-preview');

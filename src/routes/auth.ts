@@ -336,6 +336,83 @@ auth.get('/me', authMiddleware, async (c) => {
   return c.json(ok(user))
 })
 
+// ── PATCH /api/v1/auth/me ─────────────────────────────
+// 프로필 수정 (이름)
+auth.patch(
+  '/me',
+  authMiddleware,
+  zValidator('json', z.object({
+    name: z.string().min(2).max(50).optional(),
+  })),
+  async (c) => {
+    const userId = c.get('userId')
+    const { name } = c.req.valid('json')
+
+    if (!name) return c.json(fail('수정할 내용이 없습니다.'), 400)
+
+    await c.env.DB.prepare(
+      `UPDATE users SET name = ?, updated_at = datetime('now') WHERE id = ?`
+    ).bind(name, userId).run()
+
+    const user = await c.env.DB.prepare(`
+      SELECT id, email, name, account_type, plan, plan_expires_at, avatar_url,
+             is_verified, role, created_at
+      FROM users WHERE id = ? AND is_deleted = 0
+    `).bind(userId).first()
+
+    return c.json(ok(user, '프로필이 수정되었습니다.'))
+  }
+)
+
+// ── POST /api/v1/auth/me/avatar ───────────────────────
+// 프로필 사진 업로드 (R2 저장)
+auth.post('/me/avatar', authMiddleware, async (c) => {
+  const userId = c.get('userId')
+
+  // multipart/form-data 파싱
+  let formData: FormData
+  try {
+    formData = await c.req.formData()
+  } catch {
+    return c.json(fail('이미지 파일을 업로드해주세요.'), 400)
+  }
+
+  const file = formData.get('avatar') as File | null
+  if (!file || typeof file === 'string') {
+    return c.json(fail('avatar 필드에 이미지 파일을 첨부해주세요.'), 400)
+  }
+
+  // 파일 검증
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  if (!allowedTypes.includes(file.type)) {
+    return c.json(fail('JPG, PNG, WEBP, GIF 형식만 업로드 가능합니다.'), 400)
+  }
+  const maxSize = 5 * 1024 * 1024  // 5MB
+  if (file.size > maxSize) {
+    return c.json(fail('파일 크기는 5MB 이하여야 합니다.'), 400)
+  }
+
+  // 확장자 추출
+  const ext = file.type.split('/')[1].replace('jpeg', 'jpg')
+  const key = `avatars/${userId}_${Date.now()}.${ext}`
+
+  // R2에 업로드
+  const arrayBuffer = await file.arrayBuffer()
+  await c.env.STORAGE.put(key, arrayBuffer, {
+    httpMetadata: { contentType: file.type }
+  })
+
+  // public URL (r2.dev)
+  const avatarUrl = `https://pub-9e92c640989d47f69f8e3f749c4de9c0.r2.dev/${key}`
+
+  // DB 업데이트
+  await c.env.DB.prepare(
+    `UPDATE users SET avatar_url = ?, updated_at = datetime('now') WHERE id = ?`
+  ).bind(avatarUrl, userId).run()
+
+  return c.json(ok({ avatar_url: avatarUrl }, '프로필 사진이 변경되었습니다.'))
+})
+
 // ── PUT /api/v1/auth/password ─────────────────────────
 auth.put(
   '/password',
