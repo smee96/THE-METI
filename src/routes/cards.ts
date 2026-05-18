@@ -187,7 +187,17 @@ cards.patch(
     avatar_url: z.string().url().optional().nullable(),
     template_id: z.string().optional(),
     is_public: z.number().int().min(0).max(1).optional(),
-    is_primary: z.number().int().min(0).max(1).optional()
+    is_primary: z.number().int().min(0).max(1).optional(),
+    // 이력/태그/SNS — 전체 교체 방식 (null이면 무시, 빈 배열이면 전체 삭제)
+    sns_links: z.array(z.object({
+      platform: z.string().max(50),
+      url: z.string().url(),
+      sort_order: z.number().default(0)
+    })).optional().nullable(),
+    tags: z.array(z.object({
+      tag_type: z.string().max(50),   // skill | career | education | etc
+      tag_value: z.string().max(200)
+    })).optional().nullable(),
   })),
   async (c) => {
     const userId = c.get('userId')
@@ -202,32 +212,58 @@ cards.patch(
       return c.json(fail('명함을 찾을 수 없습니다.'), 404)
     }
 
-    // 동적 업데이트 빌더
+    // ── 기본 필드 업데이트 ──────────────────────────────
+    const coreFields = ['name','title','company','email','phone','website','bio','avatar_url','template_id','is_public','is_primary']
     const fields: string[] = []
     const values: unknown[] = []
     Object.entries(body).forEach(([key, value]) => {
-      if (value !== undefined) {
+      if (coreFields.includes(key) && value !== undefined) {
         fields.push(`${key} = ?`)
         values.push(value)
       }
     })
 
-    if (fields.length === 0) {
-      return c.json(fail('수정할 내용이 없습니다.'), 400)
+    if (fields.length > 0) {
+      fields.push('updated_at = datetime(\'now\')')
+      values.push(cardId, userId)
+      await c.env.DB.prepare(
+        `UPDATE cards SET ${fields.join(', ')} WHERE id = ? AND user_id = ?`
+      ).bind(...values).run()
     }
 
-    fields.push('updated_at = datetime(\'now\')')
-    values.push(cardId, userId)
+    // ── SNS 링크 전체 교체 ──────────────────────────────
+    if (body.sns_links !== undefined && body.sns_links !== null) {
+      await c.env.DB.prepare('DELETE FROM card_sns_links WHERE card_id = ?').bind(cardId).run()
+      if (body.sns_links.length > 0) {
+        const stmts = body.sns_links.map((link, i) =>
+          c.env.DB.prepare(
+            'INSERT INTO card_sns_links (card_id, platform, url, sort_order) VALUES (?, ?, ?, ?)'
+          ).bind(cardId, link.platform, link.url, i)
+        )
+        await c.env.DB.batch(stmts)
+      }
+    }
 
-    await c.env.DB.prepare(
-      `UPDATE cards SET ${fields.join(', ')} WHERE id = ? AND user_id = ?`
-    ).bind(...values).run()
+    // ── 태그 전체 교체 ──────────────────────────────────
+    if (body.tags !== undefined && body.tags !== null) {
+      await c.env.DB.prepare('DELETE FROM card_tags WHERE card_id = ?').bind(cardId).run()
+      if (body.tags.length > 0) {
+        const stmts = body.tags.map(tag =>
+          c.env.DB.prepare(
+            'INSERT INTO card_tags (card_id, tag_type, tag_value) VALUES (?, ?, ?)'
+          ).bind(cardId, tag.tag_type, tag.tag_value)
+        )
+        await c.env.DB.batch(stmts)
+      }
+    }
 
-    const updated = await c.env.DB.prepare(
-      'SELECT * FROM cards WHERE id = ?'
-    ).bind(cardId).first()
+    const [updated, snsLinks, tags] = await Promise.all([
+      c.env.DB.prepare('SELECT * FROM cards WHERE id = ?').bind(cardId).first(),
+      c.env.DB.prepare('SELECT * FROM card_sns_links WHERE card_id = ? ORDER BY sort_order').bind(cardId).all(),
+      c.env.DB.prepare('SELECT * FROM card_tags WHERE card_id = ?').bind(cardId).all(),
+    ])
 
-    return c.json(ok(updated, '명함이 수정되었습니다.'))
+    return c.json(ok({ ...updated, sns_links: snsLinks.results, tags: tags.results }, '명함이 수정되었습니다.'))
   }
 )
 

@@ -654,46 +654,100 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
 
 <!-- ── 모달: 명함 수정 ── -->
 <div id="modal-edit-card" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
-    <div class="flex items-center justify-between mb-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col" style="max-height:92vh">
+    <!-- 헤더 -->
+    <div class="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0">
       <h3 class="text-lg font-bold">명함 수정</h3>
       <button onclick="closeModal('modal-edit-card')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
     </div>
-    <form id="edit-card-form" class="space-y-3">
+    <!-- 탭 -->
+    <div class="flex border-b mx-5 flex-shrink-0">
+      <button id="edit-tab-basic" onclick="switchEditTab('basic')"
+        class="flex-1 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600">기본 정보</button>
+      <button id="edit-tab-resume" onclick="switchEditTab('resume')"
+        class="flex-1 py-2 text-sm font-medium text-gray-400 border-b-2 border-transparent">이력 &amp; SNS</button>
+    </div>
+    <form id="edit-card-form" class="overflow-y-auto flex-1 px-5 py-4">
       <input id="edit-card-id" type="hidden">
-      <!-- 명함 사진 업로드 -->
-      <div class="flex flex-col items-center gap-2 pb-2">
-        <div class="relative group cursor-pointer" onclick="document.getElementById('edit-card-avatar-input').click()">
-          <img id="edit-card-avatar-preview"
-               src="https://ui-avatars.com/api/?name=?&background=6366f1&color=fff&size=96"
-               class="w-24 h-24 rounded-full object-cover border-4 border-indigo-100 shadow"
-               onerror="this.src='https://ui-avatars.com/api/?name=?&background=6366f1&color=fff&size=96'">
-          <div class="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-            <i class="fas fa-camera text-white text-xl"></i>
+      <!-- ── 탭1: 기본 정보 ── -->
+      <div id="edit-pane-basic" class="space-y-3">
+        <!-- 사진 -->
+        <div class="flex flex-col items-center gap-2 pb-1">
+          <div class="relative group cursor-pointer" onclick="document.getElementById('edit-card-avatar-input').click()">
+            <img id="edit-card-avatar-preview"
+                 src="https://ui-avatars.com/api/?name=?&background=6366f1&color=fff&size=96"
+                 class="w-20 h-20 rounded-full object-cover border-4 border-indigo-100 shadow"
+                 onerror="this.src='https://ui-avatars.com/api/?name=?&background=6366f1&color=fff&size=96'">
+            <div class="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+              <i class="fas fa-camera text-white text-lg"></i>
+            </div>
           </div>
+          <span class="text-xs text-gray-400">사진 변경</span>
+          <input id="edit-card-avatar-input" type="file" accept="image/*" class="hidden" onchange="onEditCardAvatarChange(event)">
         </div>
-        <span class="text-xs text-gray-400">클릭하여 명함 사진 변경</span>
-        <input id="edit-card-avatar-input" type="file" accept="image/*" class="hidden" onchange="onEditCardAvatarChange(event)">
+        <input id="edit-card-name"    type="text"  placeholder="이름 *"   class="modal-input" required>
+        <input id="edit-card-title"   type="text"  placeholder="직함"     class="modal-input">
+        <input id="edit-card-company" type="text"  placeholder="회사/단체" class="modal-input">
+        <input id="edit-card-email"   type="email" placeholder="이메일"    class="modal-input">
+        <input id="edit-card-phone"   type="text"  placeholder="전화번호"  class="modal-input">
+        <input id="edit-card-website" type="url"   placeholder="웹사이트 (https://...)" class="modal-input">
+        <textarea id="edit-card-bio" placeholder="소개" rows="2" class="modal-input resize-none"></textarea>
+        <div class="flex flex-col gap-2">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="edit-card-public" class="rounded">
+            <span class="text-sm text-gray-700">공개 명함 (QR 공유 가능)</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="edit-card-primary" class="rounded">
+            <span class="text-sm text-gray-700">대표 명함으로 설정</span>
+          </label>
+        </div>
       </div>
-      <input id="edit-card-name"    type="text"  placeholder="이름 *"   class="modal-input" required>
-      <input id="edit-card-title"   type="text"  placeholder="직함"     class="modal-input">
-      <input id="edit-card-company" type="text"  placeholder="회사/단체" class="modal-input">
-      <input id="edit-card-email"   type="email" placeholder="이메일"    class="modal-input">
-      <input id="edit-card-phone"   type="text"  placeholder="전화번호"  class="modal-input">
-      <input id="edit-card-website" type="url"   placeholder="웹사이트 (https://...)" class="modal-input">
-      <textarea id="edit-card-bio" placeholder="소개" rows="2" class="modal-input resize-none"></textarea>
-      <div class="flex flex-col gap-2">
-        <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" id="edit-card-public" class="rounded">
-          <span class="text-sm text-gray-700">공개 명함 (QR 공유 가능)</span>
-        </label>
-        <label class="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" id="edit-card-primary" class="rounded">
-          <span class="text-sm text-gray-700">대표 명함으로 설정</span>
-        </label>
+      <!-- ── 탭2: 이력 & SNS ── -->
+      <div id="edit-pane-resume" class="hidden space-y-5">
+        <!-- 경력 -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-sm font-semibold text-gray-700"><i class="fas fa-briefcase text-orange-500 mr-1"></i>경력</p>
+            <button type="button" onclick="addResumeItem('edit','career')"
+              class="text-xs px-2.5 py-1 bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition">+ 추가</button>
+          </div>
+          <div id="edit-career-list" class="space-y-2"></div>
+          <p class="text-xs text-gray-400 mt-1">예: 삼성전자 · 소프트웨어 개발자 · 2020~2023</p>
+        </div>
+        <!-- 학력 -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-sm font-semibold text-gray-700"><i class="fas fa-graduation-cap text-purple-500 mr-1"></i>학력</p>
+            <button type="button" onclick="addResumeItem('edit','education')"
+              class="text-xs px-2.5 py-1 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition">+ 추가</button>
+          </div>
+          <div id="edit-education-list" class="space-y-2"></div>
+          <p class="text-xs text-gray-400 mt-1">예: 서울대학교 · 컴퓨터공학과 · 2016 졸업</p>
+        </div>
+        <!-- 스킬 -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-sm font-semibold text-gray-700"><i class="fas fa-tags text-blue-500 mr-1"></i>스킬 / 키워드</p>
+            <button type="button" onclick="addResumeItem('edit','skill')"
+              class="text-xs px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition">+ 추가</button>
+          </div>
+          <div id="edit-skill-list" class="space-y-2"></div>
+          <p class="text-xs text-gray-400 mt-1">예: Python, React, 영어 (비즈니스)</p>
+        </div>
+        <!-- SNS -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-sm font-semibold text-gray-700"><i class="fas fa-share-alt text-green-500 mr-1"></i>소셜 링크</p>
+            <button type="button" onclick="addSnsItem('edit')"
+              class="text-xs px-2.5 py-1 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition">+ 추가</button>
+          </div>
+          <div id="edit-sns-list" class="space-y-2"></div>
+        </div>
       </div>
-      <div id="edit-card-error" class="hidden text-sm text-red-600"></div>
-      <button type="submit" class="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">
+      <!-- 에러 & 제출 -->
+      <div id="edit-card-error" class="hidden text-sm text-red-600 mt-3"></div>
+      <button type="submit" class="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 mt-4">
         저장
       </button>
     </form>
@@ -702,37 +756,92 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
 
 <!-- ── 모달: 명함 생성 ── -->
 <div id="modal-create-card" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-    <div class="flex items-center justify-between mb-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col" style="max-height:92vh">
+    <!-- 헤더 -->
+    <div class="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0">
       <h3 class="text-lg font-bold">명함 추가</h3>
       <button onclick="closeModal('modal-create-card')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
     </div>
-    <form id="create-card-form" class="space-y-3">
-      <!-- 명함 사진 업로드 -->
-      <div class="flex flex-col items-center gap-2 pb-2">
-        <div class="relative group cursor-pointer" onclick="document.getElementById('create-card-avatar-input').click()">
-          <img id="create-card-avatar-preview"
-               src="https://ui-avatars.com/api/?name=+&background=6366f1&color=fff&size=96"
-               class="w-24 h-24 rounded-full object-cover border-4 border-indigo-100 shadow">
-          <div class="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-            <i class="fas fa-camera text-white text-xl"></i>
+    <!-- 탭 -->
+    <div class="flex border-b mx-5 flex-shrink-0">
+      <button id="create-tab-basic" onclick="switchCreateTab('basic')"
+        class="flex-1 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600">기본 정보</button>
+      <button id="create-tab-resume" onclick="switchCreateTab('resume')"
+        class="flex-1 py-2 text-sm font-medium text-gray-400 border-b-2 border-transparent">이력 &amp; SNS</button>
+    </div>
+    <form id="create-card-form" class="overflow-y-auto flex-1 px-5 py-4">
+      <!-- ── 탭1: 기본 정보 ── -->
+      <div id="create-pane-basic" class="space-y-3">
+        <!-- 사진 -->
+        <div class="flex flex-col items-center gap-2 pb-1">
+          <div class="relative group cursor-pointer" onclick="document.getElementById('create-card-avatar-input').click()">
+            <img id="create-card-avatar-preview"
+                 src="https://ui-avatars.com/api/?name=+&background=6366f1&color=fff&size=96"
+                 class="w-20 h-20 rounded-full object-cover border-4 border-indigo-100 shadow">
+            <div class="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+              <i class="fas fa-camera text-white text-lg"></i>
+            </div>
           </div>
+          <span class="text-xs text-gray-400">사진 추가 (선택)</span>
+          <input id="create-card-avatar-input" type="file" accept="image/*" class="hidden" onchange="onCreateCardAvatarChange(event)">
         </div>
-        <span class="text-xs text-gray-400">클릭하여 명함 사진 추가 (선택)</span>
-        <input id="create-card-avatar-input" type="file" accept="image/*" class="hidden" onchange="onCreateCardAvatarChange(event)">
+        <input id="card-name"    type="text"  placeholder="이름 *"     class="modal-input" required>
+        <input id="card-title"   type="text"  placeholder="직함"        class="modal-input">
+        <input id="card-company" type="text"  placeholder="회사/단체"    class="modal-input">
+        <input id="card-email"   type="email" placeholder="이메일"       class="modal-input">
+        <input id="card-phone"   type="text"  placeholder="전화번호"     class="modal-input">
+        <input id="card-website" type="url"   placeholder="웹사이트 (https://...)" class="modal-input">
+        <textarea id="card-bio"  placeholder="소개 (자유롭게 작성)" rows="2" class="modal-input resize-none"></textarea>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="card-public" class="rounded" checked>
+          <span class="text-sm text-gray-700">공개 명함 (QR 공유 가능)</span>
+        </label>
       </div>
-      <input id="card-name"    type="text"  placeholder="이름 *"     class="modal-input" required>
-      <input id="card-title"   type="text"  placeholder="직함"       class="modal-input">
-      <input id="card-company" type="text"  placeholder="회사/단체"   class="modal-input">
-      <input id="card-email"   type="email" placeholder="이메일"      class="modal-input">
-      <input id="card-phone"   type="text"  placeholder="전화번호"    class="modal-input">
-      <textarea id="card-bio"  placeholder="소개" rows="2"           class="modal-input resize-none"></textarea>
-      <div class="flex items-center gap-2">
-        <input type="checkbox" id="card-public" class="rounded">
-        <label for="card-public" class="text-sm text-gray-700">공개 명함 (QR 공유 가능)</label>
+      <!-- ── 탭2: 이력 & SNS ── -->
+      <div id="create-pane-resume" class="hidden space-y-5">
+        <!-- 경력 -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-sm font-semibold text-gray-700"><i class="fas fa-briefcase text-orange-500 mr-1"></i>경력</p>
+            <button type="button" onclick="addResumeItem('create','career')"
+              class="text-xs px-2.5 py-1 bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition">+ 추가</button>
+          </div>
+          <div id="create-career-list" class="space-y-2"></div>
+          <p class="text-xs text-gray-400 mt-1">예: 삼성전자 · 소프트웨어 개발자 · 2020~2023</p>
+        </div>
+        <!-- 학력 -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-sm font-semibold text-gray-700"><i class="fas fa-graduation-cap text-purple-500 mr-1"></i>학력</p>
+            <button type="button" onclick="addResumeItem('create','education')"
+              class="text-xs px-2.5 py-1 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition">+ 추가</button>
+          </div>
+          <div id="create-education-list" class="space-y-2"></div>
+          <p class="text-xs text-gray-400 mt-1">예: 서울대학교 · 컴퓨터공학과 · 2016 졸업</p>
+        </div>
+        <!-- 스킬 -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-sm font-semibold text-gray-700"><i class="fas fa-tags text-blue-500 mr-1"></i>스킬 / 키워드</p>
+            <button type="button" onclick="addResumeItem('create','skill')"
+              class="text-xs px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition">+ 추가</button>
+          </div>
+          <div id="create-skill-list" class="space-y-2"></div>
+          <p class="text-xs text-gray-400 mt-1">예: Python, React, 영어 (비즈니스)</p>
+        </div>
+        <!-- SNS -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-sm font-semibold text-gray-700"><i class="fas fa-share-alt text-green-500 mr-1"></i>소셜 링크</p>
+            <button type="button" onclick="addSnsItem('create')"
+              class="text-xs px-2.5 py-1 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition">+ 추가</button>
+          </div>
+          <div id="create-sns-list" class="space-y-2"></div>
+        </div>
       </div>
-      <div id="card-form-error" class="hidden text-sm text-red-600"></div>
-      <button type="submit" class="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">
+      <!-- 에러 & 제출 -->
+      <div id="card-form-error" class="hidden text-sm text-red-600 mt-3"></div>
+      <button type="submit" class="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 mt-4">
         명함 생성
       </button>
     </form>

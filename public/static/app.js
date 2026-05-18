@@ -639,7 +639,8 @@ async function onPreviewCardAvatarChange(event, cardId) {
 async function openEditCardModal(cardId) {
   const modal = document.getElementById('modal-edit-card');
   modal.classList.remove('hidden');
-  // 현재 데이터 로드
+  switchEditTab('basic');
+  clearResumePanes('edit');
   try {
     const res = await axios.get(`/cards/${cardId}`);
     if (!res.data.success) return;
@@ -655,16 +656,18 @@ async function openEditCardModal(cardId) {
     document.getElementById('edit-card-public').checked  = !!c.is_public;
     document.getElementById('edit-card-primary').checked = !!c.is_primary;
     document.getElementById('edit-card-error').classList.add('hidden');
-    // 아바타 미리보기 설정
+    // 아바타 미리보기
     const preview = document.getElementById('edit-card-avatar-preview');
     if (preview) {
       preview.src = c.avatar_url
         ? c.avatar_url
         : `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name || '?')}&background=6366f1&color=fff&size=96`;
     }
-    // 파일 input 초기화
     const fi = document.getElementById('edit-card-avatar-input');
     if (fi) fi.value = '';
+    // 이력 & SNS 렌더
+    renderResumeTags('edit', c.tags || []);
+    renderSnsLinks('edit', c.sns_links || []);
   } catch(e) {
     alert('명함 정보를 불러오지 못했습니다.');
     closeModal('modal-edit-card');
@@ -687,10 +690,13 @@ async function submitEditCard(e) {
       bio:        document.getElementById('edit-card-bio').value.trim()     || null,
       is_public:  document.getElementById('edit-card-public').checked  ? 1 : 0,
       is_primary: document.getElementById('edit-card-primary').checked ? 1 : 0,
+      tags:       collectResumeTags('edit'),
+      sns_links:  collectSnsLinks('edit'),
     });
     if (res.data.success) {
       closeModal('modal-edit-card');
       loadCards();
+      showToast('명함이 저장되었습니다!');
     } else {
       errEl.textContent = res.data.error || '수정에 실패했습니다.';
       errEl.classList.remove('hidden');
@@ -735,16 +741,134 @@ function showToast(msg, type = 'success') {
   setTimeout(() => t.remove(), 2500);
 }
 
+// ════════════════════════════════════════════════════════
+// ── 명함 이력 & SNS 공통 유틸
+// ════════════════════════════════════════════════════════
+const SNS_PLATFORMS = ['linkedin','instagram','twitter','facebook','github','youtube','tiktok','blog','기타'];
+
+// 탭 전환 (create/edit 공용)
+function switchCreateTab(tab) {
+  ['basic','resume'].forEach(t => {
+    document.getElementById(`create-pane-${t}`).classList.toggle('hidden', t !== tab);
+    const btn = document.getElementById(`create-tab-${t}`);
+    btn.className = `flex-1 py-2 text-sm font-medium border-b-2 transition ${t === tab ? 'text-blue-600 border-blue-600' : 'text-gray-400 border-transparent'}`;
+  });
+}
+function switchEditTab(tab) {
+  ['basic','resume'].forEach(t => {
+    document.getElementById(`edit-pane-${t}`).classList.toggle('hidden', t !== tab);
+    const btn = document.getElementById(`edit-tab-${t}`);
+    btn.className = `flex-1 py-2 text-sm font-medium border-b-2 transition ${t === tab ? 'text-blue-600 border-blue-600' : 'text-gray-400 border-transparent'}`;
+  });
+}
+
+// 경력/학력/스킬 항목 추가 행 생성 (prefix: 'create' | 'edit', type: 'career'|'education'|'skill')
+function addResumeItem(prefix, type, value = '') {
+  const container = document.getElementById(`${prefix}-${type}-list`);
+  if (!container) return;
+  const colorMap = { career:'border-orange-200 focus:ring-orange-400', education:'border-purple-200 focus:ring-purple-400', skill:'border-blue-200 focus:ring-blue-400' };
+  const row = document.createElement('div');
+  row.className = 'flex items-center gap-2';
+  row.innerHTML = `
+    <input type="text" value="${escHtml(value)}" placeholder="${type === 'career' ? '예: 삼성전자 · 개발자 · 2020~2023' : type === 'education' ? '예: 서울대 · 컴퓨터공학 · 2020졸' : '예: Python, React...'}"
+      class="flex-1 px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-1 ${colorMap[type] || 'border-gray-200'}"
+      data-type="${type}">
+    <button type="button" onclick="this.parentElement.remove()"
+      class="w-7 h-7 flex items-center justify-center text-gray-300 hover:text-red-500 flex-shrink-0">
+      <i class="fas fa-times text-xs"></i>
+    </button>`;
+  container.appendChild(row);
+  row.querySelector('input').focus();
+}
+
+// SNS 항목 추가 행 생성
+function addSnsItem(prefix, platform = '', url = '') {
+  const container = document.getElementById(`${prefix}-sns-list`);
+  if (!container) return;
+  const row = document.createElement('div');
+  row.className = 'flex items-center gap-2';
+  row.innerHTML = `
+    <select class="px-2 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400 flex-shrink-0" data-sns-platform>
+      ${SNS_PLATFORMS.map(p => `<option value="${p}" ${p === platform ? 'selected' : ''}>${p}</option>`).join('')}
+    </select>
+    <input type="url" value="${escHtml(url)}" placeholder="https://..."
+      class="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400"
+      data-sns-url>
+    <button type="button" onclick="this.parentElement.remove()"
+      class="w-7 h-7 flex items-center justify-center text-gray-300 hover:text-red-500 flex-shrink-0">
+      <i class="fas fa-times text-xs"></i>
+    </button>`;
+  container.appendChild(row);
+}
+
+// 이력 데이터 수집 (prefix 기준)
+function collectResumeTags(prefix) {
+  const tags = [];
+  ['career','education','skill'].forEach(type => {
+    const container = document.getElementById(`${prefix}-${type}-list`);
+    if (!container) return;
+    container.querySelectorAll('input[data-type]').forEach(inp => {
+      const v = inp.value.trim();
+      if (v) tags.push({ tag_type: type, tag_value: v });
+    });
+  });
+  return tags;
+}
+
+// SNS 데이터 수집
+function collectSnsLinks(prefix) {
+  const links = [];
+  const container = document.getElementById(`${prefix}-sns-list`);
+  if (!container) return links;
+  container.querySelectorAll('div').forEach((row, i) => {
+    const platform = row.querySelector('[data-sns-platform]')?.value?.trim();
+    const url      = row.querySelector('[data-sns-url]')?.value?.trim();
+    if (platform && url) links.push({ platform, url, sort_order: i });
+  });
+  return links;
+}
+
+// 이력 목록 렌더 (수정 모달 open 시 기존 데이터 표시)
+function renderResumeTags(prefix, tags = []) {
+  ['career','education','skill'].forEach(type => {
+    const container = document.getElementById(`${prefix}-${type}-list`);
+    if (container) container.innerHTML = '';
+  });
+  tags.forEach(t => {
+    if (['career','education','skill','keyword'].includes(t.tag_type)) {
+      addResumeItem(prefix, t.tag_type === 'keyword' ? 'skill' : t.tag_type, t.tag_value);
+    }
+  });
+}
+
+// SNS 목록 렌더
+function renderSnsLinks(prefix, links = []) {
+  const container = document.getElementById(`${prefix}-sns-list`);
+  if (container) container.innerHTML = '';
+  links.forEach(l => addSnsItem(prefix, l.platform, l.url));
+}
+
+// 이력 패널 초기화
+function clearResumePanes(prefix) {
+  ['career','education','skill'].forEach(type => {
+    const c = document.getElementById(`${prefix}-${type}-list`);
+    if (c) c.innerHTML = '';
+  });
+  const snsc = document.getElementById(`${prefix}-sns-list`);
+  if (snsc) snsc.innerHTML = '';
+}
+
 // ── 명함 생성 ─────────────────────────────────────────────
 function openCreateCardModal() {
   document.getElementById('modal-create-card').classList.remove('hidden');
+  switchCreateTab('basic');
+  clearResumePanes('create');
   // 아바타 미리보기 초기화
   const preview = document.getElementById('create-card-avatar-preview');
   if (preview) {
     preview.src = 'https://ui-avatars.com/api/?name=+&background=6366f1&color=fff&size=96';
     preview.dataset.pendingFile = '';
   }
-  // 파일 input 초기화
   const fileInput = document.getElementById('create-card-avatar-input');
   if (fileInput) fileInput.value = '';
 }
@@ -805,12 +929,15 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const res = await axios.post('/cards', {
           name:      document.getElementById('card-name').value.trim(),
-          title:     document.getElementById('card-title').value.trim(),
-          company:   document.getElementById('card-company').value.trim(),
-          email:     document.getElementById('card-email').value.trim(),
-          phone:     document.getElementById('card-phone').value.trim(),
-          bio:       document.getElementById('card-bio').value.trim(),
+          title:     document.getElementById('card-title').value.trim()   || undefined,
+          company:   document.getElementById('card-company').value.trim() || undefined,
+          email:     document.getElementById('card-email').value.trim()   || undefined,
+          phone:     document.getElementById('card-phone').value.trim()   || undefined,
+          website:   document.getElementById('card-website').value.trim() || undefined,
+          bio:       document.getElementById('card-bio').value.trim()     || undefined,
           is_public: document.getElementById('card-public').checked ? 1 : 0,
+          tags:      collectResumeTags('create'),
+          sns_links: collectSnsLinks('create'),
         });
         if (res.data.success) {
           const newCardId = res.data.data?.id;
@@ -828,6 +955,8 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           closeModal('modal-create-card');
           form.reset();
+          clearResumePanes('create');
+          switchCreateTab('basic');
           // 아바타 미리보기도 초기화
           if (avatarPreview) {
             avatarPreview.src = 'https://ui-avatars.com/api/?name=+&background=6366f1&color=fff&size=96';
