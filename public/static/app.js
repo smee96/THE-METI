@@ -54,6 +54,15 @@ async function initApp() {
   document.getElementById('sidebar-plan').textContent     = planLabel(currentUser.plan);
   document.getElementById('greeting-name').textContent    = currentUser.name || '-';
 
+  // 프로필 사진
+  if (currentUser.avatar_url) {
+    const img  = document.getElementById('sidebar-avatar-img');
+    const icon = document.getElementById('sidebar-avatar-icon');
+    img.src = currentUser.avatar_url;
+    img.classList.remove('hidden');
+    icon.classList.add('hidden');
+  }
+
   // 내 그룹 로드 후 컨텍스트 메뉴 구성
   await loadMyGroups();
   buildContextMenu();
@@ -362,13 +371,17 @@ async function loadCards() {
     if (cards.length === 0) { el.innerHTML = emptyHtml('명함이 없습니다. 첫 명함을 만들어보세요!'); return; }
 
     el.innerHTML = cards.map(c => `
-      <div class="item-card flex items-center gap-3">
+      <div class="item-card flex items-center gap-3 cursor-pointer hover:bg-blue-50 transition" onclick="openCardPreview(${c.id})">
         <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
-          <i class="fas fa-id-card text-white"></i>
+          ${c.avatar_url
+            ? `<img src="${escHtml(c.avatar_url)}" class="w-12 h-12 rounded-xl object-cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+            : ''}
+          <i class="fas fa-id-card text-white ${c.avatar_url ? 'hidden' : ''}"></i>
         </div>
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2">
             <p class="font-semibold text-gray-800 truncate">${escHtml(c.name)}</p>
+            ${c.is_primary ? '<span class="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full flex-shrink-0">대표</span>' : ''}
             <span class="text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${c.is_public ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}">
               ${c.is_public ? '공개' : '비공개'}
             </span>
@@ -376,10 +389,18 @@ async function loadCards() {
           <p class="text-sm text-gray-500 truncate">${escHtml([c.title, c.company].filter(Boolean).join(' · '))}</p>
           <p class="text-xs text-gray-400 mt-0.5">${escHtml(c.email || '')}</p>
         </div>
-        <div class="flex gap-2 flex-shrink-0">
-          <button onclick="copyCardLink('${c.id}')" title="링크 복사"
+        <div class="flex gap-1.5 flex-shrink-0" onclick="event.stopPropagation()">
+          <button onclick="openEditCardModal(${c.id})" title="수정"
             class="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:border-blue-300 transition">
+            <i class="fas fa-edit text-xs"></i>
+          </button>
+          <button onclick="copyCardLink('${c.id}')" title="링크 복사"
+            class="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-400 hover:text-green-600 hover:border-green-300 transition">
             <i class="fas fa-link text-xs"></i>
+          </button>
+          <button onclick="deleteCard(${c.id})" title="삭제"
+            class="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-400 hover:text-red-600 hover:border-red-300 transition">
+            <i class="fas fa-trash text-xs"></i>
           </button>
         </div>
       </div>`).join('');
@@ -388,10 +409,157 @@ async function loadCards() {
   }
 }
 
+// ── 명함 미리보기 모달 ────────────────────────────────────
+async function openCardPreview(cardId) {
+  const modal = document.getElementById('modal-card-preview');
+  const body  = document.getElementById('card-preview-body');
+  modal.classList.remove('hidden');
+  body.innerHTML = loadingHtml();
+  try {
+    const res = await axios.get(`/cards/${cardId}`);
+    if (!res.data.success) { body.innerHTML = errorHtml('명함을 불러오지 못했습니다.'); return; }
+    const c = res.data.data;
+    const pubUrl = `${window.location.origin}/card/${c.id}`;
+    body.innerHTML = `
+      <!-- 카드 헤더 -->
+      <div class="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-6 text-white text-center mb-4">
+        <div class="w-20 h-20 rounded-full mx-auto mb-3 overflow-hidden bg-white/20 flex items-center justify-center">
+          ${c.avatar_url
+            ? `<img src="${escHtml(c.avatar_url)}" class="w-20 h-20 object-cover" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-user text-white text-3xl\\'></i>'">`
+            : '<i class="fas fa-user text-white text-3xl"></i>'}
+        </div>
+        <h2 class="text-xl font-bold">${escHtml(c.name)}</h2>
+        ${c.title   ? `<p class="text-blue-200 text-sm mt-0.5">${escHtml(c.title)}</p>` : ''}
+        ${c.company ? `<p class="text-blue-100 text-sm">${escHtml(c.company)}</p>` : ''}
+        <div class="flex items-center justify-center gap-2 mt-2">
+          ${c.is_primary ? '<span class="text-xs px-2 py-0.5 bg-white/20 rounded-full">대표 명함</span>' : ''}
+          <span class="text-xs px-2 py-0.5 ${c.is_public ? 'bg-green-400/30' : 'bg-white/10'} rounded-full">
+            ${c.is_public ? '🌐 공개' : '🔒 비공개'}
+          </span>
+        </div>
+      </div>
+      <!-- 연락처 정보 -->
+      <div class="space-y-2 mb-4">
+        ${c.email   ? `<div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"><i class="fas fa-envelope text-blue-500 w-4 text-center"></i><span class="text-sm text-gray-700">${escHtml(c.email)}</span></div>` : ''}
+        ${c.phone   ? `<div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"><i class="fas fa-phone text-blue-500 w-4 text-center"></i><span class="text-sm text-gray-700">${escHtml(c.phone)}</span></div>` : ''}
+        ${c.website ? `<div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"><i class="fas fa-globe text-blue-500 w-4 text-center"></i><a href="${escHtml(c.website)}" target="_blank" class="text-sm text-blue-600 underline truncate">${escHtml(c.website)}</a></div>` : ''}
+        ${c.bio     ? `<div class="p-3 bg-gray-50 rounded-xl"><p class="text-sm text-gray-600">${escHtml(c.bio)}</p></div>` : ''}
+      </div>
+      <!-- 공유 링크 -->
+      ${c.is_public ? `
+      <div class="p-3 bg-blue-50 rounded-xl">
+        <p class="text-xs text-gray-500 mb-1.5">공개 링크</p>
+        <div class="flex gap-2">
+          <input type="text" value="${pubUrl}" readonly
+            class="flex-1 text-xs bg-white border border-blue-200 rounded-lg px-2 py-1.5 text-blue-700 min-w-0">
+          <button onclick="copyCardLink(${c.id})"
+            class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700 whitespace-nowrap">
+            <i class="fas fa-copy mr-1"></i>복사
+          </button>
+        </div>
+      </div>` : ''}
+      <!-- 액션 버튼 -->
+      <div class="flex gap-2 mt-4">
+        <button onclick="openEditCardModal(${c.id}); closeModal('modal-card-preview')"
+          class="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition">
+          <i class="fas fa-edit mr-1"></i>수정
+        </button>
+        <button onclick="deleteCard(${c.id}); closeModal('modal-card-preview')"
+          class="px-4 py-2.5 border border-red-200 text-red-500 rounded-xl text-sm hover:bg-red-50 transition">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>`;
+  } catch (e) {
+    body.innerHTML = errorHtml('명함을 불러오지 못했습니다.');
+  }
+}
+
+// ── 명함 수정 모달 ────────────────────────────────────────
+async function openEditCardModal(cardId) {
+  const modal = document.getElementById('modal-edit-card');
+  modal.classList.remove('hidden');
+  // 현재 데이터 로드
+  try {
+    const res = await axios.get(`/cards/${cardId}`);
+    if (!res.data.success) return;
+    const c = res.data.data;
+    document.getElementById('edit-card-id').value        = c.id;
+    document.getElementById('edit-card-name').value      = c.name    || '';
+    document.getElementById('edit-card-title').value     = c.title   || '';
+    document.getElementById('edit-card-company').value   = c.company || '';
+    document.getElementById('edit-card-email').value     = c.email   || '';
+    document.getElementById('edit-card-phone').value     = c.phone   || '';
+    document.getElementById('edit-card-website').value   = c.website || '';
+    document.getElementById('edit-card-bio').value       = c.bio     || '';
+    document.getElementById('edit-card-public').checked  = !!c.is_public;
+    document.getElementById('edit-card-primary').checked = !!c.is_primary;
+    document.getElementById('edit-card-error').classList.add('hidden');
+  } catch(e) {
+    alert('명함 정보를 불러오지 못했습니다.');
+    closeModal('modal-edit-card');
+  }
+}
+
+async function submitEditCard(e) {
+  e.preventDefault();
+  const errEl  = document.getElementById('edit-card-error');
+  const cardId = document.getElementById('edit-card-id').value;
+  errEl.classList.add('hidden');
+  try {
+    const res = await axios.patch(`/cards/${cardId}`, {
+      name:       document.getElementById('edit-card-name').value.trim()    || null,
+      title:      document.getElementById('edit-card-title').value.trim()   || null,
+      company:    document.getElementById('edit-card-company').value.trim() || null,
+      email:      document.getElementById('edit-card-email').value.trim()   || null,
+      phone:      document.getElementById('edit-card-phone').value.trim()   || null,
+      website:    document.getElementById('edit-card-website').value.trim() || null,
+      bio:        document.getElementById('edit-card-bio').value.trim()     || null,
+      is_public:  document.getElementById('edit-card-public').checked  ? 1 : 0,
+      is_primary: document.getElementById('edit-card-primary').checked ? 1 : 0,
+    });
+    if (res.data.success) {
+      closeModal('modal-edit-card');
+      loadCards();
+    } else {
+      errEl.textContent = res.data.error || '수정에 실패했습니다.';
+      errEl.classList.remove('hidden');
+    }
+  } catch(e) {
+    errEl.textContent = e.response?.data?.error || '오류가 발생했습니다.';
+    errEl.classList.remove('hidden');
+  }
+}
+
+// ── 명함 삭제 ─────────────────────────────────────────────
+async function deleteCard(cardId) {
+  if (!confirm('이 명함을 삭제하시겠습니까?')) return;
+  try {
+    const res = await axios.delete(`/cards/${cardId}`);
+    if (res.data.success) {
+      loadCards();
+    } else {
+      alert(res.data.error || '삭제에 실패했습니다.');
+    }
+  } catch(e) {
+    alert(e.response?.data?.error || '오류가 발생했습니다.');
+  }
+}
+
 async function copyCardLink(cardId) {
   const url = `${window.location.origin}/card/${cardId}`;
   await navigator.clipboard.writeText(url).catch(() => {});
-  alert('링크가 복사되었습니다: ' + url);
+  // 토스트 알림
+  showToast('링크가 복사되었습니다!');
+}
+
+// ── 토스트 알림 ───────────────────────────────────────────
+function showToast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = `fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] px-5 py-3 rounded-xl shadow-lg text-sm font-medium text-white transition-all
+    ${type === 'success' ? 'bg-gray-800' : 'bg-red-600'}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
 }
 
 // ── 명함 생성 ─────────────────────────────────────────────
@@ -400,35 +568,44 @@ function openCreateCardModal() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // 명함 생성 폼
   const form = document.getElementById('create-card-form');
-  if (!form) return;
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const errEl = document.getElementById('card-form-error');
-    errEl.classList.add('hidden');
-    try {
-      const res = await axios.post('/cards', {
-        name:      document.getElementById('card-name').value.trim(),
-        title:     document.getElementById('card-title').value.trim(),
-        company:   document.getElementById('card-company').value.trim(),
-        email:     document.getElementById('card-email').value.trim(),
-        phone:     document.getElementById('card-phone').value.trim(),
-        bio:       document.getElementById('card-bio').value.trim(),
-        is_public: document.getElementById('card-public').checked ? 1 : 0,
-      });
-      if (res.data.success) {
-        closeModal('modal-create-card');
-        form.reset();
-        loadCards();
-      } else {
-        errEl.textContent = res.data.error || '명함 생성에 실패했습니다.';
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errEl = document.getElementById('card-form-error');
+      errEl.classList.add('hidden');
+      try {
+        const res = await axios.post('/cards', {
+          name:      document.getElementById('card-name').value.trim(),
+          title:     document.getElementById('card-title').value.trim(),
+          company:   document.getElementById('card-company').value.trim(),
+          email:     document.getElementById('card-email').value.trim(),
+          phone:     document.getElementById('card-phone').value.trim(),
+          bio:       document.getElementById('card-bio').value.trim(),
+          is_public: document.getElementById('card-public').checked ? 1 : 0,
+        });
+        if (res.data.success) {
+          closeModal('modal-create-card');
+          form.reset();
+          loadCards();
+          showToast('명함이 생성되었습니다!');
+        } else {
+          errEl.textContent = res.data.error || '명함 생성에 실패했습니다.';
+          errEl.classList.remove('hidden');
+        }
+      } catch (e) {
+        errEl.textContent = e.response?.data?.error || '오류가 발생했습니다.';
         errEl.classList.remove('hidden');
       }
-    } catch (e) {
-      errEl.textContent = e.response?.data?.error || '오류가 발생했습니다.';
-      errEl.classList.remove('hidden');
-    }
-  });
+    });
+  }
+
+  // 명함 수정 폼
+  const editForm = document.getElementById('edit-card-form');
+  if (editForm) {
+    editForm.addEventListener('submit', submitEditCard);
+  }
 });
 
 // ════════════════════════════════════════════════════════

@@ -293,8 +293,9 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
     <!-- 하단 사용자 정보 -->
     <div class="px-4 py-4 border-t border-slate-700">
       <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
-          <i class="fas fa-user text-white text-sm"></i>
+        <div id="sidebar-avatar-wrap" class="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
+          <i id="sidebar-avatar-icon" class="fas fa-user text-white text-sm"></i>
+          <img id="sidebar-avatar-img" src="" class="hidden w-9 h-9 object-cover" onerror="this.classList.add('hidden');document.getElementById('sidebar-avatar-icon').classList.remove('hidden')">
         </div>
         <div class="flex-1 min-w-0">
           <p id="sidebar-username" class="text-sm font-medium text-white truncate">-</p>
@@ -584,6 +585,51 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
       </section>
 
     </main>
+  </div>
+</div>
+
+<!-- ── 모달: 명함 미리보기 ── -->
+<div id="modal-card-preview" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-bold">내 명함</h3>
+      <button onclick="closeModal('modal-card-preview')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="card-preview-body"></div>
+  </div>
+</div>
+
+<!-- ── 모달: 명함 수정 ── -->
+<div id="modal-edit-card" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-bold">명함 수정</h3>
+      <button onclick="closeModal('modal-edit-card')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+    </div>
+    <form id="edit-card-form" class="space-y-3">
+      <input id="edit-card-id" type="hidden">
+      <input id="edit-card-name"    type="text"  placeholder="이름 *"   class="modal-input" required>
+      <input id="edit-card-title"   type="text"  placeholder="직함"     class="modal-input">
+      <input id="edit-card-company" type="text"  placeholder="회사/단체" class="modal-input">
+      <input id="edit-card-email"   type="email" placeholder="이메일"    class="modal-input">
+      <input id="edit-card-phone"   type="text"  placeholder="전화번호"  class="modal-input">
+      <input id="edit-card-website" type="url"   placeholder="웹사이트 (https://...)" class="modal-input">
+      <textarea id="edit-card-bio" placeholder="소개" rows="2" class="modal-input resize-none"></textarea>
+      <div class="flex flex-col gap-2">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="edit-card-public" class="rounded">
+          <span class="text-sm text-gray-700">공개 명함 (QR 공유 가능)</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="edit-card-primary" class="rounded">
+          <span class="text-sm text-gray-700">대표 명함으로 설정</span>
+        </label>
+      </div>
+      <div id="edit-card-error" class="hidden text-sm text-red-600"></div>
+      <button type="submit" class="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">
+        저장
+      </button>
+    </form>
   </div>
 </div>
 
