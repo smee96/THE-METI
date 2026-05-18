@@ -661,6 +661,20 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
     </div>
     <form id="edit-card-form" class="space-y-3">
       <input id="edit-card-id" type="hidden">
+      <!-- 명함 사진 업로드 -->
+      <div class="flex flex-col items-center gap-2 pb-2">
+        <div class="relative group cursor-pointer" onclick="document.getElementById('edit-card-avatar-input').click()">
+          <img id="edit-card-avatar-preview"
+               src="https://ui-avatars.com/api/?name=?&background=6366f1&color=fff&size=96"
+               class="w-24 h-24 rounded-full object-cover border-4 border-indigo-100 shadow"
+               onerror="this.src='https://ui-avatars.com/api/?name=?&background=6366f1&color=fff&size=96'">
+          <div class="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+            <i class="fas fa-camera text-white text-xl"></i>
+          </div>
+        </div>
+        <span class="text-xs text-gray-400">클릭하여 명함 사진 변경</span>
+        <input id="edit-card-avatar-input" type="file" accept="image/*" class="hidden" onchange="onEditCardAvatarChange(event)">
+      </div>
       <input id="edit-card-name"    type="text"  placeholder="이름 *"   class="modal-input" required>
       <input id="edit-card-title"   type="text"  placeholder="직함"     class="modal-input">
       <input id="edit-card-company" type="text"  placeholder="회사/단체" class="modal-input">
@@ -694,6 +708,19 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
       <button onclick="closeModal('modal-create-card')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
     </div>
     <form id="create-card-form" class="space-y-3">
+      <!-- 명함 사진 업로드 -->
+      <div class="flex flex-col items-center gap-2 pb-2">
+        <div class="relative group cursor-pointer" onclick="document.getElementById('create-card-avatar-input').click()">
+          <img id="create-card-avatar-preview"
+               src="https://ui-avatars.com/api/?name=+&background=6366f1&color=fff&size=96"
+               class="w-24 h-24 rounded-full object-cover border-4 border-indigo-100 shadow">
+          <div class="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+            <i class="fas fa-camera text-white text-xl"></i>
+          </div>
+        </div>
+        <span class="text-xs text-gray-400">클릭하여 명함 사진 추가 (선택)</span>
+        <input id="create-card-avatar-input" type="file" accept="image/*" class="hidden" onchange="onCreateCardAvatarChange(event)">
+      </div>
       <input id="card-name"    type="text"  placeholder="이름 *"     class="modal-input" required>
       <input id="card-title"   type="text"  placeholder="직함"       class="modal-input">
       <input id="card-company" type="text"  placeholder="회사/단체"   class="modal-input">

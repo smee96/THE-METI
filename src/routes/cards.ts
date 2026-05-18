@@ -89,13 +89,13 @@ cards.post(
 
     // 명함 생성
     const result = await c.env.DB.prepare(`
-      INSERT INTO cards (user_id, group_id, card_type, name, title, company, email, phone, website, bio, template_id, is_public)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO cards (user_id, group_id, card_type, name, title, company, email, phone, website, bio, template_id, is_public, avatar_url)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       userId, body.group_id ?? null, body.card_type, body.name,
       body.title ?? null, body.company ?? null, body.email ?? null,
       body.phone ?? null, body.website ?? null, body.bio ?? null,
-      body.template_id, body.is_public
+      body.template_id, body.is_public, null   // avatar_url은 생성 후 별도 업로드
     ).run()
 
     const cardId = result.meta.last_row_id as number
@@ -184,6 +184,7 @@ cards.patch(
     phone: z.string().max(20).optional().nullable(),
     website: z.string().optional().nullable(),
     bio: z.string().max(500).optional().nullable(),
+    avatar_url: z.string().url().optional().nullable(),
     template_id: z.string().optional(),
     is_public: z.number().int().min(0).max(1).optional(),
     is_primary: z.number().int().min(0).max(1).optional()
@@ -248,6 +249,51 @@ cards.delete('/:id', authMiddleware, async (c) => {
   ).bind(cardId).run()
 
   return c.json(ok(null, '명함이 삭제되었습니다.'))
+})
+
+// ── 명함 사진 업로드 ──────────────────────────────────
+cards.post('/:id/avatar', authMiddleware, async (c) => {
+  const userId = c.get('userId')
+  const cardId = c.req.param('id')
+
+  // 명함 소유권 확인
+  const card = await c.env.DB.prepare(
+    'SELECT id FROM cards WHERE id = ? AND user_id = ? AND is_deleted = 0'
+  ).bind(cardId, userId).first()
+  if (!card) return c.json(fail('명함을 찾을 수 없습니다.'), 404)
+
+  // multipart 파싱
+  let formData: FormData
+  try { formData = await c.req.formData() }
+  catch { return c.json(fail('이미지 파일을 업로드해주세요.'), 400) }
+
+  const file = formData.get('avatar') as File | null
+  if (!file || typeof file === 'string') {
+    return c.json(fail('avatar 필드에 이미지 파일을 첨부해주세요.'), 400)
+  }
+
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  if (!allowedTypes.includes(file.type)) {
+    return c.json(fail('JPG, PNG, WEBP, GIF 형식만 업로드 가능합니다.'), 400)
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    return c.json(fail('파일 크기는 5MB 이하여야 합니다.'), 400)
+  }
+
+  const ext = file.type.split('/')[1].replace('jpeg', 'jpg')
+  const key = `cards/${userId}_${cardId}_${Date.now()}.${ext}`
+
+  await c.env.STORAGE.put(key, await file.arrayBuffer(), {
+    httpMetadata: { contentType: file.type }
+  })
+
+  const avatarUrl = `https://pub-9e92c640989d47f69f8e3f749c4de9c0.r2.dev/${key}`
+
+  await c.env.DB.prepare(
+    `UPDATE cards SET avatar_url = ?, updated_at = datetime('now') WHERE id = ?`
+  ).bind(avatarUrl, cardId).run()
+
+  return c.json(ok({ avatar_url: avatarUrl }, '명함 사진이 변경되었습니다.'))
 })
 
 // ── QR 토큰 생성 ──────────────────────────────────────

@@ -603,6 +603,16 @@ async function openEditCardModal(cardId) {
     document.getElementById('edit-card-public').checked  = !!c.is_public;
     document.getElementById('edit-card-primary').checked = !!c.is_primary;
     document.getElementById('edit-card-error').classList.add('hidden');
+    // 아바타 미리보기 설정
+    const preview = document.getElementById('edit-card-avatar-preview');
+    if (preview) {
+      preview.src = c.avatar_url
+        ? c.avatar_url
+        : `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name || '?')}&background=6366f1&color=fff&size=96`;
+    }
+    // 파일 input 초기화
+    const fi = document.getElementById('edit-card-avatar-input');
+    if (fi) fi.value = '';
   } catch(e) {
     alert('명함 정보를 불러오지 못했습니다.');
     closeModal('modal-edit-card');
@@ -664,8 +674,10 @@ async function copyCardLink(cardId) {
 // ── 토스트 알림 ───────────────────────────────────────────
 function showToast(msg, type = 'success') {
   const t = document.createElement('div');
-  t.className = `fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] px-5 py-3 rounded-xl shadow-lg text-sm font-medium text-white transition-all
-    ${type === 'success' ? 'bg-gray-800' : 'bg-red-600'}`;
+  const colorClass = type === 'error' ? 'bg-red-600'
+                   : type === 'info'  ? 'bg-blue-600'
+                   : 'bg-gray-800';
+  t.className = `fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] px-5 py-3 rounded-xl shadow-lg text-sm font-medium text-white transition-all ${colorClass}`;
   t.textContent = msg;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 2500);
@@ -674,6 +686,60 @@ function showToast(msg, type = 'success') {
 // ── 명함 생성 ─────────────────────────────────────────────
 function openCreateCardModal() {
   document.getElementById('modal-create-card').classList.remove('hidden');
+  // 아바타 미리보기 초기화
+  const preview = document.getElementById('create-card-avatar-preview');
+  if (preview) {
+    preview.src = 'https://ui-avatars.com/api/?name=+&background=6366f1&color=fff&size=96';
+    preview.dataset.pendingFile = '';
+  }
+  // 파일 input 초기화
+  const fileInput = document.getElementById('create-card-avatar-input');
+  if (fileInput) fileInput.value = '';
+}
+
+// 명함 생성 모달 — 아바타 파일 선택 (로컬 미리보기만, 업로드는 생성 후)
+function onCreateCardAvatarChange(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const preview = document.getElementById('create-card-avatar-preview');
+  const reader  = new FileReader();
+  reader.onload = (e) => {
+    preview.src = e.target.result;
+    preview.dataset.pendingFile = 'true'; // 파일이 대기 중임을 표시
+  };
+  reader.readAsDataURL(file);
+}
+
+// 명함 수정 모달 — 아바타 파일 선택 → 즉시 업로드
+async function onEditCardAvatarChange(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const cardId  = document.getElementById('edit-card-id').value;
+  const preview = document.getElementById('edit-card-avatar-preview');
+
+  // 로컬 미리보기 먼저 표시
+  const reader = new FileReader();
+  reader.onload = (e) => { preview.src = e.target.result; };
+  reader.readAsDataURL(file);
+
+  // 즉시 서버에 업로드
+  showToast('사진 업로드 중...', 'info');
+  try {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    const res = await axios.post(`/cards/${cardId}/avatar`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    if (res.data.success) {
+      showToast('명함 사진이 업데이트되었습니다!');
+      loadCards(); // 목록 새로고침
+    } else {
+      showToast(res.data.error || '업로드에 실패했습니다.', 'error');
+    }
+  } catch(e) {
+    showToast(e.response?.data?.error || '업로드 중 오류가 발생했습니다.', 'error');
+  }
+  event.target.value = '';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -695,8 +761,27 @@ document.addEventListener('DOMContentLoaded', () => {
           is_public: document.getElementById('card-public').checked ? 1 : 0,
         });
         if (res.data.success) {
+          const newCardId = res.data.data?.id;
+          // 대기 중인 아바타 파일이 있으면 업로드
+          const avatarInput   = document.getElementById('create-card-avatar-input');
+          const avatarPreview = document.getElementById('create-card-avatar-preview');
+          if (newCardId && avatarInput?.files?.length > 0 && avatarPreview?.dataset?.pendingFile) {
+            try {
+              const fd = new FormData();
+              fd.append('avatar', avatarInput.files[0]);
+              await axios.post(`/cards/${newCardId}/avatar`, fd, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+              });
+            } catch (_) { /* 사진 실패해도 명함은 생성됨 */ }
+          }
           closeModal('modal-create-card');
           form.reset();
+          // 아바타 미리보기도 초기화
+          if (avatarPreview) {
+            avatarPreview.src = 'https://ui-avatars.com/api/?name=+&background=6366f1&color=fff&size=96';
+            avatarPreview.dataset.pendingFile = '';
+          }
+          if (avatarInput) avatarInput.value = '';
           loadCards();
           showToast('명함이 생성되었습니다!');
         } else {
