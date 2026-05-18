@@ -848,7 +848,7 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
-<script src="/static/app.js"></script>
+<script src="/static/app.js?v=7b63fb7"></script>
 </body>
 </html>`
 }
