@@ -98,7 +98,7 @@ async function loadMyGroups() {
     if (res.data.success) {
       // 전체 공개 그룹 중 내가 active 멤버인 것만 필터
       // (API 개선 전 임시 처리 — 실제론 /groups/mine 필요)
-      myGroups = (res.data.data?.groups || []).map(g => ({
+      myGroups = (Array.isArray(res.data.data) ? res.data.data : (res.data.data?.groups || [])).map(g => ({
         ...g,
         my_role:   g.my_role   || null,
         my_status: g.my_status || null,
@@ -296,7 +296,7 @@ async function loadDashboard() {
 
     // 명함 통계
     if (cardsRes.status === 'fulfilled' && cardsRes.value.data.success) {
-      const cards = cardsRes.value.data.data?.cards || [];
+      const cards = Array.isArray(cardsRes.value.data.data) ? cardsRes.value.data.data : (cardsRes.value.data.data?.cards || []);
       document.getElementById('stat-cards').textContent = cards.length;
 
       const recentEl = document.getElementById('recent-cards');
@@ -358,7 +358,7 @@ async function loadCards() {
   try {
     const res = await axios.get('/cards');
     if (!res.data.success) { el.innerHTML = emptyHtml('명함이 없습니다.'); return; }
-    const cards = res.data.data?.cards || [];
+    const cards = Array.isArray(res.data.data) ? res.data.data : (res.data.data?.cards || []);
     if (cards.length === 0) { el.innerHTML = emptyHtml('명함이 없습니다. 첫 명함을 만들어보세요!'); return; }
 
     el.innerHTML = cards.map(c => `
