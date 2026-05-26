@@ -71,17 +71,20 @@ function renderApp() {
         <nav class="flex-1 px-2 py-1 overflow-y-auto" style="scrollbar-width:none;-ms-overflow-style:none;">
           <style>#sidebar nav::-webkit-scrollbar{display:none}</style>
           <p class="text-slate-500 text-sm uppercase font-semibold px-2 pt-1 pb-0.5">메인</p>
-          ${navItem('dashboard', 'tachometer-alt', '대시보드')}
-          ${navItem('users', 'users', '유저 관리')}
-          ${navItem('groups', 'building', '그룹 관리')}
-          ${navItem('cards', 'id-card', '명함 관리')}
-          ${navItem('events', 'calendar-alt', '행사 관리')}
-          ${navItem('lessons', 'chalkboard-teacher', '레슨 관리')}
+          ${navItem('dashboard',    'tachometer-alt',      '대시보드')}
+          ${navItem('users',        'users',               '유저 관리')}
+          ${navItem('groups',       'building',            '그룹 관리')}
+          ${navItem('cards',        'id-card',             '명함 관리')}
+          ${navItem('events',       'calendar-alt',        '행사 관리')}
+          ${navItem('lessons',      'chalkboard-teacher',  '레슨 관리')}
+          <p class="text-slate-500 text-sm uppercase font-semibold px-2 pt-2 pb-0.5">결제/파트너</p>
+          ${navItem('orders',       'shopping-cart',       '주문/결제')}
+          ${navItem('partners',     'handshake',           '파트너 관리')}
           <p class="text-slate-500 text-sm uppercase font-semibold px-2 pt-2 pb-0.5">운영</p>
-          ${navItem('reports', 'flag', '신고 관리')}
-          ${navItem('nfc-cards', 'credit-card', 'NFC 카드')}
+          ${navItem('reports',      'flag',                '신고 관리')}
+          ${navItem('nfc-cards',    'credit-card',         'NFC 카드')}
           <p class="text-slate-500 text-sm uppercase font-semibold px-2 pt-2 pb-0.5">설정</p>
-          ${navItem('plan-configs', 'sliders-h', '플랜 설정')}
+          ${navItem('plan-configs', 'sliders-h',           '플랜 설정')}
         </nav>
 
         <!-- 사용자 정보 -->
@@ -166,7 +169,8 @@ function navigateTo(section) {
   const titles = {
     dashboard: '대시보드', users: '유저 관리', groups: '그룹 관리', cards: '명함 관리',
     events: '행사 관리', lessons: '레슨 관리', reports: '신고 관리', 'nfc-cards': 'NFC 카드 관리',
-    'plan-configs': '플랜 설정', 'group-detail': '그룹 상세'
+    'plan-configs': '플랜 설정', 'group-detail': '그룹 상세',
+    orders: '주문/결제 관리', partners: '파트너 관리'
   };
   const titleEl = document.getElementById('page-title');
   if (titleEl) titleEl.textContent = titles[section] || section;
@@ -176,7 +180,9 @@ function navigateTo(section) {
     events: loadEvents, lessons: loadLessons,
     reports: loadReports,
     'nfc-cards': loadNfcCards,
-    'plan-configs': loadPlanConfigs
+    'plan-configs': loadPlanConfigs,
+    orders: loadOrders,       // admin-orders.js
+    partners: loadPartners    // admin-partner.js
     // 'group-detail': admin-groups.js의 loadGroupDetailPage()가 소비
   };
   if (pages[section]) pages[section]();
@@ -188,14 +194,17 @@ async function loadDashboard() {
   try {
     const { data } = await axios.get('/admin/dashboard');
     const d = data.data;
+    const revenue = (d.orders?.revenue_this_month || 0).toLocaleString();
     setContent(`
       <div class="space-y-4">
-        <!-- 통계 카드 4개 -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          ${statCard('총 유저', d.users?.total || 0, 'users', 'blue', `오늘 +${d.users?.today || 0}명`)}
-          ${statCard('활성 그룹', d.groups?.active || 0, 'building', 'green', `대기 ${d.groups?.pending || 0}개`)}
-          ${statCard('예정 행사', d.events?.upcoming || 0, 'calendar-alt', 'purple', `전체 ${d.events?.total || 0}개`)}
-          ${statCard('미처리 신고', d.reports?.pending || 0, 'flag', 'red', `전체 ${d.reports?.total || 0}건`)}
+        <!-- 통계 카드 6개 -->
+        <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+          ${statCard('총 유저',      d.users?.total || 0,          'users',         'blue',   `오늘 +${d.users?.today || 0}명`)}
+          ${statCard('활성 그룹',    d.groups?.active || 0,        'building',      'green',  `대기 ${d.groups?.pending || 0}개`)}
+          ${statCard('예정 행사',    d.events?.upcoming || 0,      'calendar-alt',  'purple', `전체 ${d.events?.total || 0}개`)}
+          ${statCard('미처리 신고',  d.reports?.pending || 0,      'flag',          'red',    `전체 ${d.reports?.total || 0}건`)}
+          ${statCard('NFC 처리대기', d.nfc?.pending || 0,          'credit-card',   'indigo', `승인완료 ${d.nfc?.approved || 0}건`)}
+          ${statCard('이달 매출',    revenue + '원',               'won-sign',      'teal',   `주문 ${d.orders?.total_orders || 0}건`)}
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -205,30 +214,64 @@ async function loadDashboard() {
               <i class="fas fa-chart-pie text-blue-500 mr-1.5"></i>플랜 분포
             </h3>
             <div class="space-y-2.5">
-              ${planBar('Free', d.users?.free_plan || 0, d.users?.total || 1, 'gray')}
-              ${planBar('Pro', d.users?.pro_plan || 0, d.users?.total || 1, 'blue')}
+              ${planBar('Free',     d.users?.free_plan     || 0, d.users?.total || 1, 'gray')}
+              ${planBar('Pro',      d.users?.pro_plan      || 0, d.users?.total || 1, 'blue')}
               ${planBar('Business', d.users?.business_plan || 0, d.users?.total || 1, 'purple')}
             </div>
           </div>
 
           <!-- 빠른 실행 -->
-          <div class="bg-white rounded-xl p-4 shadow-sm border md:col-span-2">
+          <div class="bg-white rounded-xl p-4 shadow-sm border">
             <h3 class="font-semibold text-gray-800 text-sm mb-3">
               <i class="fas fa-bolt text-yellow-500 mr-1.5"></i>빠른 실행
             </h3>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-2 gap-2">
               <button onclick="navigateTo('groups')"
-                class="p-3 bg-orange-50 hover:bg-orange-100 rounded-xl text-left transition">
-                <i class="fas fa-building text-orange-500 text-lg mb-1 block"></i>
-                <p class="font-semibold text-gray-800 text-sm">그룹 승인 대기</p>
-                <p class="text-xl font-bold text-orange-600">${d.groups?.pending || 0}</p>
+                class="p-2.5 bg-orange-50 hover:bg-orange-100 rounded-xl text-left transition">
+                <i class="fas fa-building text-orange-500 text-base mb-1 block"></i>
+                <p class="font-semibold text-gray-800 text-xs">그룹 승인 대기</p>
+                <p class="text-lg font-bold text-orange-600">${d.groups?.pending || 0}</p>
               </button>
               <button onclick="navigateTo('reports')"
-                class="p-3 bg-red-50 hover:bg-red-100 rounded-xl text-left transition">
-                <i class="fas fa-flag text-red-500 text-lg mb-1 block"></i>
-                <p class="font-semibold text-gray-800 text-sm">신고 처리 대기</p>
-                <p class="text-xl font-bold text-red-600">${d.reports?.pending || 0}</p>
+                class="p-2.5 bg-red-50 hover:bg-red-100 rounded-xl text-left transition">
+                <i class="fas fa-flag text-red-500 text-base mb-1 block"></i>
+                <p class="font-semibold text-gray-800 text-xs">신고 처리 대기</p>
+                <p class="text-lg font-bold text-red-600">${d.reports?.pending || 0}</p>
               </button>
+              <button onclick="navigateTo('nfc-cards')"
+                class="p-2.5 bg-indigo-50 hover:bg-indigo-100 rounded-xl text-left transition">
+                <i class="fas fa-credit-card text-indigo-500 text-base mb-1 block"></i>
+                <p class="font-semibold text-gray-800 text-xs">NFC 처리 대기</p>
+                <p class="text-lg font-bold text-indigo-600">${d.nfc?.pending || 0}</p>
+              </button>
+              <button onclick="navigateTo('orders')"
+                class="p-2.5 bg-teal-50 hover:bg-teal-100 rounded-xl text-left transition">
+                <i class="fas fa-shopping-cart text-teal-500 text-base mb-1 block"></i>
+                <p class="font-semibold text-gray-800 text-xs">미처리 주문</p>
+                <p class="text-lg font-bold text-teal-600">${d.orders?.pending_orders || 0}</p>
+              </button>
+            </div>
+          </div>
+
+          <!-- 최근 가입 유저 -->
+          <div class="bg-white rounded-xl p-4 shadow-sm border">
+            <h3 class="font-semibold text-gray-800 text-sm mb-3">
+              <i class="fas fa-user-plus text-green-500 mr-1.5"></i>최근 가입 유저
+            </h3>
+            <div class="space-y-2">
+              ${(d.recent_users || []).map(u => `
+                <div class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 rounded-lg p-1 transition"
+                     onclick="showUserDetail(${u.id})">
+                  <div class="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-user text-blue-500 text-xs"></i>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-800 truncate">${u.name}</p>
+                    <p class="text-xs text-gray-400 truncate">${u.email}</p>
+                  </div>
+                  ${planBadge(u.plan)}
+                </div>
+              `).join('')}
             </div>
           </div>
         </div>
@@ -241,10 +284,12 @@ async function loadDashboard() {
 
 function statCard(label, value, icon, color, sub) {
   const colors = {
-    blue: 'bg-blue-50 text-blue-600',
-    green: 'bg-green-50 text-green-600',
+    blue:   'bg-blue-50 text-blue-600',
+    green:  'bg-green-50 text-green-600',
     purple: 'bg-purple-50 text-purple-600',
-    red: 'bg-red-50 text-red-600'
+    red:    'bg-red-50 text-red-600',
+    indigo: 'bg-indigo-50 text-indigo-600',
+    teal:   'bg-teal-50 text-teal-600'
   };
   return `<div class="bg-white rounded-xl p-4 shadow-sm border">
     <div class="flex items-center justify-between mb-2">
@@ -1537,66 +1582,166 @@ async function submitCreateEvent() {
 }
 
 // ── 플랜 설정 ──────────────────────────────────────────
-async function loadPlanConfigs() {
+let _planTab = 'plans'; // plans | configs | charge-products
+
+async function loadPlanConfigs(tab = _planTab) {
+  _planTab = tab;
   setContent(loadingSpinner())
   try {
-    const { data } = await axios.get('/api/v1/admin/plan-configs')
-    const plans = data.data || []
+    const [plansRes, configsRes, chargeRes] = await Promise.all([
+      axios.get('/api/v1/admin/plan-configs'),
+      axios.get('/admin/plan-configs/keys'),
+      axios.get('/admin/point-charge-products')
+    ])
+    const plans   = plansRes.data.data   || []
+    const configs = configsRes.data.data || []
+    const charges = chargeRes.data.data  || []
     const planLabels = { free: 'Free', pro: 'Pro', business: 'Business' }
     const planColors = { free: 'gray', pro: 'blue', business: 'purple' }
 
+    const configLabels = {
+      extra_card_price:       '추가 명함 단가 (원)',
+      point_expiry_days:      '포인트 만료일 (일)',
+      min_point_charge:       '최소 포인트 충전액 (원)',
+      chat_retention_free:    '채팅 보관 — Free (일)',
+      chat_retention_pro:     '채팅 보관 — Pro (일)',
+      chat_retention_business:'채팅 보관 — Business (일, 0=무제한)',
+    }
+
     setContent(`
       <div class="space-y-4">
-        <div class="flex items-center justify-between">
-          <h2 class="text-lg font-bold text-gray-900">플랜 설정</h2>
-          <p class="text-sm text-gray-400">그룹 최대 멤버 수 등 플랜별 제한을 설정합니다.</p>
+        <!-- 탭 -->
+        <div class="border-b border-gray-200">
+          <div class="flex gap-1">
+            <button onclick="loadPlanConfigs('plans')"
+              class="px-4 py-2.5 text-sm font-semibold border-b-2 transition
+                     ${_planTab==='plans' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}">
+              <i class="fas fa-layer-group mr-1"></i>플랜 제한
+            </button>
+            <button onclick="loadPlanConfigs('configs')"
+              class="px-4 py-2.5 text-sm font-semibold border-b-2 transition
+                     ${_planTab==='configs' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}">
+              <i class="fas fa-cog mr-1"></i>고급 설정
+            </button>
+            <button onclick="loadPlanConfigs('charge-products')"
+              class="px-4 py-2.5 text-sm font-semibold border-b-2 transition
+                     ${_planTab==='charge-products' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}">
+              <i class="fas fa-coins mr-1"></i>충전 상품
+            </button>
+          </div>
         </div>
-        <div class="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-700">
-          <i class="fas fa-info-circle mr-1"></i>
-          멤버 수 <strong>NULL = 무제한</strong>. 변경 즉시 신규 가입/승인에 적용됩니다.
+
+        <!-- 플랜 제한 탭 -->
+        <div class="${_planTab==='plans' ? '' : 'hidden'}">
+          <div class="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-700 mb-4">
+            <i class="fas fa-info-circle mr-1"></i>
+            멤버 수 / 명함 수 <strong>비워두기 = 무제한</strong>. 변경 즉시 신규 가입/승인에 적용됩니다.
+          </div>
+          <div class="grid gap-4">
+            ${plans.map(p => {
+              const color = planColors[p.code] || 'gray'
+              const badgeClass = { gray: 'bg-gray-100 text-gray-700', blue: 'bg-blue-100 text-blue-700', purple: 'bg-purple-100 text-purple-700' }[color]
+              return `
+              <div class="bg-white rounded-xl shadow-sm border p-5">
+                <div class="flex items-center justify-between mb-4">
+                  <div class="flex items-center gap-2">
+                    <span class="px-2.5 py-1 rounded-full text-sm font-bold ${badgeClass}">${planLabels[p.code] || p.code}</span>
+                    <span class="text-sm text-gray-500">${p.name}</span>
+                  </div>
+                  <span class="text-sm text-gray-400">code: ${p.code}</span>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-semibold text-gray-600 mb-1">그룹 최대 멤버 수</label>
+                    <div class="flex gap-2">
+                      <input type="number" id="plan-members-${p.code}" value="${p.max_group_members ?? ''}" placeholder="무제한"
+                        min="1" class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <button onclick="updatePlanConfig('${p.code}', 'max_group_members')"
+                        class="px-3 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition">저장</button>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">현재: ${p.max_group_members !== null ? p.max_group_members + '명' : '무제한'}</p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-semibold text-gray-600 mb-1">명함 한도</label>
+                    <div class="flex gap-2">
+                      <input type="number" id="plan-cards-${p.code}" value="${p.max_cards ?? ''}" placeholder="무제한"
+                        min="1" class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <button onclick="updatePlanConfig('${p.code}', 'max_cards')"
+                        class="px-3 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition">저장</button>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">현재: ${p.max_cards !== null ? p.max_cards + '개' : '무제한'}</p>
+                  </div>
+                </div>
+              </div>`
+            }).join('')}
+          </div>
         </div>
-        <div class="grid gap-4">
-          ${plans.map(p => {
-            const color = planColors[p.code] || 'gray'
-            const colorClass = { gray: 'border-gray-300 bg-gray-50', blue: 'border-blue-300 bg-blue-50', purple: 'border-purple-300 bg-purple-50' }[color]
-            const badgeClass = { gray: 'bg-gray-100 text-gray-700', blue: 'bg-blue-100 text-blue-700', purple: 'bg-purple-100 text-purple-700' }[color]
-            return `
-            <div class="bg-white rounded-xl shadow-sm border p-5">
-              <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-2">
-                  <span class="px-2.5 py-1 rounded-full text-sm font-bold ${badgeClass}">${planLabels[p.code] || p.code}</span>
-                  <span class="text-sm text-gray-500">${p.name}</span>
-                </div>
-                <span class="text-sm text-gray-400">code: ${p.code}</span>
-              </div>
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-semibold text-gray-600 mb-1">그룹 최대 멤버 수</label>
-                  <div class="flex gap-2">
-                    <input type="number" id="plan-members-${p.code}" value="${p.max_group_members ?? ''}" placeholder="무제한 (비워두기)"
-                      min="1" class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <button onclick="updatePlanConfig('${p.code}', 'max_group_members')"
-                      class="px-3 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition">
-                      저장
-                    </button>
+
+        <!-- 고급 설정 탭 -->
+        <div class="${_planTab==='configs' ? '' : 'hidden'}">
+          <div class="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3 text-sm text-yellow-700 mb-4">
+            <i class="fas fa-exclamation-triangle mr-1"></i>
+            서비스 전체에 영향을 주는 설정입니다. 신중하게 변경해주세요.
+          </div>
+          <div class="grid gap-3">
+            ${configs.map(cfg => `
+              <div class="bg-white rounded-xl shadow-sm border p-4">
+                <div class="flex items-center justify-between mb-2">
+                  <div>
+                    <p class="text-sm font-semibold text-gray-800">${configLabels[cfg.config_key] || cfg.config_key}</p>
+                    <p class="text-xs text-gray-400">${cfg.description || ''}</p>
                   </div>
-                  <p class="text-sm text-gray-400 mt-1">현재: ${p.max_group_members !== null ? p.max_group_members + '명' : '무제한'}</p>
+                  <span class="text-xs text-gray-400">최종수정: ${formatDate(cfg.updated_at)}</span>
                 </div>
-                <div>
-                  <label class="block text-sm font-semibold text-gray-600 mb-1">명함 한도</label>
-                  <div class="flex gap-2">
-                    <input type="number" id="plan-cards-${p.code}" value="${p.max_cards ?? ''}" placeholder="무제한 (비워두기)"
-                      min="1" class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <button onclick="updatePlanConfig('${p.code}', 'max_cards')"
-                      class="px-3 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition">
-                      저장
-                    </button>
-                  </div>
-                  <p class="text-sm text-gray-400 mt-1">현재: ${p.max_cards !== null ? p.max_cards + '개' : '무제한'}</p>
+                <div class="flex gap-2">
+                  <input type="text" id="cfg-${cfg.config_key}" value="${cfg.config_val}"
+                    class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+                  <button onclick="updateConfigKey('${cfg.config_key}')"
+                    class="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition">저장</button>
                 </div>
               </div>
-            </div>`
-          }).join('')}
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- 충전 상품 탭 -->
+        <div class="${_planTab==='charge-products' ? '' : 'hidden'}">
+          <div class="flex items-center justify-between mb-3">
+            <p class="text-sm text-gray-500">포인트 충전 상품 ${charges.length}개</p>
+            <button onclick="showCreateChargeProductModal()"
+              class="px-3 py-1.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition flex items-center gap-1">
+              <i class="fas fa-plus text-xs"></i> 상품 추가
+            </button>
+          </div>
+          <div class="grid gap-3">
+            ${charges.map(c => `
+              <div class="bg-white rounded-xl shadow-sm border p-4 flex items-center gap-4">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <p class="font-semibold text-gray-900">${c.title}</p>
+                    ${c.is_custom ? '<span class="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-xs rounded">직접입력</span>' : ''}
+                    ${!c.is_active ? '<span class="px-1.5 py-0.5 bg-gray-100 text-gray-500 text-xs rounded">비활성</span>' : ''}
+                  </div>
+                  <p class="text-sm text-gray-500">
+                    결제금액: <strong>${c.amount_krw.toLocaleString()}원</strong>
+                    → 지급: <strong class="text-blue-600">${c.points.toLocaleString()}P</strong>
+                    ${c.min_amount ? `| 최소: ${c.min_amount.toLocaleString()}원` : ''}
+                  </p>
+                </div>
+                <div class="flex gap-1.5 flex-shrink-0">
+                  <button onclick="toggleChargeProduct(${c.id}, ${c.is_active})"
+                    class="px-2.5 py-1.5 text-xs rounded-lg border transition
+                           ${c.is_active ? 'text-red-600 border-red-200 hover:bg-red-50' : 'text-green-600 border-green-200 hover:bg-green-50'}">
+                    ${c.is_active ? '비활성화' : '활성화'}
+                  </button>
+                  <button onclick="deleteChargeProduct(${c.id})"
+                    class="px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition">
+                    삭제
+                  </button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
         </div>
       </div>
     `)
@@ -1609,17 +1754,119 @@ async function updatePlanConfig(planCode, field) {
   const input = document.getElementById(`plan-${field === 'max_group_members' ? 'members' : 'cards'}-${planCode}`)
   const rawVal = input?.value.trim()
   const value = rawVal === '' ? null : parseInt(rawVal)
-
   if (rawVal !== '' && (isNaN(value) || value < 1)) {
     showToast('올바른 숫자를 입력하거나 비워두세요 (무제한).', 'error'); return
   }
-
   try {
     await axios.patch(`/api/v1/admin/plan-configs/${planCode}`, { [field]: value })
     showToast(`${planCode} 플랜 설정이 저장되었습니다.`, 'success')
-    loadPlanConfigs()
+    loadPlanConfigs('plans')
   } catch (e) {
     showToast(e.response?.data?.error || '저장 실패', 'error')
+  }
+}
+
+async function updateConfigKey(configKey) {
+  const input = document.getElementById(`cfg-${configKey}`)
+  const val = input?.value.trim()
+  if (val === '') { showToast('값을 입력해주세요.', 'error'); return }
+  try {
+    await axios.patch(`/admin/plan-configs/keys/${configKey}`, { config_val: val })
+    showToast('설정이 저장되었습니다.', 'success')
+    loadPlanConfigs('configs')
+  } catch (e) {
+    showToast(e.response?.data?.error || '저장 실패', 'error')
+  }
+}
+
+async function toggleChargeProduct(id, currentActive) {
+  try {
+    await axios.patch(`/admin/point-charge-products/${id}`, { is_active: currentActive ? 0 : 1 })
+    showToast(currentActive ? '비활성화되었습니다.' : '활성화되었습니다.', 'success')
+    loadPlanConfigs('charge-products')
+  } catch (e) {
+    showToast('상태 변경에 실패했습니다.', 'error')
+  }
+}
+
+async function deleteChargeProduct(id) {
+  if (!confirm('이 충전 상품을 삭제하시겠습니까?')) return
+  try {
+    await axios.delete(`/admin/point-charge-products/${id}`)
+    showToast('삭제되었습니다.', 'success')
+    loadPlanConfigs('charge-products')
+  } catch (e) {
+    showToast(e.response?.data?.error || '삭제 실패', 'error')
+  }
+}
+
+function showCreateChargeProductModal() {
+  const modal = document.createElement('div')
+  modal.id = 'create-charge-modal'
+  modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4'
+  modal.innerHTML = `
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-bold text-gray-900">충전 상품 추가</h3>
+        <button onclick="document.getElementById('create-charge-modal').remove()"
+          class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">상품명 <span class="text-red-500">*</span></label>
+          <input id="charge-title" type="text" placeholder="예: 포인트 50,000P"
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">결제금액 (원) <span class="text-red-500">*</span></label>
+            <input id="charge-amount" type="number" placeholder="50000"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">지급 포인트 <span class="text-red-500">*</span></label>
+            <input id="charge-points" type="number" placeholder="50000"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">정렬 순서</label>
+          <input id="charge-sort" type="number" placeholder="0" value="0"
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+        </div>
+        <div id="charge-create-error" class="hidden text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
+        <div class="flex gap-2 pt-1">
+          <button onclick="document.getElementById('create-charge-modal').remove()"
+            class="flex-1 py-2.5 border border-gray-300 text-gray-600 text-sm rounded-xl hover:bg-gray-50 transition">취소</button>
+          <button onclick="submitCreateChargeProduct()"
+            class="flex-1 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition">추가</button>
+        </div>
+      </div>
+    </div>`
+  document.body.appendChild(modal)
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove() })
+}
+
+async function submitCreateChargeProduct() {
+  const title  = document.getElementById('charge-title')?.value.trim()
+  const amount = parseInt(document.getElementById('charge-amount')?.value)
+  const points = parseInt(document.getElementById('charge-points')?.value)
+  const sort   = parseInt(document.getElementById('charge-sort')?.value || '0')
+  const errEl  = document.getElementById('charge-create-error')
+
+  if (!title)           { errEl.textContent = '상품명을 입력해주세요.';    errEl.classList.remove('hidden'); return }
+  if (isNaN(amount))    { errEl.textContent = '결제금액을 입력해주세요.';  errEl.classList.remove('hidden'); return }
+  if (isNaN(points))    { errEl.textContent = '지급 포인트를 입력해주세요.'; errEl.classList.remove('hidden'); return }
+  errEl.classList.add('hidden')
+
+  try {
+    await axios.post('/admin/point-charge-products', { title, amount_krw: amount, points, sort_order: sort })
+    showToast('충전 상품이 추가되었습니다.', 'success')
+    document.getElementById('create-charge-modal')?.remove()
+    loadPlanConfigs('charge-products')
+  } catch (e) {
+    errEl.textContent = e.response?.data?.error || '추가에 실패했습니다.'
+    errEl.classList.remove('hidden')
   }
 }
 

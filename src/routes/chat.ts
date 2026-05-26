@@ -146,13 +146,19 @@ chat.post(
       return c.json(fail('전송할 내용이 없습니다.'), 400)
     }
 
-    // 무료 플랜: 메시지 만료 시간 설정 (다음날 자정)
+    // 플랜별 메시지 만료 시간 설정 (plan_configs 기반, 0=무제한)
     let expiresAt: string | null = null
-    if (userPlan === 'free') {
-      const tomorrow = new Date()
-      tomorrow.setDate(tomorrow.getDate() + 1)
-      tomorrow.setHours(0, 0, 0, 0)
-      expiresAt = tomorrow.toISOString()
+    const retentionKey = `chat_retention_${userPlan ?? 'free'}`
+    const retentionRow = await c.env.DB.prepare(
+      `SELECT config_val FROM plan_configs WHERE config_key = ?`
+    ).bind(retentionKey).first<{ config_val: string }>()
+    const retentionDays = retentionRow ? parseInt(retentionRow.config_val) : (userPlan === 'free' ? 1 : 0)
+
+    if (retentionDays > 0) {
+      const expiry = new Date()
+      expiry.setDate(expiry.getDate() + retentionDays)
+      expiry.setHours(0, 0, 0, 0)
+      expiresAt = expiry.toISOString()
     }
 
     const result = await c.env.DB.prepare(`

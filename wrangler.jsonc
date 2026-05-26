@@ -53,6 +53,11 @@
         "REFRESH_TOKEN_EXPIRES_IN": "30d"
       }
     }
+  },
+
+  // ── Cron Triggers — 매일 UTC 17:00 (KST 02:00) 만료 채팅 삭제 ─
+  "triggers": {
+    "crons": ["0 17 * * *"]
   }
 
   // Secrets (wrangler secret put 으로 설정):

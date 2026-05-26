@@ -116,6 +116,8 @@ export function adminAppHtml(): string {
   <script src="/static/admin-nfc.js"></script>
   <script src="/static/admin-reports.js"></script>
   <script src="/static/admin-groups.js"></script>
+  <script src="/static/admin-orders.js"></script>
+  <script src="/static/admin-partner.js"></script>
 </body>
 </html>`
 }
