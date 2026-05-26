@@ -55,10 +55,10 @@
     }
   },
 
-  // ── Cron Triggers — 매일 UTC 17:00 (KST 02:00) 만료 채팅 삭제 ─
-  "triggers": {
-    "crons": ["0 17 * * *"]
-  }
+  // ── Cron Triggers ─────────────────────────────────────────────
+  // 주의: Cloudflare Pages는 triggers 블록 미지원
+  // 만료 채팅 삭제는 /cdn-cgi/handler/scheduled 엔드포인트로 수동 호출 가능
+  // (추후 별도 Worker로 분리 예정)
 
   // Secrets (wrangler secret put 으로 설정):
   // JWT_SECRET
