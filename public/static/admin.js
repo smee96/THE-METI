@@ -297,7 +297,7 @@ function statCard(label, value, icon, color, sub) {
         <i class="fas fa-${icon} text-base"></i>
       </div>
     </div>
-    <p class="text-2xl font-bold text-gray-900">${value.toLocaleString()}</p>
+    <p class="text-2xl font-bold text-gray-900">${typeof value === 'number' ? value.toLocaleString() : value}</p>
     <p class="text-gray-500 text-sm mt-0.5">${label}</p>
     <p class="text-sm text-gray-400 mt-1">${sub}</p>
   </div>`;
@@ -1589,7 +1589,7 @@ async function loadPlanConfigs(tab = _planTab) {
   setContent(loadingSpinner())
   try {
     const [plansRes, configsRes, chargeRes] = await Promise.all([
-      axios.get('/api/v1/admin/plan-configs'),
+      axios.get('/admin/plan-configs'),
       axios.get('/admin/plan-configs/keys'),
       axios.get('/admin/point-charge-products')
     ])
@@ -1758,7 +1758,7 @@ async function updatePlanConfig(planCode, field) {
     showToast('올바른 숫자를 입력하거나 비워두세요 (무제한).', 'error'); return
   }
   try {
-    await axios.patch(`/api/v1/admin/plan-configs/${planCode}`, { [field]: value })
+    await axios.patch(`/admin/plan-configs/${planCode}`, { [field]: value })
     showToast(`${planCode} 플랜 설정이 저장되었습니다.`, 'success')
     loadPlanConfigs('plans')
   } catch (e) {

@@ -11,6 +11,8 @@ import adminJs         from '../public/static/admin.js?raw'
 import adminNfcJs      from '../public/static/admin-nfc.js?raw'
 import adminReportsJs  from '../public/static/admin-reports.js?raw'
 import adminGroupsJs   from '../public/static/admin-groups.js?raw'
+import adminOrdersJs   from '../public/static/admin-orders.js?raw'
+import adminPartnerJs  from '../public/static/admin-partner.js?raw'
 import appJs           from '../public/static/app.js?raw'
 import styleCss        from '../public/static/style.css?raw'
 
@@ -23,6 +25,8 @@ staticRouter.get('/admin.js',          (c) => c.body(adminJs,        200, JS_HEA
 staticRouter.get('/admin-nfc.js',      (c) => c.body(adminNfcJs,     200, JS_HEADERS))
 staticRouter.get('/admin-reports.js',  (c) => c.body(adminReportsJs, 200, JS_HEADERS))
 staticRouter.get('/admin-groups.js',   (c) => c.body(adminGroupsJs,  200, JS_HEADERS))
+staticRouter.get('/admin-orders.js',   (c) => c.body(adminOrdersJs,  200, JS_HEADERS))
+staticRouter.get('/admin-partner.js',  (c) => c.body(adminPartnerJs, 200, JS_HEADERS))
 staticRouter.get('/app.js',            (c) => c.body(appJs,          200, JS_HEADERS))
 staticRouter.get('/style.css',         (c) => c.body(styleCss,       200, CSS_HEADERS))
 
