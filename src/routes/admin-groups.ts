@@ -278,6 +278,208 @@ groupDetail.get('/point-history', async (c) => {
   }))
 })
 
+// ── 그룹별 행사 목록 ──────────────────────────────────────
+// GET /admin/groups/:groupId/events?page=1&status=all
+groupDetail.get('/events', async (c) => {
+  const groupId = c.req.param('groupId')
+  const status  = c.req.query('status') // upcoming | ongoing | ended | cancelled
+  const { page, limit, offset } = parsePagination(
+    c.req.query('page'),
+    c.req.query('limit'),
+    20
+  )
+
+  const conditions: string[] = ['e.group_id = ?', 'e.is_deleted = 0']
+  const bindings: unknown[]  = [groupId]
+
+  if (status && status !== 'all') {
+    conditions.push('e.status = ?')
+    bindings.push(status)
+  }
+
+  const where = `WHERE ${conditions.join(' AND ')}`
+
+  const [rows, countRow] = await Promise.all([
+    c.env.DB.prepare(`
+      SELECT
+        e.id, e.title, e.description, e.location,
+        e.start_at, e.end_at, e.status,
+        e.entry_fee, e.max_participants,
+        e.created_at, e.updated_at,
+        u.name AS organizer_name,
+        (SELECT COUNT(*) FROM event_participants ep WHERE ep.event_id = e.id) AS participant_count
+      FROM events e
+      LEFT JOIN users u ON u.id = e.organizer_id
+      ${where}
+      ORDER BY e.start_at DESC
+      LIMIT ? OFFSET ?
+    `).bind(...bindings, limit, offset).all(),
+
+    c.env.DB.prepare(`
+      SELECT COUNT(*) AS total FROM events e
+      ${where}
+    `).bind(...bindings).first<{ total: number }>(),
+  ])
+
+  return c.json(paginate(rows.results, countRow?.total ?? 0, page, limit))
+})
+
+// ── 그룹별 레슨 목록 ──────────────────────────────────────
+// GET /admin/groups/:groupId/lessons?page=1&status=all
+groupDetail.get('/lessons', async (c) => {
+  const groupId = c.req.param('groupId')
+  const status  = c.req.query('status') // scheduled | ongoing | ended | cancelled
+  const { page, limit, offset } = parsePagination(
+    c.req.query('page'),
+    c.req.query('limit'),
+    20
+  )
+
+  const conditions: string[] = ['l.group_id = ?', 'l.is_deleted = 0']
+  const bindings: unknown[]  = [groupId]
+
+  if (status && status !== 'all') {
+    conditions.push('l.status = ?')
+    bindings.push(status)
+  }
+
+  const where = `WHERE ${conditions.join(' AND ')}`
+
+  const [rows, countRow] = await Promise.all([
+    c.env.DB.prepare(`
+      SELECT
+        l.id, l.title, l.description, l.location,
+        l.start_at, l.end_at, l.status,
+        l.fee, l.max_students,
+        l.created_at, l.updated_at,
+        u.name AS instructor_name,
+        (SELECT COUNT(*) FROM lesson_enrollments le WHERE le.lesson_id = l.id) AS enrolled_count
+      FROM lessons l
+      LEFT JOIN users u ON u.id = l.instructor_id
+      ${where}
+      ORDER BY l.start_at DESC
+      LIMIT ? OFFSET ?
+    `).bind(...bindings, limit, offset).all(),
+
+    c.env.DB.prepare(`
+      SELECT COUNT(*) AS total FROM lessons l
+      ${where}
+    `).bind(...bindings).first<{ total: number }>(),
+  ])
+
+  return c.json(paginate(rows.results, countRow?.total ?? 0, page, limit))
+})
+
+// ── 그룹별 공지 목록 ──────────────────────────────────────
+// GET /admin/groups/:groupId/notices?page=1
+groupDetail.get('/notices', async (c) => {
+  const groupId = c.req.param('groupId')
+  const { page, limit, offset } = parsePagination(
+    c.req.query('page'),
+    c.req.query('limit'),
+    20
+  )
+
+  const [rows, countRow] = await Promise.all([
+    c.env.DB.prepare(`
+      SELECT
+        n.id, n.title, n.content, n.is_pinned,
+        n.created_at, n.updated_at,
+        u.name AS author_name
+      FROM group_notices n
+      LEFT JOIN users u ON u.id = n.author_id
+      WHERE n.group_id = ? AND n.is_deleted = 0
+      ORDER BY n.is_pinned DESC, n.created_at DESC
+      LIMIT ? OFFSET ?
+    `).bind(groupId, limit, offset).all(),
+
+    c.env.DB.prepare(
+      'SELECT COUNT(*) AS total FROM group_notices WHERE group_id = ? AND is_deleted = 0'
+    ).bind(groupId).first<{ total: number }>(),
+  ])
+
+  return c.json(paginate(rows.results, countRow?.total ?? 0, page, limit))
+})
+
+// ── 그룹 공지 생성 ────────────────────────────────────────
+// POST /admin/groups/:groupId/notices
+groupDetail.post(
+  '/notices',
+  zValidator('json', z.object({
+    title:     z.string().min(1).max(200),
+    content:   z.string().min(1),
+    is_pinned: z.boolean().optional().default(false),
+  })),
+  async (c) => {
+    const groupId = c.req.param('groupId')
+    const adminId = c.get('userId')
+    const { title, content, is_pinned } = c.req.valid('json')
+
+    const group = await c.env.DB.prepare(
+      'SELECT id FROM groups WHERE id = ? AND is_deleted = 0'
+    ).bind(groupId).first()
+    if (!group) return c.json(fail('그룹을 찾을 수 없습니다.'), 404)
+
+    const res = await c.env.DB.prepare(`
+      INSERT INTO group_notices (group_id, author_id, title, content, is_pinned, created_at)
+      VALUES (?, ?, ?, ?, ?, datetime('now'))
+    `).bind(groupId, adminId, title, content, is_pinned ? 1 : 0).run()
+
+    return c.json(ok({ id: res.meta.last_row_id }, '공지가 등록되었습니다.'), 201)
+  }
+)
+
+// ── 그룹 공지 수정 ────────────────────────────────────────
+// PATCH /admin/groups/:groupId/notices/:noticeId
+groupDetail.patch(
+  '/notices/:noticeId',
+  zValidator('json', z.object({
+    title:     z.string().min(1).max(200).optional(),
+    content:   z.string().min(1).optional(),
+    is_pinned: z.boolean().optional(),
+  })),
+  async (c) => {
+    const groupId  = c.req.param('groupId')
+    const noticeId = c.req.param('noticeId')
+    const body     = c.req.valid('json')
+
+    const notice = await c.env.DB.prepare(
+      'SELECT id FROM group_notices WHERE id = ? AND group_id = ? AND is_deleted = 0'
+    ).bind(noticeId, groupId).first()
+    if (!notice) return c.json(fail('공지를 찾을 수 없습니다.'), 404)
+
+    const fields: string[] = ['updated_at = datetime(\'now\')']
+    const vals: unknown[]  = []
+    if (body.title     !== undefined) { fields.push('title = ?');     vals.push(body.title) }
+    if (body.content   !== undefined) { fields.push('content = ?');   vals.push(body.content) }
+    if (body.is_pinned !== undefined) { fields.push('is_pinned = ?'); vals.push(body.is_pinned ? 1 : 0) }
+
+    await c.env.DB.prepare(
+      `UPDATE group_notices SET ${fields.join(', ')} WHERE id = ?`
+    ).bind(...vals, noticeId).run()
+
+    return c.json(ok(null, '공지가 수정되었습니다.'))
+  }
+)
+
+// ── 그룹 공지 삭제 ────────────────────────────────────────
+// DELETE /admin/groups/:groupId/notices/:noticeId
+groupDetail.delete('/notices/:noticeId', async (c) => {
+  const groupId  = c.req.param('groupId')
+  const noticeId = c.req.param('noticeId')
+
+  const notice = await c.env.DB.prepare(
+    'SELECT id FROM group_notices WHERE id = ? AND group_id = ? AND is_deleted = 0'
+  ).bind(noticeId, groupId).first()
+  if (!notice) return c.json(fail('공지를 찾을 수 없습니다.'), 404)
+
+  await c.env.DB.prepare(
+    'UPDATE group_notices SET is_deleted = 1, updated_at = datetime(\'now\') WHERE id = ?'
+  ).bind(noticeId).run()
+
+  return c.json(ok(null, '공지가 삭제되었습니다.'))
+})
+
 // ── 그룹 포인트 직접 지급/차감 ───────────────────────────
 // POST /admin/groups/:groupId/points
 groupDetail.post(

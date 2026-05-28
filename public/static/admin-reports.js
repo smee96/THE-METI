@@ -114,8 +114,17 @@ async function loadReports(page = 1, status = 'pending') {
     setContent(`
       <div class="space-y-3">
 
-        <!-- 상태 탭 -->
-        <div class="flex gap-2 flex-wrap">${tabsHtml}</div>
+        <!-- 상태 탭 + 통계 토글 -->
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <div class="flex gap-2 flex-wrap">${tabsHtml}</div>
+          <button onclick="_toggleReportsStats()"
+            class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 text-sm rounded-lg hover:bg-indigo-100 font-medium transition border border-indigo-200">
+            <i class="fas fa-chart-bar"></i> 통계
+          </button>
+        </div>
+
+        <!-- 통계 패널 (토글) -->
+        <div id="reports-stats-panel" class="${_reportsChartVisible ? '' : 'hidden'}"></div>
 
         <!-- 대상 유형 필터 -->
         <div class="flex gap-1.5 flex-wrap items-center">
@@ -248,6 +257,25 @@ async function showReportDetail(id) {
 
 // ── 상세 액션 패널 ────────────────────────────────────────
 function reportDetailActions(r) {
+  // 유저 대상 신고일 때 계정 제재 버튼 추가
+  const userSanctionBtn = r.target_type === 'user' ? `
+    <div class="border rounded-xl p-3 space-y-2 bg-red-50 border-red-200 mt-2" id="user-sanction-area-${r.id}">
+      <p class="text-xs font-semibold text-red-700 uppercase">
+        <i class="fas fa-user-slash mr-1"></i>유저 계정 제재
+      </p>
+      <div class="flex gap-2">
+        <button onclick="suspendReportedUser(${r.id},'suspend')"
+          class="flex-1 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 font-medium">
+          <i class="fas fa-ban mr-1"></i>계정 정지
+        </button>
+        <button onclick="suspendReportedUser(${r.id},'activate')"
+          class="flex-1 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200 font-medium">
+          <i class="fas fa-check-circle mr-1"></i>계정 정상화
+        </button>
+      </div>
+    </div>
+  ` : '';
+
   if (r.status === 'pending') {
     return `
       <div class="border rounded-xl p-3 space-y-2 bg-blue-50 border-blue-200">
@@ -267,6 +295,7 @@ function reportDetailActions(r) {
           </button>
         </div>
       </div>
+      ${userSanctionBtn}
     `;
   }
 
@@ -285,6 +314,15 @@ function reportDetailActions(r) {
           </button>
         </div>
       </div>
+      ${userSanctionBtn}
+    `;
+  }
+
+  // 완료/기각 상태에서도 유저 제재는 허용
+  if (r.target_type === 'user') {
+    return `
+      <p class="text-center text-sm text-gray-400 py-2">처리 완료된 신고입니다.</p>
+      ${userSanctionBtn}
     `;
   }
 
@@ -337,12 +375,15 @@ function reportTargetInfo(type, info) {
   }
 
   if (type === 'user') {
+    const isActive = info.is_active === 1 || info.is_active === true || info.status === 'active';
     return `
       <div class="space-y-1">
         <div class="flex justify-between"><span class="text-gray-500">이름</span><span class="font-medium">${escHtml(info.name)}</span></div>
         <div class="flex justify-between"><span class="text-gray-500">이메일</span><span>${escHtml(info.email)}</span></div>
         <div class="flex justify-between"><span class="text-gray-500">계정상태</span>
-          <span class="${info.status === 'active' ? 'text-green-600' : 'text-red-500'}">${info.status === 'active' ? '활성' : '정지'}</span>
+          <span class="${isActive ? 'text-green-600 font-medium' : 'text-red-500 font-medium'}">
+            ${isActive ? '✅ 정상' : '🚫 정지'}
+          </span>
         </div>
       </div>
     `;
@@ -403,4 +444,46 @@ function reportTargetBadge(type) {
   };
   const [cls, label] = map[type] || ['bg-gray-100 text-gray-600', type];
   return `<span class="px-2 py-0.5 text-xs rounded-full font-medium ${cls}">${label}</span>`;
+}
+
+// ── 신고된 유저 계정 정지/정상화 ─────────────────────────
+async function suspendReportedUser(reportId, action) {
+  const actionLabel = action === 'suspend' ? '계정을 정지' : '계정을 정상화';
+  const warningMsg  = action === 'suspend'
+    ? '\n\n⚠️ 해당 유저는 앱 로그인이 불가능해집니다.'
+    : '';
+  if (!confirm(`신고된 유저의 ${actionLabel}하시겠습니까?${warningMsg}`)) return;
+
+  try {
+    const { data } = await axios.post(`/admin/reports/${reportId}/user-action`, { action });
+    showToast(data.message || '처리되었습니다.', 'success');
+    // 모달 새로고침 (상세 재로드)
+    document.getElementById('report-modal')?.remove();
+    loadReports(_reportsPage, _reportsStatus);
+  } catch (err) {
+    const msg = err.response?.data?.message || '처리에 실패했습니다.';
+    showToast(msg, 'error');
+  }
+}
+
+// ── 통계 패널 토글 ────────────────────────────────────────
+function _toggleReportsStats() {
+  _reportsChartVisible = !_reportsChartVisible;
+  const panel = document.getElementById('reports-stats-panel');
+  if (!panel) return;
+
+  if (_reportsChartVisible) {
+    panel.classList.remove('hidden');
+    // Chart.js CDN 동적 로드 (없으면)
+    if (typeof Chart === 'undefined') {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+      script.onload = () => _loadReportsStats();
+      document.head.appendChild(script);
+    } else {
+      _loadReportsStats();
+    }
+  } else {
+    panel.classList.add('hidden');
+  }
 }

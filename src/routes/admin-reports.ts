@@ -164,23 +164,99 @@ reports.patch(
   }
 )
 
-// ── 상태별 카운트 요약 ────────────────────────────────────
+// ── 신고 대상 유저 계정 정지/정상화 ──────────────────────
+// POST /admin/reports/:id/user-action
+// 신고 대상이 user 타입일 때만 사용 가능
+reports.post(
+  '/:id/user-action',
+  zValidator('json', z.object({
+    action: z.enum(['suspend', 'activate']),  // suspend: 정지, activate: 정상화
+    reason: z.string().max(500).optional(),
+  })),
+  async (c) => {
+    const id      = c.req.param('id')
+    const adminId = c.get('userId')
+    const { action, reason } = c.req.valid('json')
+
+    // 신고 조회 및 target_type 확인
+    const report = await c.env.DB.prepare(
+      'SELECT id, target_type, target_id, status FROM reports WHERE id = ?'
+    ).bind(id).first<{ id: number; target_type: string; target_id: number; status: string }>()
+
+    if (!report) return c.json(fail('존재하지 않는 신고입니다.'), 404)
+    if (report.target_type !== 'user') {
+      return c.json(fail('유저 신고 건에만 계정 제재를 적용할 수 있습니다.'), 400)
+    }
+
+    // 대상 유저 확인
+    const targetUser = await c.env.DB.prepare(
+      'SELECT id, name, is_active FROM users WHERE id = ? AND is_deleted = 0'
+    ).bind(report.target_id).first<{ id: number; name: string; is_active: number }>()
+
+    if (!targetUser) return c.json(fail('대상 유저를 찾을 수 없습니다.'), 404)
+
+    const newIsActive = action === 'activate' ? 1 : 0
+
+    await c.env.DB.prepare(
+      `UPDATE users SET is_active = ?, updated_at = datetime('now') WHERE id = ?`
+    ).bind(newIsActive, report.target_id).run()
+
+    // 신고 상태를 resolved로 자동 업데이트 (정지 처리 시)
+    if (action === 'suspend' && ['pending', 'reviewed'].includes(report.status)) {
+      await c.env.DB.prepare(`
+        UPDATE reports
+        SET status = 'resolved', reviewed_by = ?, reviewed_at = datetime('now')
+        WHERE id = ?
+      `).bind(adminId, id).run()
+    }
+
+    const msg = action === 'suspend'
+      ? `${targetUser.name} 계정이 정지되었습니다.`
+      : `${targetUser.name} 계정이 정상화되었습니다.`
+
+    return c.json(ok({ user_id: report.target_id, is_active: newIsActive }, msg))
+  }
+)
+
+// ── 상태별 + 대상유형별 카운트 요약 ──────────────────────
 // GET /admin/reports/stats
 reports.get('/stats', async (c) => {
-  const rows = await c.env.DB.prepare(`
-    SELECT status, COUNT(*) AS cnt
-    FROM reports
-    GROUP BY status
-  `).all<{ status: string; cnt: number }>()
+  const [statusRows, typeRows, trendRows] = await Promise.all([
+    // 상태별 카운트
+    c.env.DB.prepare(`
+      SELECT status, COUNT(*) AS cnt FROM reports GROUP BY status
+    `).all<{ status: string; cnt: number }>(),
 
-  const stats: Record<string, number> = {
+    // 대상 유형별 카운트
+    c.env.DB.prepare(`
+      SELECT target_type, COUNT(*) AS cnt FROM reports GROUP BY target_type
+    `).all<{ target_type: string; cnt: number }>(),
+
+    // 최근 7일 일별 신고 수
+    c.env.DB.prepare(`
+      SELECT
+        date(created_at) AS day,
+        COUNT(*) AS cnt
+      FROM reports
+      WHERE created_at >= date('now', '-6 days')
+      GROUP BY day
+      ORDER BY day ASC
+    `).all<{ day: string; cnt: number }>(),
+  ])
+
+  const byStatus: Record<string, number> = {
     pending: 0, reviewed: 0, resolved: 0, dismissed: 0,
   }
-  for (const r of rows.results) {
-    if (r.status in stats) stats[r.status] = r.cnt
+  for (const r of statusRows.results) {
+    if (r.status in byStatus) byStatus[r.status] = r.cnt
   }
 
-  return c.json(ok(stats))
+  const byType: Record<string, number> = { user: 0, card: 0, group: 0, message: 0 }
+  for (const r of typeRows.results) {
+    byType[r.target_type] = r.cnt
+  }
+
+  return c.json(ok({ by_status: byStatus, by_type: byType, trend: trendRows.results }))
 })
 
 export default reports

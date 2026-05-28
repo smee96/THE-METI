@@ -3,25 +3,38 @@
  * loadGroupDetailPage(groupId) 호출 → setContent()로 전체 페이지 렌더
  *
  * 탭 구성:
- *  [멤버]   — 멤버 목록 / 역할 변경 / 강제 탈퇴 / 가입 대기 승인
- *  [포인트] — 그룹 포인트 잔액 / 지급·차감 / 내역
+ *  [멤버]    — 멤버 목록 / 역할 변경 / 강제 탈퇴 / 가입 대기 승인
+ *  [포인트]  — 그룹 포인트 잔액 / 지급·차감 / 내역
+ *  [행사]    — 그룹 행사 목록 / 상세 보기
+ *  [레슨]    — 그룹 레슨 목록 / 상세 보기
+ *  [공지]    — 그룹 공지 목록 / 작성·수정·삭제
  *  [그룹 정보] — 그룹 기본 정보 (읽기 전용)
  */
 
 // ── 상태 전역 ─────────────────────────────────────────────
-let _grpId           = null;
-let _grpMemberStatus = 'active';
-let _grpMemberPage   = 1;
-let _grpPtPage       = 1;
-let _grpCurrentTab   = 'members';
+let _grpId             = null;
+let _grpMemberStatus   = 'active';
+let _grpMemberPage     = 1;
+let _grpPtPage         = 1;
+let _grpEventsPage     = 1;
+let _grpEventsStatus   = 'all';
+let _grpLessonsPage    = 1;
+let _grpLessonsStatus  = 'all';
+let _grpNoticesPage    = 1;
+let _grpCurrentTab     = 'members';
 
 // ── 그룹 상세 페이지 진입점 ───────────────────────────────
 async function loadGroupDetailPage(groupId) {
-  _grpId           = groupId;
-  _grpMemberStatus = 'active';
-  _grpMemberPage   = 1;
-  _grpPtPage       = 1;
-  _grpCurrentTab   = 'members';
+  _grpId            = groupId;
+  _grpMemberStatus  = 'active';
+  _grpMemberPage    = 1;
+  _grpPtPage        = 1;
+  _grpEventsPage    = 1;
+  _grpEventsStatus  = 'all';
+  _grpLessonsPage   = 1;
+  _grpLessonsStatus = 'all';
+  _grpNoticesPage   = 1;
+  _grpCurrentTab    = 'members';
 
   // 페이지 뼈대 렌더 (탭 + 컨텐츠 영역)
   setContent(`
@@ -44,11 +57,11 @@ async function loadGroupDetailPage(groupId) {
       </div>
 
       <!-- 탭 바 -->
-      <div class="border-b border-gray-200">
-        <nav class="flex gap-0">
-          ${[['members','멤버'],['points','포인트'],['info','그룹 정보']].map(([t,l]) => `
+      <div class="border-b border-gray-200 overflow-x-auto">
+        <nav class="flex gap-0 min-w-max">
+          ${[['members','멤버'],['points','포인트'],['events','행사'],['lessons','레슨'],['notices','공지'],['info','그룹 정보']].map(([t,l]) => `
             <button id="grptab-btn-${t}" onclick="switchGroupTab('${t}')"
-              class="px-5 py-3 text-sm font-medium border-b-2 transition ${t === 'members'
+              class="px-4 py-3 text-sm font-medium border-b-2 transition whitespace-nowrap ${t === 'members'
                 ? 'border-blue-600 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'}">
               ${l}
@@ -61,8 +74,11 @@ async function loadGroupDetailPage(groupId) {
       <div id="grptab-members" class="min-h-64">
         ${loadingSpinner()}
       </div>
-      <div id="grptab-points"  class="min-h-64 hidden"></div>
-      <div id="grptab-info"    class="min-h-64 hidden"></div>
+      <div id="grptab-points"   class="min-h-64 hidden"></div>
+      <div id="grptab-events"   class="min-h-64 hidden"></div>
+      <div id="grptab-lessons"  class="min-h-64 hidden"></div>
+      <div id="grptab-notices"  class="min-h-64 hidden"></div>
+      <div id="grptab-info"     class="min-h-64 hidden"></div>
     </div>
   `);
 
@@ -84,7 +100,7 @@ async function loadGroupDetailPage(groupId) {
 function switchGroupTab(tab) {
   _grpCurrentTab = tab;
 
-  ['members', 'points', 'info'].forEach(t => {
+  ['members', 'points', 'events', 'lessons', 'notices', 'info'].forEach(t => {
     document.getElementById(`grptab-${t}`)?.classList.toggle('hidden', t !== tab);
     const btn = document.getElementById(`grptab-btn-${t}`);
     if (btn) {
@@ -100,6 +116,18 @@ function switchGroupTab(tab) {
   if (tab === 'points' && _grpId) {
     const el = document.getElementById('grptab-points');
     if (el && el.innerHTML.trim() === '') _loadGroupPoints(_grpId, 1);
+  }
+  if (tab === 'events' && _grpId) {
+    const el = document.getElementById('grptab-events');
+    if (el && el.innerHTML.trim() === '') _loadGroupEvents(_grpId, 'all', 1);
+  }
+  if (tab === 'lessons' && _grpId) {
+    const el = document.getElementById('grptab-lessons');
+    if (el && el.innerHTML.trim() === '') _loadGroupLessons(_grpId, 'all', 1);
+  }
+  if (tab === 'notices' && _grpId) {
+    const el = document.getElementById('grptab-notices');
+    if (el && el.innerHTML.trim() === '') _loadGroupNotices(_grpId, 1);
   }
   if (tab === 'info' && _grpId) {
     const el = document.getElementById('grptab-info');
@@ -478,6 +506,398 @@ async function submitGroupPoints(groupId) {
     _loadGroupPoints(groupId, 1);
   } catch (err) {
     showToast(err.response?.data?.message || '처리에 실패했습니다.', 'error');
+  }
+}
+
+// ── 행사 탭 ───────────────────────────────────────────────
+async function _loadGroupEvents(groupId, status = 'all', page = 1) {
+  _grpEventsStatus = status;
+  _grpEventsPage   = page;
+
+  const el = document.getElementById('grptab-events');
+  if (!el) return;
+  el.innerHTML = loadingSpinner();
+
+  try {
+    const params = new URLSearchParams({ page, limit: 20 });
+    if (status !== 'all') params.set('status', status);
+
+    const { data } = await axios.get(`/admin/groups/${groupId}/events?${params}`);
+    const events     = data.data        || [];
+    const pagination = data.pagination;
+
+    const statusTabs = [
+      { key: 'all',       label: '전체' },
+      { key: 'upcoming',  label: '예정' },
+      { key: 'ongoing',   label: '진행중' },
+      { key: 'ended',     label: '종료' },
+      { key: 'cancelled', label: '취소' },
+    ];
+
+    const tabsHtml = statusTabs.map(t => {
+      const active = status === t.key;
+      const cls = active
+        ? 'bg-blue-600 text-white border-blue-600'
+        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50';
+      return `<button onclick="_loadGroupEvents(${groupId},'${t.key}',1)"
+        class="px-3 py-1.5 rounded-lg text-xs font-medium transition border ${cls}">${t.label}</button>`;
+    }).join('');
+
+    const eventStatusBadge = (s) => {
+      const map = {
+        upcoming:  ['bg-blue-100 text-blue-700',   '예정'],
+        ongoing:   ['bg-green-100 text-green-700', '진행중'],
+        ended:     ['bg-gray-100 text-gray-500',   '종료'],
+        cancelled: ['bg-red-100 text-red-500',     '취소'],
+      };
+      const [cls, label] = map[s] || ['bg-gray-100 text-gray-500', s];
+      return `<span class="px-1.5 py-0.5 text-xs rounded-full font-medium ${cls}">${label}</span>`;
+    };
+
+    const rowsHtml = events.length === 0
+      ? `<tr><td colspan="6" class="px-4 py-10 text-center text-gray-400 text-sm">행사가 없습니다.</td></tr>`
+      : events.map(e => `
+        <tr class="hover:bg-gray-50 transition">
+          <td class="px-4 py-3">
+            <p class="text-sm font-medium text-gray-900">${escHtml(e.title)}</p>
+            ${e.location ? `<p class="text-xs text-gray-400">${escHtml(e.location)}</p>` : ''}
+          </td>
+          <td class="px-4 py-3 text-xs text-gray-500">${escHtml(e.organizer_name ?? '-')}</td>
+          <td class="px-4 py-3 text-xs text-gray-500">
+            ${e.start_at ? formatDate(e.start_at) : '-'}
+            ${e.end_at ? ' ~ ' + formatDate(e.end_at) : ''}
+          </td>
+          <td class="px-4 py-3 text-xs text-gray-600">
+            ${e.participant_count ?? 0}명${e.max_participants ? ' / ' + e.max_participants + '명' : ''}
+          </td>
+          <td class="px-4 py-3 text-xs text-gray-600">
+            ${e.entry_fee ? e.entry_fee.toLocaleString() + 'P' : '무료'}
+          </td>
+          <td class="px-4 py-3">${eventStatusBadge(e.status)}</td>
+        </tr>
+      `).join('');
+
+    const cardsHtml = events.length === 0
+      ? `<p class="text-center text-gray-400 text-sm py-10">행사가 없습니다.</p>`
+      : events.map(e => `
+        <div class="bg-white border rounded-xl p-3 shadow-sm">
+          <div class="flex items-start justify-between mb-1">
+            <p class="font-medium text-sm text-gray-900">${escHtml(e.title)}</p>
+            ${eventStatusBadge(e.status)}
+          </div>
+          <p class="text-xs text-gray-400 mb-1">${escHtml(e.organizer_name ?? '')} · ${e.start_at ? formatDate(e.start_at) : '-'}</p>
+          <p class="text-xs text-gray-500">참가: ${e.participant_count ?? 0}명 · ${e.entry_fee ? e.entry_fee.toLocaleString() + 'P' : '무료'}</p>
+        </div>
+      `).join('');
+
+    const pgHtml = _grpPagination(pagination,
+      (p) => `_loadGroupEvents(${groupId},'${status}',${p})`);
+
+    el.innerHTML = `
+      <div class="space-y-4">
+        <div class="flex gap-1.5 flex-wrap">${tabsHtml}</div>
+        <div class="hidden md:block bg-white rounded-2xl border overflow-hidden shadow-sm">
+          <table class="w-full">
+            <thead class="bg-gray-50 border-b">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">행사명</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">주최자</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">일정</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">참가자</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">참가비</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">상태</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">${rowsHtml}</tbody>
+          </table>
+        </div>
+        <div class="md:hidden space-y-2">${cardsHtml}</div>
+        ${pgHtml}
+      </div>
+    `;
+  } catch {
+    el.innerHTML = errorBox('행사 목록을 불러오지 못했습니다.');
+  }
+}
+
+// ── 레슨 탭 ───────────────────────────────────────────────
+async function _loadGroupLessons(groupId, status = 'all', page = 1) {
+  _grpLessonsStatus = status;
+  _grpLessonsPage   = page;
+
+  const el = document.getElementById('grptab-lessons');
+  if (!el) return;
+  el.innerHTML = loadingSpinner();
+
+  try {
+    const params = new URLSearchParams({ page, limit: 20 });
+    if (status !== 'all') params.set('status', status);
+
+    const { data } = await axios.get(`/admin/groups/${groupId}/lessons?${params}`);
+    const lessons    = data.data        || [];
+    const pagination = data.pagination;
+
+    const statusTabs = [
+      { key: 'all',       label: '전체' },
+      { key: 'scheduled', label: '예정' },
+      { key: 'ongoing',   label: '진행중' },
+      { key: 'ended',     label: '종료' },
+      { key: 'cancelled', label: '취소' },
+    ];
+
+    const tabsHtml = statusTabs.map(t => {
+      const active = status === t.key;
+      const cls = active
+        ? 'bg-indigo-600 text-white border-indigo-600'
+        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50';
+      return `<button onclick="_loadGroupLessons(${groupId},'${t.key}',1)"
+        class="px-3 py-1.5 rounded-lg text-xs font-medium transition border ${cls}">${t.label}</button>`;
+    }).join('');
+
+    const lessonStatusBadge = (s) => {
+      const map = {
+        scheduled: ['bg-blue-100 text-blue-700',     '예정'],
+        ongoing:   ['bg-green-100 text-green-700',   '진행중'],
+        ended:     ['bg-gray-100 text-gray-500',     '종료'],
+        cancelled: ['bg-red-100 text-red-500',       '취소'],
+      };
+      const [cls, label] = map[s] || ['bg-gray-100 text-gray-500', s];
+      return `<span class="px-1.5 py-0.5 text-xs rounded-full font-medium ${cls}">${label}</span>`;
+    };
+
+    const rowsHtml = lessons.length === 0
+      ? `<tr><td colspan="6" class="px-4 py-10 text-center text-gray-400 text-sm">레슨이 없습니다.</td></tr>`
+      : lessons.map(l => `
+        <tr class="hover:bg-gray-50 transition">
+          <td class="px-4 py-3">
+            <p class="text-sm font-medium text-gray-900">${escHtml(l.title)}</p>
+            ${l.location ? `<p class="text-xs text-gray-400">${escHtml(l.location)}</p>` : ''}
+          </td>
+          <td class="px-4 py-3 text-xs text-gray-500">${escHtml(l.instructor_name ?? '-')}</td>
+          <td class="px-4 py-3 text-xs text-gray-500">
+            ${l.start_at ? formatDate(l.start_at) : '-'}
+            ${l.end_at ? ' ~ ' + formatDate(l.end_at) : ''}
+          </td>
+          <td class="px-4 py-3 text-xs text-gray-600">
+            ${l.enrolled_count ?? 0}명${l.max_students ? ' / ' + l.max_students + '명' : ''}
+          </td>
+          <td class="px-4 py-3 text-xs text-gray-600">
+            ${l.fee ? l.fee.toLocaleString() + 'P' : '무료'}
+          </td>
+          <td class="px-4 py-3">${lessonStatusBadge(l.status)}</td>
+        </tr>
+      `).join('');
+
+    const cardsHtml = lessons.length === 0
+      ? `<p class="text-center text-gray-400 text-sm py-10">레슨이 없습니다.</p>`
+      : lessons.map(l => `
+        <div class="bg-white border rounded-xl p-3 shadow-sm">
+          <div class="flex items-start justify-between mb-1">
+            <p class="font-medium text-sm text-gray-900">${escHtml(l.title)}</p>
+            ${lessonStatusBadge(l.status)}
+          </div>
+          <p class="text-xs text-gray-400 mb-1">${escHtml(l.instructor_name ?? '')} · ${l.start_at ? formatDate(l.start_at) : '-'}</p>
+          <p class="text-xs text-gray-500">수강: ${l.enrolled_count ?? 0}명 · ${l.fee ? l.fee.toLocaleString() + 'P' : '무료'}</p>
+        </div>
+      `).join('');
+
+    const pgHtml = _grpPagination(pagination,
+      (p) => `_loadGroupLessons(${groupId},'${status}',${p})`);
+
+    el.innerHTML = `
+      <div class="space-y-4">
+        <div class="flex gap-1.5 flex-wrap">${tabsHtml}</div>
+        <div class="hidden md:block bg-white rounded-2xl border overflow-hidden shadow-sm">
+          <table class="w-full">
+            <thead class="bg-gray-50 border-b">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">레슨명</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">강사</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">일정</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">수강자</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">수강료</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">상태</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">${rowsHtml}</tbody>
+          </table>
+        </div>
+        <div class="md:hidden space-y-2">${cardsHtml}</div>
+        ${pgHtml}
+      </div>
+    `;
+  } catch {
+    el.innerHTML = errorBox('레슨 목록을 불러오지 못했습니다.');
+  }
+}
+
+// ── 공지 탭 ───────────────────────────────────────────────
+async function _loadGroupNotices(groupId, page = 1) {
+  _grpNoticesPage = page;
+
+  const el = document.getElementById('grptab-notices');
+  if (!el) return;
+  el.innerHTML = loadingSpinner();
+
+  try {
+    const { data } = await axios.get(
+      `/admin/groups/${groupId}/notices?page=${page}&limit=20`
+    );
+    const notices    = data.data        || [];
+    const pagination = data.pagination;
+
+    const noticeRowHtml = (n) => `
+      <div class="bg-white border rounded-xl p-4 shadow-sm space-y-2" id="notice-row-${n.id}">
+        <div class="flex items-start justify-between gap-2">
+          <div class="flex items-center gap-2 flex-1 min-w-0">
+            ${n.is_pinned ? '<span class="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded font-medium flex-shrink-0">📌 고정</span>' : ''}
+            <p class="text-sm font-semibold text-gray-900 truncate">${escHtml(n.title)}</p>
+          </div>
+          <div class="flex gap-1 flex-shrink-0">
+            <button onclick="_editNoticeInline(${groupId}, ${n.id})"
+              class="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 font-medium">수정</button>
+            <button onclick="_deleteGroupNotice(${groupId}, ${n.id})"
+              class="text-xs px-2 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 font-medium">삭제</button>
+          </div>
+        </div>
+        <p class="text-sm text-gray-600 whitespace-pre-wrap line-clamp-3">${escHtml(n.content)}</p>
+        <p class="text-xs text-gray-400">${escHtml(n.author_name ?? '-')} · ${formatDateTime(n.created_at)}</p>
+      </div>
+    `;
+
+    const pgHtml = _grpPagination(pagination,
+      (p) => `_loadGroupNotices(${groupId},${p})`);
+
+    el.innerHTML = `
+      <div class="space-y-4 max-w-2xl">
+        <!-- 공지 작성 폼 -->
+        <div class="bg-white border rounded-2xl p-4 shadow-sm space-y-3">
+          <p class="text-sm font-semibold text-gray-700">새 공지 작성</p>
+          <input id="notice-title-${groupId}" type="text" placeholder="제목 *"
+            class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-300 outline-none">
+          <textarea id="notice-content-${groupId}" rows="4" placeholder="내용 *"
+            class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-300 outline-none resize-none"></textarea>
+          <div class="flex items-center justify-between">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input id="notice-pin-${groupId}" type="checkbox" class="rounded">
+              <span class="text-sm text-gray-600">고정 공지</span>
+            </label>
+            <button onclick="_submitGroupNotice(${groupId})"
+              class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 font-medium transition">
+              <i class="fas fa-plus mr-1"></i>공지 등록
+            </button>
+          </div>
+        </div>
+
+        <!-- 공지 목록 -->
+        <div>
+          <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+            공지 목록 (${data.pagination?.total ?? notices.length}건)
+          </h4>
+          <div id="notices-list-${groupId}" class="space-y-2">
+            ${notices.length === 0
+              ? `<p class="text-center text-gray-400 text-sm py-10">등록된 공지가 없습니다.</p>`
+              : notices.map(noticeRowHtml).join('')}
+          </div>
+          ${pgHtml}
+        </div>
+      </div>
+    `;
+  } catch {
+    el.innerHTML = errorBox('공지 목록을 불러오지 못했습니다.');
+  }
+}
+
+// ── 공지 등록 ─────────────────────────────────────────────
+async function _submitGroupNotice(groupId) {
+  const title   = document.getElementById(`notice-title-${groupId}`)?.value?.trim();
+  const content = document.getElementById(`notice-content-${groupId}`)?.value?.trim();
+  const pinned  = document.getElementById(`notice-pin-${groupId}`)?.checked ?? false;
+
+  if (!title)   { showToast('제목을 입력하세요.', 'error'); return; }
+  if (!content) { showToast('내용을 입력하세요.', 'error'); return; }
+
+  try {
+    const { data } = await axios.post(`/admin/groups/${groupId}/notices`, {
+      title, content, is_pinned: pinned,
+    });
+    showToast(data.message || '공지가 등록되었습니다.', 'success');
+    _loadGroupNotices(groupId, 1);
+  } catch (err) {
+    showToast(err.response?.data?.message || '공지 등록에 실패했습니다.', 'error');
+  }
+}
+
+// ── 공지 인라인 수정 ──────────────────────────────────────
+async function _editNoticeInline(groupId, noticeId) {
+  // 현재 공지 정보 가져오기 (목록 행 DOM에서 추출)
+  const row = document.getElementById(`notice-row-${noticeId}`);
+  if (!row) return;
+
+  // 이미 수정 폼이 열려있으면 취소
+  if (row.querySelector('.notice-edit-form')) {
+    _loadGroupNotices(groupId, _grpNoticesPage);
+    return;
+  }
+
+  const titleEl   = row.querySelector('p.font-semibold');
+  const contentEl = row.querySelector('p.text-gray-600');
+  const isPinned  = !!row.querySelector('span.bg-amber-100');
+  const currentTitle   = titleEl?.textContent?.trim() ?? '';
+  const currentContent = contentEl?.textContent?.trim() ?? '';
+
+  row.innerHTML = `
+    <div class="notice-edit-form space-y-2">
+      <p class="text-xs font-semibold text-gray-500 uppercase">공지 수정</p>
+      <input id="edit-notice-title-${noticeId}" type="text" value="${escHtml(currentTitle)}"
+        class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-300 outline-none">
+      <textarea id="edit-notice-content-${noticeId}" rows="4"
+        class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-300 outline-none resize-none">${escHtml(currentContent)}</textarea>
+      <div class="flex items-center justify-between">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input id="edit-notice-pin-${noticeId}" type="checkbox" class="rounded" ${isPinned ? 'checked' : ''}>
+          <span class="text-sm text-gray-600">고정 공지</span>
+        </label>
+        <div class="flex gap-2">
+          <button onclick="_loadGroupNotices(${groupId},${_grpNoticesPage})"
+            class="text-xs px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 font-medium">취소</button>
+          <button onclick="_saveGroupNotice(${groupId},${noticeId})"
+            class="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">저장</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ── 공지 수정 저장 ────────────────────────────────────────
+async function _saveGroupNotice(groupId, noticeId) {
+  const title    = document.getElementById(`edit-notice-title-${noticeId}`)?.value?.trim();
+  const content  = document.getElementById(`edit-notice-content-${noticeId}`)?.value?.trim();
+  const isPinned = document.getElementById(`edit-notice-pin-${noticeId}`)?.checked ?? false;
+
+  if (!title)   { showToast('제목을 입력하세요.', 'error'); return; }
+  if (!content) { showToast('내용을 입력하세요.', 'error'); return; }
+
+  try {
+    const { data } = await axios.patch(`/admin/groups/${groupId}/notices/${noticeId}`, {
+      title, content, is_pinned: isPinned,
+    });
+    showToast(data.message || '수정되었습니다.', 'success');
+    _loadGroupNotices(groupId, _grpNoticesPage);
+  } catch (err) {
+    showToast(err.response?.data?.message || '수정에 실패했습니다.', 'error');
+  }
+}
+
+// ── 공지 삭제 ─────────────────────────────────────────────
+async function _deleteGroupNotice(groupId, noticeId) {
+  if (!confirm('이 공지를 삭제하시겠습니까?')) return;
+  try {
+    const { data } = await axios.delete(`/admin/groups/${groupId}/notices/${noticeId}`);
+    showToast(data.message || '삭제되었습니다.', 'success');
+    _loadGroupNotices(groupId, _grpNoticesPage);
+  } catch (err) {
+    showToast(err.response?.data?.message || '삭제에 실패했습니다.', 'error');
   }
 }
 

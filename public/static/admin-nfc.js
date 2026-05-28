@@ -10,7 +10,38 @@
 let _nfcStatus = 'all';
 let _nfcPage   = 1;
 
+// 일괄 배송 처리용 로컬 상태 (id → { carrier, tracking_no })
+let _nfcBulkRows = [];
+
 function loadNfcCardsPage(page) { loadNfcCards(page, _nfcStatus); }
+
+// ── 배송 현황 요약 로드 ────────────────────────────────────
+async function _loadNfcStats() {
+  try {
+    const { data } = await axios.get('/admin/nfc-cards/stats');
+    const s = data.data || {};
+    const total = (s.pending||0) + (s.approved||0) + (s.issued||0) + (s.deactivated||0);
+
+    const card = (label, val, cls) =>
+      `<div class="bg-white rounded-xl border p-3 text-center shadow-sm">
+         <p class="text-2xl font-bold ${cls}">${val}</p>
+         <p class="text-xs text-gray-500 mt-0.5">${label}</p>
+       </div>`;
+
+    const el = document.getElementById('nfc-stats-bar');
+    if (el) {
+      el.innerHTML = `
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
+          ${card('전체',    total,           'text-gray-800')}
+          ${card('대기',    s.pending||0,    'text-yellow-600')}
+          ${card('승인',    s.approved||0,   'text-blue-600')}
+          ${card('발급',    s.issued||0,     'text-green-600')}
+          ${card('비활성',  s.deactivated||0,'text-red-500')}
+        </div>
+      `;
+    }
+  } catch { /* 통계 오류는 무시 */ }
+}
 
 // ── 메인 목록 로드 ────────────────────────────────────────
 async function loadNfcCards(page = 1, status = 'all') {
@@ -67,8 +98,21 @@ async function loadNfcCards(page = 1, status = 'all') {
     setContent(`
       <div class="space-y-3">
 
-        <!-- 탭 필터 -->
-        <div class="flex gap-2 flex-wrap">${tabsHtml}</div>
+        <!-- 배송 현황 통계 카드 -->
+        <div id="nfc-stats-bar"></div>
+
+        <!-- 일괄 배송 처리 토글 버튼 -->
+        <div class="flex items-center justify-between">
+          <div class="flex gap-2 flex-wrap">${tabsHtml}</div>
+          ${status === 'issued' ? `
+          <button onclick="_toggleBulkShipping()"
+            class="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 font-medium transition">
+            <i class="fas fa-truck"></i> 일괄 배송 처리
+          </button>` : ''}
+        </div>
+
+        <!-- 일괄 배송 처리 패널 (토글) -->
+        <div id="bulk-shipping-panel" class="hidden"></div>
 
         <!-- 테이블 (데스크탑) -->
         <div class="hidden md:block bg-white rounded-xl shadow-sm border overflow-hidden">
@@ -117,6 +161,10 @@ async function loadNfcCards(page = 1, status = 'all') {
         ${renderPagination(pagination, 'loadNfcCardsPage')}
       </div>
     `);
+
+    // 통계 카드 비동기 로드
+    _loadNfcStats();
+
   } catch (err) {
     setContent(errorBox('NFC 카드 목록을 불러오지 못했습니다.'));
   }
@@ -455,4 +503,170 @@ function nfcCarrierLabel(carrier) {
     lotte: '롯데택배', epost: '우체국', etc: '기타',
   };
   return map[carrier] || carrier || '-';
+}
+
+// ── 일괄 배송 처리 패널 토글 ──────────────────────────────
+async function _toggleBulkShipping() {
+  const panel = document.getElementById('bulk-shipping-panel');
+  if (!panel) return;
+
+  // 패널이 열려있으면 닫기
+  if (!panel.classList.contains('hidden')) {
+    panel.classList.add('hidden');
+    panel.innerHTML = '';
+    return;
+  }
+
+  panel.classList.remove('hidden');
+  panel.innerHTML = `<div class="flex justify-center py-4">${loadingSpinner()}</div>`;
+
+  try {
+    // 발급(issued) 상태 중 운송장 미등록 건 조회 (최대 100건)
+    const { data } = await axios.get('/admin/nfc-cards?status=issued&limit=100&page=1');
+    const cards = (data.data || []).filter(r => !r.tracking_no);
+
+    if (cards.length === 0) {
+      panel.innerHTML = `
+        <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-center text-sm text-green-700">
+          <i class="fas fa-check-circle mr-1"></i>
+          운송장 미등록 건이 없습니다. 모든 발급 건에 운송장이 등록되어 있습니다.
+        </div>`;
+      return;
+    }
+
+    // 전역 상태에 저장
+    _nfcBulkRows = cards.map(r => ({ id: r.id, carrier: '', tracking_no: '' }));
+
+    const carrierOpts = `
+      <option value="">택배사 선택</option>
+      <option value="cjlogistics">CJ대한통운</option>
+      <option value="hanjin">한진택배</option>
+      <option value="lotte">롯데택배</option>
+      <option value="epost">우체국</option>
+      <option value="etc">기타</option>
+    `;
+
+    // 전체 일괄 적용 섹션
+    const bulkApplySection = `
+      <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-3">
+        <p class="text-xs font-semibold text-blue-700 uppercase mb-2">
+          <i class="fas fa-magic mr-1"></i>전체 일괄 적용
+        </p>
+        <div class="flex gap-2 flex-wrap">
+          <select id="bulk-all-carrier" class="px-3 py-2 text-sm border rounded-lg outline-none bg-white">
+            ${carrierOpts}
+          </select>
+          <button onclick="_applyBulkCarrierToAll()"
+            class="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 font-medium">
+            택배사 일괄 적용
+          </button>
+        </div>
+      </div>
+    `;
+
+    const rowsHtml = cards.map((r, idx) => `
+      <tr class="hover:bg-gray-50">
+        <td class="px-3 py-2">
+          <p class="text-sm font-medium text-gray-900">${escHtml(r.user_name ?? '-')}</p>
+          <p class="text-xs text-gray-400">${escHtml(r.group_name ?? '')}</p>
+        </td>
+        <td class="px-3 py-2 text-xs text-gray-500">${nfcDesignLabel(r.design_type)}</td>
+        <td class="px-3 py-2 text-xs text-gray-400">${formatDate(r.applied_at)}</td>
+        <td class="px-3 py-2">
+          <select id="bulk-carrier-${r.id}" onchange="_nfcBulkRows[${idx}].carrier=this.value"
+            class="w-full px-2 py-1.5 text-xs border rounded-lg outline-none">
+            ${carrierOpts}
+          </select>
+        </td>
+        <td class="px-3 py-2">
+          <input id="bulk-tracking-${r.id}" type="text" placeholder="운송장번호"
+            oninput="_nfcBulkRows[${idx}].tracking_no=this.value"
+            class="w-full px-2 py-1.5 text-xs border rounded-lg outline-none">
+        </td>
+      </tr>
+    `).join('');
+
+    panel.innerHTML = `
+      <div class="bg-white border rounded-2xl shadow-sm overflow-hidden">
+        <div class="flex items-center justify-between px-4 py-3 bg-gray-50 border-b">
+          <div>
+            <p class="text-sm font-semibold text-gray-800">
+              <i class="fas fa-truck mr-1.5 text-green-600"></i>일괄 배송 처리
+            </p>
+            <p class="text-xs text-gray-500 mt-0.5">운송장 미등록 ${cards.length}건 · 입력 후 [일괄 등록] 클릭</p>
+          </div>
+          <button onclick="_toggleBulkShipping()"
+            class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+        </div>
+        <div class="p-4 space-y-3">
+          ${bulkApplySection}
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50 border-b">
+                <tr>
+                  <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500">신청자</th>
+                  <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500">디자인</th>
+                  <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500">신청일</th>
+                  <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 w-36">택배사</th>
+                  <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 w-40">운송장번호</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">${rowsHtml}</tbody>
+            </table>
+          </div>
+          <div class="flex justify-end gap-2">
+            <button onclick="_toggleBulkShipping()"
+              class="px-4 py-2 text-sm bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 font-medium">취소</button>
+            <button onclick="_submitBulkShipping()"
+              class="px-5 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 font-bold transition">
+              <i class="fas fa-paper-plane mr-1"></i>일괄 등록
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  } catch {
+    panel.innerHTML = errorBox('발급 목록을 불러오지 못했습니다.');
+  }
+}
+
+// ── 택배사 전체 일괄 적용 ─────────────────────────────────
+function _applyBulkCarrierToAll() {
+  const carrier = document.getElementById('bulk-all-carrier')?.value;
+  if (!carrier) { showToast('택배사를 먼저 선택하세요.', 'error'); return; }
+  _nfcBulkRows.forEach((row, idx) => {
+    row.carrier = carrier;
+    const sel = document.getElementById(`bulk-carrier-${row.id}`);
+    if (sel) sel.value = carrier;
+  });
+  showToast('택배사가 일괄 적용되었습니다.', 'success');
+}
+
+// ── 일괄 배송 등록 제출 ───────────────────────────────────
+async function _submitBulkShipping() {
+  // DOM에서 최신값 수집
+  const items = _nfcBulkRows.map(row => ({
+    id:          row.id,
+    carrier:     document.getElementById(`bulk-carrier-${row.id}`)?.value || '',
+    tracking_no: (document.getElementById(`bulk-tracking-${row.id}`)?.value || '').trim(),
+  })).filter(item => item.carrier && item.tracking_no);
+
+  if (items.length === 0) {
+    showToast('등록할 운송장 정보가 없습니다. 택배사와 운송장번호를 입력하세요.', 'error');
+    return;
+  }
+
+  if (!confirm(`${items.length}건의 운송장을 일괄 등록하시겠습니까?`)) return;
+
+  try {
+    const { data } = await axios.post('/admin/nfc-cards/bulk-tracking', { items });
+    showToast(data.message || `${items.length}건 운송장 등록 완료`, 'success');
+    // 패널 닫고 목록 새로고침
+    const panel = document.getElementById('bulk-shipping-panel');
+    if (panel) { panel.classList.add('hidden'); panel.innerHTML = ''; }
+    loadNfcCards(_nfcPage, _nfcStatus);
+  } catch (err) {
+    const msg = err.response?.data?.message || '일괄 등록에 실패했습니다.';
+    showToast(msg, 'error');
+  }
 }

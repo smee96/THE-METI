@@ -217,6 +217,64 @@ nfc.patch(
   }
 )
 
+// ── 일괄 운송장 등록 ──────────────────────────────────────
+// POST /admin/nfc-cards/bulk-tracking
+// body: { items: [{ id, carrier, tracking_no }] }
+nfc.post(
+  '/bulk-tracking',
+  zValidator('json', z.object({
+    items: z.array(z.object({
+      id:          z.number().int().positive(),
+      carrier:     z.string().min(1),
+      tracking_no: z.string().min(1),
+    })).min(1).max(100),
+  })),
+  async (c) => {
+    const { items } = c.req.valid('json')
+
+    const now = new Date().toISOString().replace('T', ' ').slice(0, 19)
+
+    // id 목록으로 현재 상태 일괄 조회
+    const ids = items.map(i => i.id)
+    const placeholders = ids.map(() => '?').join(',')
+    const existingRows = await c.env.DB.prepare(
+      `SELECT id, status FROM nfc_physical_cards WHERE id IN (${placeholders})`
+    ).bind(...ids).all<{ id: number; status: string }>()
+
+    const existingMap = new Map(existingRows.results.map(r => [r.id, r.status]))
+
+    const succeeded: number[] = []
+    const skipped:   number[] = []
+
+    // D1은 batch를 지원하므로 모든 업데이트를 한 번에 실행
+    const stmts = items.flatMap(item => {
+      const currentStatus = existingMap.get(item.id)
+      // issued 상태이면서 운송장이 없는 것만 처리
+      if (!currentStatus || currentStatus !== 'issued') {
+        skipped.push(item.id)
+        return []
+      }
+      succeeded.push(item.id)
+      return [
+        c.env.DB.prepare(
+          `UPDATE nfc_physical_cards
+           SET tracking_no = ?, carrier = ?, shipped_at = ?, updated_at = ?
+           WHERE id = ? AND status = 'issued'`
+        ).bind(item.tracking_no, item.carrier, now, now, item.id),
+      ]
+    })
+
+    if (stmts.length > 0) {
+      await c.env.DB.batch(stmts)
+    }
+
+    return c.json(ok(
+      { succeeded: succeeded.length, skipped: skipped.length, skipped_ids: skipped },
+      `${succeeded.length}건 운송장 등록 완료${skipped.length ? `, ${skipped.length}건 건너뜀` : ''}`
+    ))
+  }
+)
+
 // ── 통계 요약 ─────────────────────────────────────────────
 // GET /admin/nfc-cards/stats
 nfc.get('/stats', async (c) => {
