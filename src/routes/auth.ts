@@ -108,7 +108,6 @@ auth.post(
     return c.json(ok({
       user_id: userId,
       email,
-      verify_token: verifyToken  // TODO: 운영에서 제거, 이메일로 발송
     }, '회원가입이 완료되었습니다. 이메일 인증을 진행해주세요.'), 201)
   }
 )
@@ -283,9 +282,7 @@ auth.post(
     `).bind(user.id, resetToken, expiresAt).run()
 
     // TODO: 이메일 발송
-    return c.json(ok({
-      reset_token: resetToken  // TODO: 운영에서 제거
-    }, '비밀번호 재설정 이메일이 발송되었습니다.'))
+    return c.json(ok(null, '비밀번호 재설정 이메일이 발송되었습니다.'))
   }
 )
 
