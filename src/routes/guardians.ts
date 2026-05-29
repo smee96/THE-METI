@@ -170,7 +170,7 @@ guardians.post('/link/:requestId/reject', authMiddleware, async (c) => {
 //   ?role=mine     (기본) → 내 보호자 목록 (학생 입장)
 //   ?role=students → 내가 담당하는 학생 목록 (보호자/강사 입장)
 // ══════════════════════════════════════════════════════════════
-guardians.get('/guardians', authMiddleware, async (c) => {
+guardians.get('/', authMiddleware, async (c) => {
   const userId = c.get('userId')
   const role   = c.req.query('role') ?? 'mine'
 
