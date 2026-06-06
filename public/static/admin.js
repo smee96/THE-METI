@@ -164,6 +164,11 @@ function navigateTo(section) {
 
   currentSection = section;
 
+  // URL hash 업데이트 (북마크 가능, 뒤로가기 지원)
+  if (window.location.hash.replace('#', '') !== section) {
+    history.replaceState(null, '', `#${section}`);
+  }
+
   const titles = {
     dashboard: '대시보드', users: '유저 관리', groups: '그룹 관리', cards: '명함 관리',
     events: '행사 관리', lessons: '레슨 관리', reports: '신고 관리', 'nfc-cards': 'NFC 카드 관리',

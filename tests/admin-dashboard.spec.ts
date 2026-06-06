@@ -204,13 +204,14 @@ test.describe('대시보드 API', () => {
     expect(typeof body.data.users.today).toBe('number')
   })
 
-  test('3-2 비인증 상태에서 /admin/dashboard 접근 시 401 또는 리다이렉트', async ({ browser }) => {
+  test('3-2 비인증 상태에서 /api/v1/admin/dashboard 접근 시 401', async ({ browser }) => {
     // storageState 없는 새 컨텍스트 (비인증)
     const ctx = await browser.newContext()
     const page = await ctx.newPage()
 
-    const response = await page.request.get('/admin/dashboard')
-    // 401 혹은 403 응답 확인
+    // /admin/dashboard는 SPA catch-all이므로 HTML 200 반환
+    // 실제 API는 /api/v1/admin/dashboard (axios baseURL = /api/v1)
+    const response = await page.request.get('/api/v1/admin/dashboard')
     expect([401, 403]).toContain(response.status())
 
     await ctx.close()
