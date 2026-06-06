@@ -146,13 +146,19 @@ chat.post(
       return c.json(fail('전송할 내용이 없습니다.'), 400)
     }
 
-    // 무료 플랜: 메시지 만료 시간 설정 (다음날 자정)
+    // 플랜별 메시지 만료 시간 설정 (plan_configs 기반, 0=무제한)
     let expiresAt: string | null = null
-    if (userPlan === 'free') {
-      const tomorrow = new Date()
-      tomorrow.setDate(tomorrow.getDate() + 1)
-      tomorrow.setHours(0, 0, 0, 0)
-      expiresAt = tomorrow.toISOString()
+    const retentionKey = `chat_retention_${userPlan ?? 'free'}`
+    const retentionRow = await c.env.DB.prepare(
+      `SELECT config_val FROM plan_configs WHERE config_key = ?`
+    ).bind(retentionKey).first<{ config_val: string }>()
+    const retentionDays = retentionRow ? parseInt(retentionRow.config_val) : (userPlan === 'free' ? 1 : 0)
+
+    if (retentionDays > 0) {
+      const expiry = new Date()
+      expiry.setDate(expiry.getDate() + retentionDays)
+      expiry.setHours(0, 0, 0, 0)
+      expiresAt = expiry.toISOString()
     }
 
     const result = await c.env.DB.prepare(`
@@ -207,6 +213,123 @@ chat.post(
     return c.json(ok(null, '신고가 접수되었습니다.'), 201)
   }
 )
+
+// ── 채팅 파일 업로드 (이미지/파일 → R2) ─────────────
+// POST /api/v1/chat/:roomId/upload
+// Content-Type: multipart/form-data
+// form fields:
+//   file     : 이미지 또는 파일 (필수)
+//   file_type : 'image' | 'file' (선택, 기본 자동 감지)
+chat.post('/:roomId/upload', authMiddleware, async (c) => {
+  const userId = c.get('userId')
+  const roomId = parseInt(c.req.param('roomId'))
+
+  // 채팅방 멤버 + 차단 여부 확인
+  const membership = await c.env.DB.prepare(
+    'SELECT id FROM chat_room_members WHERE room_id = ? AND user_id = ? AND left_at IS NULL AND is_blocked = 0'
+  ).bind(roomId, userId).first()
+
+  if (!membership) return c.json(fail('채팅방에 접근할 수 없습니다.'), 403)
+
+  // multipart/form-data 파싱
+  let formData: FormData
+  try {
+    formData = await c.req.formData()
+  } catch {
+    return c.json(fail('파일을 업로드해주세요.'), 400)
+  }
+
+  const file = formData.get('file') as File | null
+  if (!file || typeof file === 'string') {
+    return c.json(fail('file 필드에 파일을 첨부해주세요.'), 400)
+  }
+
+  // 허용 타입 및 크기 정책
+  const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  const FILE_TYPES  = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/plain',
+  ]
+  const ALLOWED_TYPES = [...IMAGE_TYPES, ...FILE_TYPES]
+  const MAX_IMAGE_SIZE = 5  * 1024 * 1024  // 5MB
+  const MAX_FILE_SIZE  = 20 * 1024 * 1024  // 20MB
+
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return c.json(fail('지원하지 않는 파일 형식입니다. (이미지: JPG·PNG·WEBP·GIF / 파일: PDF·Word·Excel·TXT)'), 400)
+  }
+
+  const isImage = IMAGE_TYPES.includes(file.type)
+  const maxSize = isImage ? MAX_IMAGE_SIZE : MAX_FILE_SIZE
+  if (file.size > maxSize) {
+    return c.json(fail(`파일 크기는 ${isImage ? '5MB' : '20MB'} 이하여야 합니다.`), 400)
+  }
+
+  // R2 키 생성
+  // chat/{roomId}/{userId}_{timestamp}_{originalName}
+  const safeFileName = file.name
+    ? file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100)
+    : `file_${Date.now()}`
+  const key = `chat/${roomId}/${userId}_${Date.now()}_${safeFileName}`
+
+  // R2 업로드
+  const arrayBuffer = await file.arrayBuffer()
+  await c.env.STORAGE.put(key, arrayBuffer, {
+    httpMetadata: { contentType: file.type }
+  })
+
+  const fileUrl  = `https://pub-9e92c640989d47f69f8e3f749c4de9c0.r2.dev/${key}`
+  const msgType  = isImage ? 'image' : 'file'
+
+  // 플랜별 메시지 만료 시간 설정 (기존 전송 로직과 동일)
+  const userPlan = c.get('userPlan')
+  let expiresAt: string | null = null
+  const retentionKey = `chat_retention_${userPlan ?? 'free'}`
+  const retentionRow = await c.env.DB.prepare(
+    `SELECT config_val FROM plan_configs WHERE config_key = ?`
+  ).bind(retentionKey).first<{ config_val: string }>()
+  const retentionDays = retentionRow
+    ? parseInt(retentionRow.config_val)
+    : (userPlan === 'free' ? 1 : 0)
+
+  if (retentionDays > 0) {
+    const expiry = new Date()
+    expiry.setDate(expiry.getDate() + retentionDays)
+    expiry.setHours(0, 0, 0, 0)
+    expiresAt = expiry.toISOString()
+  }
+
+  // chat_messages에 자동 저장
+  const result = await c.env.DB.prepare(`
+    INSERT INTO chat_messages (room_id, sender_id, message_type, content, file_url, expires_at)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).bind(
+    roomId, userId, msgType,
+    file.name ?? null,   // content = 원본 파일명 (UI 표시용)
+    fileUrl,
+    expiresAt
+  ).run()
+
+  // 채팅방 updated_at 갱신
+  await c.env.DB.prepare(
+    `UPDATE chat_rooms SET updated_at = datetime('now') WHERE id = ?`
+  ).bind(roomId).run()
+
+  const message = await c.env.DB.prepare(
+    'SELECT * FROM chat_messages WHERE id = ?'
+  ).bind(result.meta.last_row_id).first()
+
+  return c.json(ok({
+    message,
+    file_url : fileUrl,
+    file_type: msgType,
+    file_name: file.name ?? null,
+    file_size: file.size,
+  }, '파일이 전송되었습니다.'), 201)
+})
 
 // ── 차단 ──────────────────────────────────────────────
 chat.post(

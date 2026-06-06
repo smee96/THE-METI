@@ -3,6 +3,7 @@ import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import type { Bindings, Variables } from '../types'
 import { ok, fail } from '../middleware/response'
+import { authMiddleware } from '../middleware/auth'
 
 const partner = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -161,6 +162,23 @@ partner.get('/user-balance', partnerAuth, async (c) => {
   ).bind(mapping.user_id).first<{ points: number }>()
 
   return c.json(ok({ points: balance?.points ?? 0 }))
+})
+
+// ══════════════════════════════════════════════════════════════
+// GET /api/v1/partner/services
+// B-2: 앱용 파트너 서비스 목록 (status=active, 일반 사용자용)
+// ══════════════════════════════════════════════════════════════
+partner.get('/services', authMiddleware, async (c) => {
+  const rows = await c.env.DB.prepare(`
+    SELECT id, name, description, webview_url
+    FROM partner_services
+    WHERE status = 'active'
+      AND webview_url IS NOT NULL
+      AND webview_url != ''
+    ORDER BY id ASC
+  `).all()
+
+  return c.json(ok(rows.results))
 })
 
 export default partner

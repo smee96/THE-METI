@@ -402,4 +402,95 @@ events.get('/:id/participants', authMiddleware, async (c) => {
   return c.json(paginate(rows.results, countRow?.total ?? 0, page, limit))
 })
 
+// ══════════════════════════════════════════════════════════════
+// POST /api/v1/events/:id/checkin
+// B-3: 행사 현장 체크인 (QR / NFC)
+// - 참가 신청(confirmed) 상태인 멤버만 체크인 가능
+// - 중복 체크인 방지
+// - event_entry_logs 테이블 기록
+// ══════════════════════════════════════════════════════════════
+events.post(
+  '/:id/checkin',
+  authMiddleware,
+  zValidator('json', z.object({
+    // entry_method: 실제 DB 스키마 컬럼명 (nfc | qr | manual)
+    entry_method: z.enum(['qr', 'nfc', 'manual']).default('qr'),
+    qr_token    : z.string().optional(),  // QR 토큰 (선택적 검증용)
+  })),
+  async (c) => {
+    const userId  = c.get('userId')
+    const eventId = parseInt(c.req.param('id'))
+    const body    = c.req.valid('json')
+
+    // 행사 조회
+    const event = await c.env.DB.prepare(`
+      SELECT id, group_id, status, title, entry_method
+      FROM events WHERE id = ?
+    `).bind(eventId).first<{
+      id: number; group_id: number; status: string;
+      title: string; entry_method: string
+    }>()
+
+    if (!event) {
+      return c.json(fail('행사를 찾을 수 없습니다.'), 404)
+    }
+    if (event.status === 'cancelled') {
+      return c.json(fail('취소된 행사입니다.'), 400)
+    }
+    if (event.status === 'ended') {
+      return c.json(fail('종료된 행사입니다.'), 400)
+    }
+    if (event.status === 'upcoming') {
+      return c.json(fail('아직 시작되지 않은 행사입니다.'), 400)
+    }
+
+    // 참가 신청 확인 (confirmed 상태여야 체크인 가능)
+    const participant = await c.env.DB.prepare(`
+      SELECT id, status, checked_in_at
+      FROM event_participants
+      WHERE event_id = ? AND user_id = ?
+    `).bind(eventId, userId).first<{
+      id: number; status: string; checked_in_at: string | null
+    }>()
+
+    // status: 'confirmed'(join API 기존값) 또는 'registered'(DB 스키마 기본값) 모두 허용
+    if (!participant || !['confirmed', 'registered'].includes(participant.status)) {
+      return c.json(fail('참가 신청이 확인된 멤버만 체크인할 수 있습니다.'), 403)
+    }
+
+    // 중복 체크인 방지
+    if (participant.checked_in_at) {
+      return c.json(fail('이미 체크인한 행사입니다.', {
+        checked_in_at: participant.checked_in_at
+      }), 409)
+    }
+
+    const now = new Date().toISOString()
+
+    // 체크인 처리 (배치: 참가자 checked_in_at 업데이트 + 입장 로그 기록)
+    await c.env.DB.batch([
+      // event_participants.checked_in_at 업데이트
+      c.env.DB.prepare(`
+        UPDATE event_participants
+        SET checked_in_at = ?
+        WHERE event_id = ? AND user_id = ?
+      `).bind(now, eventId, userId),
+
+      // event_entry_logs 기록 (실제 스키마: entry_method, processed_by, entered_at)
+      c.env.DB.prepare(`
+        INSERT INTO event_entry_logs
+          (event_id, user_id, entry_method, entered_at)
+        VALUES (?, ?, ?, ?)
+      `).bind(eventId, userId, body.entry_method, now),
+    ])
+
+    return c.json(ok({
+      event_id     : eventId,
+      event_title  : event.title,
+      checked_in_at: now,
+      entry_method : body.entry_method,
+    }, '체크인이 완료되었습니다.'), 201)
+  }
+)
+
 export default events

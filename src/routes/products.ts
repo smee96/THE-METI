@@ -466,4 +466,19 @@ products.post(
   }
 )
 
+// ══════════════════════════════════════════════════════════════
+// GET /api/v1/point-charge-products
+// B-1: 앱용 포인트 충전상품 목록 (is_active=1, sort_order 순)
+// ══════════════════════════════════════════════════════════════
+products.get('/point-charge-products', authMiddleware, async (c) => {
+  const rows = await c.env.DB.prepare(`
+    SELECT id, title, amount_krw, points, is_custom, min_amount, sort_order
+    FROM point_charge_products
+    WHERE is_active = 1
+    ORDER BY sort_order ASC, id ASC
+  `).all()
+
+  return c.json(ok(rows.results))
+})
+
 export default products

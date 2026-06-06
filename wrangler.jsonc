@@ -14,6 +14,13 @@
     }
   ],
 
+  "r2_buckets": [
+    {
+      "binding": "STORAGE",
+      "bucket_name": "the-meti-storage"
+    }
+  ],
+
   "vars": {
     "APP_NAME": "METI",
     "APP_ENV": "production",
@@ -33,6 +40,12 @@
           "database_id": "5ebff506-d8a7-44dd-91ff-6dc805df4511"
         }
       ],
+      "r2_buckets": [
+        {
+          "binding": "STORAGE",
+          "bucket_name": "the-meti-storage"
+        }
+      ],
       "vars": {
         "APP_NAME": "METI",
         "APP_ENV": "staging",
@@ -40,7 +53,12 @@
         "REFRESH_TOKEN_EXPIRES_IN": "30d"
       }
     }
-  }
+  },
+
+  // ── Cron Triggers ─────────────────────────────────────────────
+  // 주의: Cloudflare Pages는 triggers 블록 미지원
+  // 만료 채팅 삭제는 /cdn-cgi/handler/scheduled 엔드포인트로 수동 호출 가능
+  // (추후 별도 Worker로 분리 예정)
 
   // Secrets (wrangler secret put 으로 설정):
   // JWT_SECRET

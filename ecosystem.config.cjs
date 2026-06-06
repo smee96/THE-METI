@@ -5,7 +5,7 @@ module.exports = {
     {
       name: 'meti-local',
       script: 'npx',
-      args: 'wrangler pages dev dist --d1=the-meti-production --local --ip 0.0.0.0 --port 3000',
+      args: 'wrangler pages dev dist --d1=the-meti-production --local --ip 0.0.0.0 --port 3000 --inspector-port 9229',
       env: {
         NODE_ENV: 'development',
         PORT: 3000
@@ -21,7 +21,7 @@ module.exports = {
     {
       name: 'meti-staging',
       script: 'npx',
-      args: 'wrangler pages dev dist --d1=the-meti-staging --local --ip 0.0.0.0 --port 3001',
+      args: 'wrangler pages dev dist --d1=the-meti-staging --local --ip 0.0.0.0 --port 3001 --inspector-port 9230',
       env: {
         NODE_ENV: 'staging',
         PORT: 3001

@@ -89,13 +89,13 @@ cards.post(
 
     // 명함 생성
     const result = await c.env.DB.prepare(`
-      INSERT INTO cards (user_id, group_id, card_type, name, title, company, email, phone, website, bio, template_id, is_public)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO cards (user_id, group_id, card_type, name, title, company, email, phone, website, bio, template_id, is_public, avatar_url)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       userId, body.group_id ?? null, body.card_type, body.name,
       body.title ?? null, body.company ?? null, body.email ?? null,
       body.phone ?? null, body.website ?? null, body.bio ?? null,
-      body.template_id, body.is_public
+      body.template_id, body.is_public, null   // avatar_url은 생성 후 별도 업로드
     ).run()
 
     const cardId = result.meta.last_row_id as number
@@ -184,9 +184,20 @@ cards.patch(
     phone: z.string().max(20).optional().nullable(),
     website: z.string().optional().nullable(),
     bio: z.string().max(500).optional().nullable(),
+    avatar_url: z.string().url().optional().nullable(),
     template_id: z.string().optional(),
     is_public: z.number().int().min(0).max(1).optional(),
-    is_primary: z.number().int().min(0).max(1).optional()
+    is_primary: z.number().int().min(0).max(1).optional(),
+    // 이력/태그/SNS — 전체 교체 방식 (null이면 무시, 빈 배열이면 전체 삭제)
+    sns_links: z.array(z.object({
+      platform: z.string().max(50),
+      url: z.string().url(),
+      sort_order: z.number().default(0)
+    })).optional().nullable(),
+    tags: z.array(z.object({
+      tag_type: z.string().max(50),   // skill | career | education | etc
+      tag_value: z.string().max(200)
+    })).optional().nullable(),
   })),
   async (c) => {
     const userId = c.get('userId')
@@ -201,32 +212,58 @@ cards.patch(
       return c.json(fail('명함을 찾을 수 없습니다.'), 404)
     }
 
-    // 동적 업데이트 빌더
+    // ── 기본 필드 업데이트 ──────────────────────────────
+    const coreFields = ['name','title','company','email','phone','website','bio','avatar_url','template_id','is_public','is_primary']
     const fields: string[] = []
     const values: unknown[] = []
     Object.entries(body).forEach(([key, value]) => {
-      if (value !== undefined) {
+      if (coreFields.includes(key) && value !== undefined) {
         fields.push(`${key} = ?`)
         values.push(value)
       }
     })
 
-    if (fields.length === 0) {
-      return c.json(fail('수정할 내용이 없습니다.'), 400)
+    if (fields.length > 0) {
+      fields.push('updated_at = datetime(\'now\')')
+      values.push(cardId, userId)
+      await c.env.DB.prepare(
+        `UPDATE cards SET ${fields.join(', ')} WHERE id = ? AND user_id = ?`
+      ).bind(...values).run()
     }
 
-    fields.push('updated_at = datetime(\'now\')')
-    values.push(cardId, userId)
+    // ── SNS 링크 전체 교체 ──────────────────────────────
+    if (body.sns_links !== undefined && body.sns_links !== null) {
+      await c.env.DB.prepare('DELETE FROM card_sns_links WHERE card_id = ?').bind(cardId).run()
+      if (body.sns_links.length > 0) {
+        const stmts = body.sns_links.map((link, i) =>
+          c.env.DB.prepare(
+            'INSERT INTO card_sns_links (card_id, platform, url, sort_order) VALUES (?, ?, ?, ?)'
+          ).bind(cardId, link.platform, link.url, i)
+        )
+        await c.env.DB.batch(stmts)
+      }
+    }
 
-    await c.env.DB.prepare(
-      `UPDATE cards SET ${fields.join(', ')} WHERE id = ? AND user_id = ?`
-    ).bind(...values).run()
+    // ── 태그 전체 교체 ──────────────────────────────────
+    if (body.tags !== undefined && body.tags !== null) {
+      await c.env.DB.prepare('DELETE FROM card_tags WHERE card_id = ?').bind(cardId).run()
+      if (body.tags.length > 0) {
+        const stmts = body.tags.map(tag =>
+          c.env.DB.prepare(
+            'INSERT INTO card_tags (card_id, tag_type, tag_value) VALUES (?, ?, ?)'
+          ).bind(cardId, tag.tag_type, tag.tag_value)
+        )
+        await c.env.DB.batch(stmts)
+      }
+    }
 
-    const updated = await c.env.DB.prepare(
-      'SELECT * FROM cards WHERE id = ?'
-    ).bind(cardId).first()
+    const [updated, snsLinks, tags] = await Promise.all([
+      c.env.DB.prepare('SELECT * FROM cards WHERE id = ?').bind(cardId).first(),
+      c.env.DB.prepare('SELECT * FROM card_sns_links WHERE card_id = ? ORDER BY sort_order').bind(cardId).all(),
+      c.env.DB.prepare('SELECT * FROM card_tags WHERE card_id = ?').bind(cardId).all(),
+    ])
 
-    return c.json(ok(updated, '명함이 수정되었습니다.'))
+    return c.json(ok({ ...updated, sns_links: snsLinks.results, tags: tags.results }, '명함이 수정되었습니다.'))
   }
 )
 
@@ -248,6 +285,51 @@ cards.delete('/:id', authMiddleware, async (c) => {
   ).bind(cardId).run()
 
   return c.json(ok(null, '명함이 삭제되었습니다.'))
+})
+
+// ── 명함 사진 업로드 ──────────────────────────────────
+cards.post('/:id/avatar', authMiddleware, async (c) => {
+  const userId = c.get('userId')
+  const cardId = c.req.param('id')
+
+  // 명함 소유권 확인
+  const card = await c.env.DB.prepare(
+    'SELECT id FROM cards WHERE id = ? AND user_id = ? AND is_deleted = 0'
+  ).bind(cardId, userId).first()
+  if (!card) return c.json(fail('명함을 찾을 수 없습니다.'), 404)
+
+  // multipart 파싱
+  let formData: FormData
+  try { formData = await c.req.formData() }
+  catch { return c.json(fail('이미지 파일을 업로드해주세요.'), 400) }
+
+  const file = formData.get('avatar') as File | null
+  if (!file || typeof file === 'string') {
+    return c.json(fail('avatar 필드에 이미지 파일을 첨부해주세요.'), 400)
+  }
+
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  if (!allowedTypes.includes(file.type)) {
+    return c.json(fail('JPG, PNG, WEBP, GIF 형식만 업로드 가능합니다.'), 400)
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    return c.json(fail('파일 크기는 5MB 이하여야 합니다.'), 400)
+  }
+
+  const ext = file.type.split('/')[1].replace('jpeg', 'jpg')
+  const key = `cards/${userId}_${cardId}_${Date.now()}.${ext}`
+
+  await c.env.STORAGE.put(key, await file.arrayBuffer(), {
+    httpMetadata: { contentType: file.type }
+  })
+
+  const avatarUrl = `https://pub-9e92c640989d47f69f8e3f749c4de9c0.r2.dev/${key}`
+
+  await c.env.DB.prepare(
+    `UPDATE cards SET avatar_url = ?, updated_at = datetime('now') WHERE id = ?`
+  ).bind(avatarUrl, cardId).run()
+
+  return c.json(ok({ avatar_url: avatarUrl }, '명함 사진이 변경되었습니다.'))
 })
 
 // ── QR 토큰 생성 ──────────────────────────────────────

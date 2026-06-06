@@ -1,7 +1,6 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
-import { serveStatic } from 'hono/cloudflare-workers'
 import type { Bindings, Variables } from './types'
 
 // Routes
@@ -12,9 +11,12 @@ import eventsRoutes  from './routes/events'
 import chatRoutes    from './routes/chat'
 import partnerRoutes from './routes/partner'
 import adminRoutes    from './routes/admin'
-import lessonsRoutes  from './routes/lessons'
-import productsRoutes from './routes/products'
+import lessonsRoutes         from './routes/lessons'
+import lessonSchedulesRoutes from './routes/lesson-schedules'
+import guardianRoutes        from './routes/guardians'
+import productsRoutes        from './routes/products'
 import pointsRoutes   from './routes/points'
+import staticRouter   from './static-serve'
 
 // Web UI HTML 템플릿
 import { adminLoginHtml, adminAppHtml }               from './web/admin'
@@ -36,65 +38,209 @@ function cardPublicHtml(cardId: string): string {
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
   <meta property="og:title" content="METI 디지털 명함">
   <meta property="og:description" content="QR 코드로 명함을 교환하세요">
+  <style>
+    .section-title { font-size:.7rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#94a3b8; margin-bottom:.5rem; }
+    .tag-chip { display:inline-block; padding:.2rem .6rem; border-radius:9999px; font-size:.72rem; font-weight:500; background:#eff6ff; color:#2563eb; margin:.15rem; }
+    .tag-chip.skill     { background:#f0fdf4; color:#16a34a; }
+    .tag-chip.education { background:#faf5ff; color:#9333ea; }
+    .tag-chip.career    { background:#fff7ed; color:#ea580c; }
+    .sns-icon { width:2rem; height:2rem; border-radius:.5rem; display:flex; align-items:center; justify-content:center; font-size:.85rem; }
+  </style>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">
-  <div id="card-container" class="w-full max-w-sm">
-    <div class="text-center mb-6">
-      <p class="text-sm text-gray-500 font-semibold tracking-widest">METI</p>
+<body class="bg-gradient-to-br from-slate-100 to-blue-50 min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-sm">
+    <!-- METI 워터마크 -->
+    <div class="text-center mb-4">
+      <p class="text-xs text-gray-400 font-semibold tracking-widest">METI</p>
     </div>
-    <div id="card-loading" class="bg-white rounded-3xl shadow-2xl p-8 text-center">
+
+    <!-- 로딩 -->
+    <div id="card-loading" class="bg-white rounded-3xl shadow-xl p-8 text-center">
       <i class="fas fa-spinner fa-spin text-blue-500 text-2xl mb-3"></i>
-      <p class="text-gray-500">명함 불러오는 중...</p>
+      <p class="text-gray-400 text-sm">명함 불러오는 중...</p>
     </div>
-    <div id="card-content" class="hidden bg-white rounded-3xl shadow-2xl overflow-hidden">
-      <div id="card-header" class="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white text-center">
+
+    <!-- 명함 본체 -->
+    <div id="card-content" class="hidden space-y-3">
+
+      <!-- ① 헤더 카드 -->
+      <div class="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl shadow-xl p-6 text-white text-center">
+        <div id="avatar-wrap" class="hidden w-20 h-20 rounded-full mx-auto mb-3 border-4 border-white/30 overflow-hidden">
+          <img id="avatar-img" class="w-20 h-20 object-cover">
+        </div>
+        <div id="avatar-placeholder" class="w-16 h-16 rounded-full mx-auto mb-3 bg-white/20 flex items-center justify-center">
+          <i class="fas fa-user text-white text-2xl"></i>
+        </div>
         <h1 id="card-name"    class="text-2xl font-bold"></h1>
-        <p  id="card-title"   class="text-blue-200 mt-1"></p>
-        <p  id="card-company" class="text-blue-100 text-sm mt-1"></p>
+        <p  id="card-title"   class="text-blue-200 text-sm mt-0.5"></p>
+        <p  id="card-company" class="text-blue-100 text-sm font-medium mt-0.5"></p>
       </div>
-      <div class="p-6 space-y-3">
-        <div id="card-email"   class="hidden flex items-center gap-3 text-gray-700">
-          <i class="fas fa-envelope text-blue-500 w-5"></i>
-          <span id="email-val"></span>
+
+      <!-- ② 연락처 -->
+      <div id="contact-section" class="hidden bg-white rounded-2xl shadow p-4 space-y-2.5">
+        <p class="section-title">연락처</p>
+        <div id="card-email"   class="hidden flex items-center gap-3">
+          <span class="sns-icon bg-red-50 text-red-500"><i class="fas fa-envelope text-sm"></i></span>
+          <a id="email-val" class="text-sm text-gray-700 hover:text-blue-600"></a>
         </div>
-        <div id="card-phone"   class="hidden flex items-center gap-3 text-gray-700">
-          <i class="fas fa-phone text-blue-500 w-5"></i>
-          <span id="phone-val"></span>
+        <div id="card-phone"   class="hidden flex items-center gap-3">
+          <span class="sns-icon bg-green-50 text-green-600"><i class="fas fa-phone text-sm"></i></span>
+          <a id="phone-val" class="text-sm text-gray-700 hover:text-blue-600"></a>
         </div>
-        <div id="card-website" class="hidden flex items-center gap-3 text-gray-700">
-          <i class="fas fa-globe text-blue-500 w-5"></i>
-          <a id="website-val" class="text-blue-600 hover:underline"></a>
+        <div id="card-website" class="hidden flex items-center gap-3">
+          <span class="sns-icon bg-blue-50 text-blue-500"><i class="fas fa-globe text-sm"></i></span>
+          <a id="website-val" class="text-sm text-blue-600 hover:underline truncate"></a>
         </div>
-        <div id="card-bio" class="hidden pt-2 border-t text-gray-600 text-sm"></div>
       </div>
-      <div class="px-6 pb-6">
-        <a href="https://meti.io" target="_blank"
-          class="block w-full py-3 bg-blue-600 text-white text-center rounded-xl font-semibold hover:bg-blue-700 transition">
-          <i class="fas fa-id-card mr-2"></i>METI로 명함 교환하기
-        </a>
+
+      <!-- ③ 소개 -->
+      <div id="bio-section" class="hidden bg-white rounded-2xl shadow p-4">
+        <p class="section-title">소개</p>
+        <p id="card-bio" class="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap"></p>
       </div>
+
+      <!-- ④ SNS 링크 -->
+      <div id="sns-section" class="hidden bg-white rounded-2xl shadow p-4">
+        <p class="section-title">소셜 링크</p>
+        <div id="sns-list" class="flex flex-wrap gap-2 mt-1"></div>
+      </div>
+
+      <!-- ⑤ 경력 -->
+      <div id="career-section" class="hidden bg-white rounded-2xl shadow p-4">
+        <p class="section-title"><i class="fas fa-briefcase mr-1"></i>경력</p>
+        <div id="career-list" class="space-y-2 mt-1"></div>
+      </div>
+
+      <!-- ⑥ 학력 -->
+      <div id="education-section" class="hidden bg-white rounded-2xl shadow p-4">
+        <p class="section-title"><i class="fas fa-graduation-cap mr-1"></i>학력</p>
+        <div id="education-list" class="space-y-2 mt-1"></div>
+      </div>
+
+      <!-- ⑦ 스킬 / 기타 태그 -->
+      <div id="skill-section" class="hidden bg-white rounded-2xl shadow p-4">
+        <p class="section-title"><i class="fas fa-tags mr-1"></i>스킬 &amp; 키워드</p>
+        <div id="skill-list" class="mt-1"></div>
+      </div>
+
+      <!-- ⑧ CTA -->
+      <a href="https://the-meti.pages.dev" target="_blank"
+        class="block w-full py-3.5 bg-blue-600 text-white text-center rounded-2xl font-semibold hover:bg-blue-700 transition shadow">
+        <i class="fas fa-id-card mr-2"></i>METI로 명함 교환하기
+      </a>
     </div>
-    <div id="card-error" class="hidden bg-white rounded-3xl shadow-2xl p-8 text-center">
+
+    <!-- 에러 -->
+    <div id="card-error" class="hidden bg-white rounded-3xl shadow-xl p-8 text-center">
       <i class="fas fa-exclamation-circle text-red-400 text-3xl mb-3"></i>
-      <p class="text-gray-600">명함을 찾을 수 없습니다.</p>
+      <p class="text-gray-500">명함을 찾을 수 없습니다.</p>
     </div>
   </div>
+
   <script>
+    const SNS_META = {
+      linkedin:  { icon:'fab fa-linkedin',  bg:'bg-blue-700',   color:'text-white',  label:'LinkedIn' },
+      instagram: { icon:'fab fa-instagram', bg:'bg-pink-500',   color:'text-white',  label:'Instagram' },
+      twitter:   { icon:'fab fa-twitter',   bg:'bg-sky-500',    color:'text-white',  label:'Twitter/X' },
+      facebook:  { icon:'fab fa-facebook',  bg:'bg-blue-600',   color:'text-white',  label:'Facebook' },
+      github:    { icon:'fab fa-github',    bg:'bg-gray-800',   color:'text-white',  label:'GitHub' },
+      youtube:   { icon:'fab fa-youtube',   bg:'bg-red-600',    color:'text-white',  label:'YouTube' },
+      tiktok:    { icon:'fab fa-tiktok',    bg:'bg-gray-900',   color:'text-white',  label:'TikTok' },
+      blog:      { icon:'fas fa-rss',       bg:'bg-orange-500', color:'text-white',  label:'블로그' },
+    };
+
+    function esc(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
     fetch('/api/v1/cards/public/${cardId}')
       .then(r => r.json())
       .then(data => {
         document.getElementById('card-loading').classList.add('hidden');
         if (!data.success) { document.getElementById('card-error').classList.remove('hidden'); return; }
         const card = data.data;
+
         document.getElementById('card-content').classList.remove('hidden');
+        document.title = (card.name || 'METI') + ' - 디지털 명함';
+
+        // ① 헤더
         document.getElementById('card-name').textContent    = card.name    || '';
         document.getElementById('card-title').textContent   = card.title   || '';
         document.getElementById('card-company').textContent = card.company || '';
-        if (card.email)   { document.getElementById('card-email').classList.remove('hidden');   document.getElementById('email-val').textContent  = card.email; }
-        if (card.phone)   { document.getElementById('card-phone').classList.remove('hidden');   document.getElementById('phone-val').textContent  = card.phone; }
-        if (card.website) { document.getElementById('card-website').classList.remove('hidden'); const a = document.getElementById('website-val'); a.textContent = card.website; a.href = card.website; }
-        if (card.bio)     { document.getElementById('card-bio').classList.remove('hidden');     document.getElementById('card-bio').textContent   = card.bio; }
-        document.title = card.name + ' - METI 디지털 명함';
+        if (card.avatar_url) {
+          const img = document.getElementById('avatar-img');
+          img.src = card.avatar_url;
+          img.onerror = () => {};
+          document.getElementById('avatar-wrap').classList.remove('hidden');
+          document.getElementById('avatar-placeholder').classList.add('hidden');
+        }
+
+        // ② 연락처
+        let hasContact = false;
+        if (card.email)   { document.getElementById('card-email').classList.remove('hidden');
+                            const a = document.getElementById('email-val'); a.textContent = card.email; a.href = 'mailto:' + card.email; hasContact = true; }
+        if (card.phone)   { document.getElementById('card-phone').classList.remove('hidden');
+                            const a = document.getElementById('phone-val'); a.textContent = card.phone; a.href = 'tel:' + card.phone; hasContact = true; }
+        if (card.website) { document.getElementById('card-website').classList.remove('hidden');
+                            const a = document.getElementById('website-val'); a.textContent = card.website; a.href = card.website; a.target='_blank'; hasContact = true; }
+        if (hasContact) document.getElementById('contact-section').classList.remove('hidden');
+
+        // ③ 소개
+        if (card.bio) {
+          document.getElementById('bio-section').classList.remove('hidden');
+          document.getElementById('card-bio').textContent = card.bio;
+        }
+
+        // ④ SNS 링크
+        const sns = card.sns_links || [];
+        if (sns.length > 0) {
+          document.getElementById('sns-section').classList.remove('hidden');
+          const snsList = document.getElementById('sns-list');
+          snsList.innerHTML = sns.map(s => {
+            const m = SNS_META[s.platform] || { icon:'fas fa-link', bg:'bg-gray-200', color:'text-gray-700', label: s.platform };
+            return '<a href="' + esc(s.url) + '" target="_blank" rel="noopener" '
+              + 'class="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-100 hover:shadow transition text-sm font-medium text-gray-700">'
+              + '<span class="w-6 h-6 rounded-lg ' + m.bg + ' ' + m.color + ' flex items-center justify-center text-xs"><i class="' + m.icon + '"></i></span>'
+              + esc(m.label) + '</a>';
+          }).join('');
+        }
+
+        // ⑤⑥⑦ 태그 분류 처리
+        const tags = card.tags || [];
+        const careers    = tags.filter(t => t.tag_type === 'career');
+        const educations = tags.filter(t => t.tag_type === 'education');
+        const skills     = tags.filter(t => t.tag_type === 'skill' || t.tag_type === 'keyword');
+        const others     = tags.filter(t => !['career','education','skill','keyword'].includes(t.tag_type));
+
+        // 경력
+        if (careers.length > 0) {
+          document.getElementById('career-section').classList.remove('hidden');
+          document.getElementById('career-list').innerHTML = careers.map(t =>
+            '<div class="flex items-start gap-2 py-1 border-b border-gray-50 last:border-0">'
+            + '<i class="fas fa-circle text-orange-400 text-[5px] mt-2 flex-shrink-0"></i>'
+            + '<p class="text-sm text-gray-700">' + esc(t.tag_value) + '</p></div>'
+          ).join('');
+        }
+
+        // 학력
+        if (educations.length > 0) {
+          document.getElementById('education-section').classList.remove('hidden');
+          document.getElementById('education-list').innerHTML = educations.map(t =>
+            '<div class="flex items-start gap-2 py-1 border-b border-gray-50 last:border-0">'
+            + '<i class="fas fa-circle text-purple-400 text-[5px] mt-2 flex-shrink-0"></i>'
+            + '<p class="text-sm text-gray-700">' + esc(t.tag_value) + '</p></div>'
+          ).join('');
+        }
+
+        // 스킬 + 기타
+        const allSkills = [...skills, ...others];
+        if (allSkills.length > 0) {
+          document.getElementById('skill-section').classList.remove('hidden');
+          document.getElementById('skill-list').innerHTML = allSkills.map(t =>
+            '<span class="tag-chip ' + esc(t.tag_type) + '">' + esc(t.tag_value) + '</span>'
+          ).join('');
+        }
       })
       .catch(() => {
         document.getElementById('card-loading').classList.add('hidden');
@@ -124,8 +270,8 @@ app.use('/api/*', cors({
   credentials: true,
 }))
 
-// ── 정적 파일 ─────────────────────────────────────────────
-app.use('/static/*', serveStatic({ root: './public' }))
+// ── 정적 파일 (인라인 번들링) ───────────────────────────────
+app.route('/static', staticRouter)
 
 // ── API 라우트 (v1) ───────────────────────────────────────
 app.route('/api/v1/auth',    authRoutes)
@@ -135,7 +281,9 @@ app.route('/api/v1/events',   eventsRoutes)
 app.route('/api/v1/chat',     chatRoutes)
 app.route('/api/v1/partner',  partnerRoutes)
 app.route('/api/v1/admin',    adminRoutes)
-app.route('/api/v1/lessons',  lessonsRoutes)
+app.route('/api/v1/lessons',   lessonsRoutes)
+app.route('/api/v1/lessons',   lessonSchedulesRoutes)  // schedules / students 하위 경로
+app.route('/api/v1/guardians', guardianRoutes)
 app.route('/api/v1/points',   pointsRoutes)
 app.route('/api/v1',          productsRoutes)  // /groups/:id/products, /orders, /payments
 
@@ -354,5 +502,6 @@ app.onError((err, c) => {
   }
   return c.html('<h1>Internal Server Error</h1>', 500)
 })
+
 
 export default app

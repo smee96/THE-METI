@@ -4,15 +4,27 @@ import { z } from 'zod'
 import type { Bindings, Variables } from '../types'
 import { authMiddleware, superAdminMiddleware } from '../middleware/auth'
 import { ok, fail, paginate, parsePagination } from '../middleware/response'
+import nfcRouter          from './admin-nfc'
+import reportsRouter      from './admin-reports'
+import groupDetailRouter  from './admin-groups'
+import ordersAdminRouter  from './admin-orders'
+import partnerAdminRouter from './admin-partner'
 
 const admin = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
 // 모든 admin 라우트는 인증 + 슈퍼관리자 권한 필요
 admin.use('*', authMiddleware, superAdminMiddleware)
 
+// ── 서브 라우터 마운트 ────────────────────────────────────
+admin.route('/nfc-cards',       nfcRouter)
+admin.route('/reports',         reportsRouter)
+admin.route('/groups/:groupId', groupDetailRouter)
+admin.route('/orders',          ordersAdminRouter)
+admin.route('/partners',        partnerAdminRouter)
+
 // ── 대시보드 통계 ─────────────────────────────────────
 admin.get('/dashboard', async (c) => {
-  const [users, groups, events, reports] = await Promise.all([
+  const [users, groups, events, reports, nfc, orders, recentUsers] = await Promise.all([
     c.env.DB.prepare(`SELECT
       COUNT(*) as total,
       SUM(CASE WHEN DATE(created_at) = DATE('now') THEN 1 ELSE 0 END) as today,
@@ -30,10 +42,28 @@ admin.get('/dashboard', async (c) => {
       FROM events WHERE is_deleted = 0`).first(),
     c.env.DB.prepare(`SELECT COUNT(*) as total,
       SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending
-      FROM reports`).first()
+      FROM reports`).first(),
+    // NFC 처리 대기
+    c.env.DB.prepare(`SELECT
+      COUNT(*) as total,
+      SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+      SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved,
+      SUM(CASE WHEN status = 'shipped' THEN 1 ELSE 0 END) as shipped
+      FROM nfc_physical_cards`).first(),
+    // 이번 달 주문/결제 통계
+    c.env.DB.prepare(`SELECT
+      COUNT(*) as total_orders,
+      SUM(CASE WHEN status = 'paid' THEN total_amount ELSE 0 END) as revenue_this_month,
+      SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_orders
+      FROM orders
+      WHERE DATE(created_at) >= DATE('now','start of month')`).first(),
+    // 최근 가입 유저 5명
+    c.env.DB.prepare(`SELECT id, name, email, plan, created_at
+      FROM users WHERE is_deleted = 0
+      ORDER BY created_at DESC LIMIT 5`).all()
   ])
 
-  return c.json(ok({ users, groups, events, reports }))
+  return c.json(ok({ users, groups, events, reports, nfc, orders, recent_users: recentUsers.results }))
 })
 
 // ── 유저 관리 ─────────────────────────────────────────
@@ -244,145 +274,6 @@ admin.post(
   }
 )
 
-// ── 신고 관리 ─────────────────────────────────────────
-admin.get('/reports', async (c) => {
-  const { page, limit, offset } = parsePagination(c.req.query('page'), c.req.query('limit'))
-  const status = c.req.query('status') ?? 'pending'
-
-  const [rows, countRow] = await Promise.all([
-    c.env.DB.prepare(`
-      SELECT r.*, u.name as reporter_name, u.email as reporter_email
-      FROM reports r
-      JOIN users u ON u.id = r.reporter_id
-      WHERE r.status = ?
-      ORDER BY r.created_at DESC LIMIT ? OFFSET ?
-    `).bind(status, limit, offset).all(),
-    c.env.DB.prepare('SELECT COUNT(*) as total FROM reports WHERE status = ?').bind(status).first<{ total: number }>()
-  ])
-
-  return c.json(paginate(rows.results, countRow?.total ?? 0, page, limit))
-})
-
-admin.patch(
-  '/reports/:id',
-  zValidator('json', z.object({
-    status: z.enum(['reviewed', 'resolved', 'dismissed'])
-  })),
-  async (c) => {
-    const adminId = c.get('userId')
-    const reportId = c.req.param('id')
-    const { status } = c.req.valid('json')
-
-    await c.env.DB.prepare(`
-      UPDATE reports SET status = ?, reviewed_by = ?, reviewed_at = datetime('now')
-      WHERE id = ?
-    `).bind(status, adminId, reportId).run()
-
-    return c.json(ok(null, '신고가 처리되었습니다.'))
-  }
-)
-
-// ── 파트너 서비스 관리 ────────────────────────────────
-admin.get('/partners', async (c) => {
-  const partners = await c.env.DB.prepare(
-    'SELECT id, name, description, status, created_at FROM partner_services ORDER BY created_at DESC'
-  ).all()
-  return c.json(ok(partners.results))
-})
-
-admin.post(
-  '/partners',
-  zValidator('json', z.object({
-    name: z.string().min(2),
-    description: z.string().optional()
-  })),
-  async (c) => {
-    const { name, description } = c.req.valid('json')
-    const apiKey = `meti_partner_${crypto.randomUUID().replace(/-/g, '')}`
-
-    const result = await c.env.DB.prepare(`
-      INSERT INTO partner_services (name, description, api_key) VALUES (?, ?, ?)
-    `).bind(name, description ?? null, apiKey).run()
-
-    return c.json(ok({
-      id: result.meta.last_row_id,
-      name,
-      api_key: apiKey
-    }, '파트너 서비스가 등록되었습니다.'), 201)
-  }
-)
-
-// ── 리워드 잔액/이력 조회 ────────────────────────────
-admin.get('/rewards', async (c) => {
-  const { page, limit, offset } = parsePagination(c.req.query('page'), c.req.query('limit'))
-
-  const [rows, countRow] = await Promise.all([
-    c.env.DB.prepare(`
-      SELECT r.*, u.name, u.email, ps.name as partner_name
-      FROM rewards r
-      JOIN users u ON u.id = r.user_id
-      LEFT JOIN partner_services ps ON ps.id = r.partner_id
-      ORDER BY r.created_at DESC LIMIT ? OFFSET ?
-    `).bind(limit, offset).all(),
-    c.env.DB.prepare('SELECT COUNT(*) as total FROM rewards').first<{ total: number }>()
-  ])
-
-  return c.json(paginate(rows.results, countRow?.total ?? 0, page, limit))
-})
-
-// ── NFC 실물카드 관리 ────────────────────────────────
-admin.get('/nfc-cards', async (c) => {
-  const { page, limit, offset } = parsePagination(c.req.query('page'), c.req.query('limit'))
-  const status = c.req.query('status') ?? 'pending'
-
-  const [rows, countRow] = await Promise.all([
-    c.env.DB.prepare(`
-      SELECT n.*, u.name as user_name, u.email as user_email, g.name as group_name
-      FROM nfc_physical_cards n
-      LEFT JOIN users u ON u.id = n.user_id
-      LEFT JOIN groups g ON g.id = n.group_id
-      WHERE n.status = ?
-      ORDER BY n.applied_at DESC LIMIT ? OFFSET ?
-    `).bind(status, limit, offset).all(),
-    c.env.DB.prepare('SELECT COUNT(*) as total FROM nfc_physical_cards WHERE status = ?').bind(status).first<{ total: number }>()
-  ])
-
-  return c.json(paginate(rows.results, countRow?.total ?? 0, page, limit))
-})
-
-admin.patch(
-  '/nfc-cards/:id',
-  zValidator('json', z.object({
-    action: z.enum(['approve', 'issue', 'reject', 'deactivate']),
-    nfc_uid: z.string().optional(),
-    serial_no: z.string().optional()
-  })),
-  async (c) => {
-    const cardId = c.req.param('id')
-    const { action, nfc_uid, serial_no } = c.req.valid('json')
-
-    const statusMap: Record<string, string> = {
-      approve: 'approved', issue: 'issued', reject: 'pending', deactivate: 'deactivated'
-    }
-
-    const updates: string[] = [`status = '${statusMap[action]}'`]
-    const values: unknown[] = []
-
-    if (action === 'issue') {
-      updates.push(`issued_at = datetime('now')`)
-      if (nfc_uid) { updates.push(`nfc_uid = ?`); values.push(nfc_uid) }
-      if (serial_no) { updates.push(`serial_no = ?`); values.push(serial_no) }
-    }
-    if (action === 'deactivate') updates.push(`deactivated_at = datetime('now')`)
-    updates.push(`updated_at = datetime('now')`)
-    values.push(cardId)
-
-    await c.env.DB.prepare(`UPDATE nfc_physical_cards SET ${updates.join(', ')} WHERE id = ?`).bind(...values).run()
-
-    return c.json(ok(null, 'NFC 카드 상태가 변경되었습니다.'))
-  }
-)
-
 // ── 플랜 설정 조회 ────────────────────────────────────
 admin.get('/plan-configs', superAdminMiddleware, async (c) => {
   const plans = await c.env.DB.prepare(`
@@ -426,6 +317,114 @@ admin.patch(
     return c.json(ok(null, `${code} 플랜 설정이 변경되었습니다.`))
   }
 )
+
+// ── plan_configs 키 목록 조회 ─────────────────────────────────
+admin.get('/plan-configs/keys', superAdminMiddleware, async (c) => {
+  const rows = await c.env.DB.prepare(
+    `SELECT id, config_key, config_val, description, updated_at FROM plan_configs ORDER BY id ASC`
+  ).all()
+  return c.json(ok(rows.results))
+})
+
+// ── plan_configs 키 값 수정 ───────────────────────────────────
+admin.patch(
+  '/plan-configs/keys/:key',
+  superAdminMiddleware,
+  zValidator('json', z.object({ config_val: z.string() })),
+  async (c) => {
+    const configKey = c.req.param('key')
+    const { config_val } = c.req.valid('json')
+    const adminId = c.get('userId')
+
+    const row = await c.env.DB.prepare(
+      `SELECT id FROM plan_configs WHERE config_key = ?`
+    ).bind(configKey).first()
+    if (!row) return c.json(fail('설정 키를 찾을 수 없습니다.'), 404)
+
+    await c.env.DB.prepare(
+      `UPDATE plan_configs SET config_val = ?, updated_by = ?, updated_at = datetime('now') WHERE config_key = ?`
+    ).bind(config_val, adminId, configKey).run()
+
+    return c.json(ok(null, `${configKey} 설정이 변경되었습니다.`))
+  }
+)
+
+// ── 포인트 충전 상품 목록 조회 ────────────────────────────────
+admin.get('/point-charge-products', superAdminMiddleware, async (c) => {
+  const rows = await c.env.DB.prepare(
+    `SELECT * FROM point_charge_products ORDER BY sort_order ASC`
+  ).all()
+  return c.json(ok(rows.results))
+})
+
+// ── 포인트 충전 상품 생성 ─────────────────────────────────────
+admin.post(
+  '/point-charge-products',
+  superAdminMiddleware,
+  zValidator('json', z.object({
+    title:      z.string().min(1).max(50),
+    amount_krw: z.number().int().min(0),
+    points:     z.number().int().min(0),
+    is_custom:  z.number().int().min(0).max(1).optional().default(0),
+    min_amount: z.number().int().positive().nullable().optional(),
+    sort_order: z.number().int().min(0).optional().default(0),
+  })),
+  async (c) => {
+    const body = c.req.valid('json')
+    const result = await c.env.DB.prepare(`
+      INSERT INTO point_charge_products (title, amount_krw, points, is_custom, min_amount, sort_order)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).bind(body.title, body.amount_krw, body.points, body.is_custom, body.min_amount ?? null, body.sort_order).run()
+    return c.json(ok({ id: result.meta.last_row_id }, '충전 상품이 등록되었습니다.'), 201)
+  }
+)
+
+// ── 포인트 충전 상품 수정 ─────────────────────────────────────
+admin.patch(
+  '/point-charge-products/:id',
+  superAdminMiddleware,
+  zValidator('json', z.object({
+    title:      z.string().min(1).max(50).optional(),
+    amount_krw: z.number().int().min(0).optional(),
+    points:     z.number().int().min(0).optional(),
+    is_active:  z.number().int().min(0).max(1).optional(),
+    min_amount: z.number().int().positive().nullable().optional(),
+    sort_order: z.number().int().min(0).optional(),
+  })),
+  async (c) => {
+    const id   = parseInt(c.req.param('id'))
+    const body = c.req.valid('json')
+
+    const row = await c.env.DB.prepare('SELECT id FROM point_charge_products WHERE id = ?').bind(id).first()
+    if (!row) return c.json(fail('충전 상품을 찾을 수 없습니다.'), 404)
+
+    const fields: string[] = []
+    const vals: unknown[] = []
+    if (body.title      !== undefined) { fields.push('title = ?');      vals.push(body.title) }
+    if (body.amount_krw !== undefined) { fields.push('amount_krw = ?'); vals.push(body.amount_krw) }
+    if (body.points     !== undefined) { fields.push('points = ?');     vals.push(body.points) }
+    if (body.is_active  !== undefined) { fields.push('is_active = ?');  vals.push(body.is_active) }
+    if (body.min_amount !== undefined) { fields.push('min_amount = ?'); vals.push(body.min_amount) }
+    if (body.sort_order !== undefined) { fields.push('sort_order = ?'); vals.push(body.sort_order) }
+
+    if (fields.length === 0) return c.json(fail('변경할 항목이 없습니다.'), 400)
+
+    await c.env.DB.prepare(
+      `UPDATE point_charge_products SET ${fields.join(', ')} WHERE id = ?`
+    ).bind(...vals, id).run()
+
+    return c.json(ok(null, '충전 상품이 수정되었습니다.'))
+  }
+)
+
+// ── 포인트 충전 상품 삭제 ─────────────────────────────────────
+admin.delete('/point-charge-products/:id', superAdminMiddleware, async (c) => {
+  const id = parseInt(c.req.param('id'))
+  const row = await c.env.DB.prepare('SELECT id FROM point_charge_products WHERE id = ?').bind(id).first()
+  if (!row) return c.json(fail('충전 상품을 찾을 수 없습니다.'), 404)
+  await c.env.DB.prepare('DELETE FROM point_charge_products WHERE id = ?').bind(id).run()
+  return c.json(ok(null, '충전 상품이 삭제되었습니다.'))
+})
 
 // ══════════════════════════════════════════════════════════════
 // GET /admin/lessons  — 전체 레슨 목록 (어드민 전용)
@@ -480,8 +479,8 @@ admin.get('/users/:id/detail', async (c) => {
       FROM users WHERE id = ? AND is_deleted = 0
     `).bind(userId).first(),
     c.env.DB.prepare(`
-      SELECT id, title, job_title, company, is_default, is_active, created_at
-      FROM cards WHERE user_id = ? AND is_deleted = 0 ORDER BY is_default DESC, created_at DESC
+      SELECT id, title, company, is_primary, is_active, created_at
+      FROM cards WHERE user_id = ? AND is_deleted = 0 ORDER BY is_primary DESC, created_at DESC
     `).bind(userId).all(),
     c.env.DB.prepare(`
       SELECT g.id, g.name, g.status, gm.role, gm.joined_at
@@ -514,7 +513,7 @@ admin.get('/cards', async (c) => {
   const isActive  = c.req.query('active')  // '1' | '0'
 
   let query = `
-    SELECT c.id, c.title, c.job_title, c.company, c.is_default, c.is_active, c.created_at,
+    SELECT c.id, c.title, c.company, c.is_primary, c.is_active, c.created_at,
            u.id as user_id, u.name as user_name, u.email as user_email
     FROM cards c
     JOIN users u ON u.id = c.user_id
@@ -671,10 +670,10 @@ admin.post('/events', superAdminMiddleware,
 
     const result = await c.env.DB.prepare(`
       INSERT INTO events
-        (group_id, created_by, title, description, location,
-         starts_at, ends_at, capacity, visibility, registration_type,
-         entry_method, point_cost, entry_fee)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+        (group_id, organizer_id, title, description, location,
+         starts_at, ends_at, max_participants, visibility, registration_type,
+         entry_method, entry_fee)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       body.group_id, adminId, body.title, body.description ?? null,
       body.location ?? null, body.starts_at, body.ends_at ?? null,
@@ -697,10 +696,10 @@ admin.get('/events', superAdminMiddleware, async (c) => {
     SELECT e.*,
       g.name  AS group_name,
       u.name  AS creator_name,
-      (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id AND status = 'confirmed') AS participant_count
+      (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id) AS participant_count
     FROM events e
     JOIN groups g ON g.id = e.group_id
-    JOIN users  u ON u.id = e.created_by
+    JOIN users  u ON u.id = e.organizer_id
     WHERE 1=1
   `
   const params: unknown[] = []
@@ -730,10 +729,10 @@ admin.get('/events/:id', superAdminMiddleware, async (c) => {
   const [event, participants] = await Promise.all([
     c.env.DB.prepare(`
       SELECT e.*, g.name AS group_name, u.name AS creator_name,
-        (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id AND status = 'confirmed') AS participant_count
+        (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id) AS participant_count
       FROM events e
       JOIN groups g ON g.id = e.group_id
-      JOIN users  u ON u.id = e.created_by
+      JOIN users  u ON u.id = e.organizer_id
       WHERE e.id = ?
     `).bind(eventId).first(),
     c.env.DB.prepare(`
@@ -741,7 +740,7 @@ admin.get('/events/:id', superAdminMiddleware, async (c) => {
       FROM event_participants ep
       JOIN users u ON u.id = ep.user_id
       WHERE ep.event_id = ?
-      ORDER BY ep.joined_at ASC
+      ORDER BY ep.created_at ASC
       LIMIT 100
     `).bind(eventId).all()
   ])

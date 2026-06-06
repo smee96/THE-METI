@@ -113,6 +113,15 @@ export function adminAppHtml(): string {
   </div>
   <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
   <script src="/static/admin.js"></script>
+  <script src="/static/admin-users.js"></script>
+  <script src="/static/admin-events.js"></script>
+  <script src="/static/admin-plans.js"></script>
+  <script src="/static/admin-lessons.js"></script>
+  <script src="/static/admin-nfc.js"></script>
+  <script src="/static/admin-reports.js"></script>
+  <script src="/static/admin-groups.js"></script>
+  <script src="/static/admin-orders.js"></script>
+  <script src="/static/admin-partner.js"></script>
 </body>
 </html>`
 }
