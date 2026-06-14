@@ -6,194 +6,158 @@ export function appLoginHtml(): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>METI</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+  <title>로그인 — METI</title>
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; }
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #f2f5fb;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 24px 16px;
+    :root {
+      --navy:#0B1E40; --navy-deep:#06122A; --navy-glow:#1C3D72;
+      --gold:#C9A86A; --gold-deep:#9A7333; --gold-soft:rgba(201,168,106,.13);
+      --bg:#F4F5F8; --surface:#fff; --ink:#0E1726; --sub:#5B6577; --mute:#8B95A6;
+      --line:rgba(14,23,38,.08);
+      --danger:#D8513C; --danger-soft:rgba(216,81,60,.10);
+      --r-md:14px; --r-lg:18px; --r-card:22px;
+      --font:Pretendard,-apple-system,system-ui,sans-serif;
     }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{min-height:100%;}
+    body{
+      font-family:var(--font);
+      background:radial-gradient(110% 90% at 88% -20%,var(--navy-glow) 0%,var(--navy) 48%,var(--navy-deep) 100%);
+      min-height:100vh;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:24px 16px;
+    }
+    /* grain overlay */
+    body::before{
+      content:'';position:fixed;inset:0;pointer-events:none;
+      background:radial-gradient(circle at 1px 1px,rgba(255,255,255,.055) 1px,transparent 0);
+      background-size:28px 28px;
+      -webkit-mask-image:radial-gradient(120% 80% at 75% 30%,#000 30%,transparent 75%);
+      mask-image:radial-gradient(120% 80% at 75% 30%,#000 30%,transparent 75%);
+    }
+    /* back link */
+    .back{
+      position:fixed;top:20px;left:24px;
+      display:flex;align-items:center;gap:7px;
+      font-size:13px;font-weight:600;color:rgba(255,255,255,.52);
+      text-decoration:none;transition:color .15s;z-index:10;
+    }
+    .back:hover{color:rgba(255,255,255,.88);}
+    .back svg{flex-shrink:0;}
+    /* wrap */
+    .wrap{width:100%;max-width:400px;position:relative;z-index:1;}
+    /* wordmark */
+    .wordmark{
+      display:flex;align-items:center;gap:11px;
+      justify-content:center;margin-bottom:28px;
+    }
+    .nfcmark{
+      width:36px;height:36px;border-radius:11px;
+      border:1.5px solid var(--gold);
+      display:flex;align-items:center;justify-content:center;
+    }
+    .wm-text{font-size:20px;font-weight:800;letter-spacing:.2em;color:#fff;}
+    .wm-text .i{color:var(--gold);}
+    /* card */
+    .card{
+      background:var(--surface);
+      border-radius:var(--r-card);
+      padding:36px;
+      box-shadow:0 2px 4px rgba(6,18,42,.28),0 20px 48px -12px rgba(6,18,42,.58);
+    }
+    .card-title{font-size:20px;font-weight:800;color:var(--ink);margin-bottom:6px;letter-spacing:-.02em;}
+    .card-sub{font-size:14px;color:var(--mute);margin-bottom:26px;}
+    /* form */
+    .field{margin-bottom:16px;}
+    label{display:block;font-size:12px;font-weight:700;color:var(--sub);margin-bottom:6px;letter-spacing:.04em;}
+    .label-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+    .forgot{font-size:12px;font-weight:600;color:var(--gold-deep);text-decoration:none;}
+    .forgot:hover{text-decoration:underline;}
+    input[type=email],input[type=password]{
+      width:100%;padding:13px 15px;
+      background:var(--bg);border:1.5px solid var(--line);
+      border-radius:var(--r-md);
+      font-family:var(--font);font-size:15px;color:var(--ink);
+      outline:none;transition:border-color .15s,box-shadow .15s,background .15s;
+    }
+    input::placeholder{color:var(--mute);}
+    input:focus{border-color:var(--navy);background:#fff;box-shadow:0 0 0 3px rgba(11,30,64,.09);}
+    /* error */
+    #err{
+      display:none;
+      background:var(--danger-soft);border:1px solid rgba(216,81,60,.22);
+      color:#B5402E;border-radius:10px;
+      padding:10px 14px;font-size:13px;margin-bottom:16px;
+    }
+    /* btn */
+    .btn{
+      width:100%;padding:15px;margin-top:4px;
+      background:var(--navy);color:#fff;border:none;
+      border-radius:var(--r-md);
+      font-family:var(--font);font-size:15px;font-weight:700;
+      cursor:pointer;transition:filter .15s,transform .08s;
+    }
+    .btn:hover{filter:brightness(1.14);}
+    .btn:active{transform:scale(0.99);}
+    .btn:disabled{opacity:.55;cursor:not-allowed;}
+    /* divider */
+    .div{border:none;border-top:1px solid var(--line);margin:24px 0;}
+    /* bottom */
+    .bottom{text-align:center;font-size:14px;color:var(--mute);}
+    .bottom a{color:var(--navy);font-weight:700;text-decoration:none;}
+    .bottom a:hover{text-decoration:underline;}
+    /* footer */
+    .foot{margin-top:22px;font-size:12px;color:rgba(255,255,255,.28);text-align:center;position:relative;z-index:1;}
 
-    /* ── Card ── */
-    .card {
-      width: 100%; max-width: 420px;
-      border-radius: 24px;
-      overflow: hidden;
-      box-shadow: 0 2px 8px rgba(26,63,170,0.06), 0 16px 48px rgba(26,63,170,0.1);
-    }
-
-    /* Blue header */
-    .card-header {
-      background: #0c2d85;
-      padding: 32px 36px 30px;
-      position: relative;
-      overflow: hidden;
-    }
-    .card-header::after {
-      content: '';
-      position: absolute;
-      top: -60px; right: -60px;
-      width: 180px; height: 180px;
-      background: rgba(255,255,255,0.05);
-      border-radius: 50%;
-    }
-    .card-header::before {
-      content: '';
-      position: absolute;
-      bottom: -40px; left: 30%;
-      width: 120px; height: 120px;
-      background: rgba(255,255,255,0.04);
-      border-radius: 50%;
-    }
-    .logo {
-      display: flex; align-items: center; gap: 10px;
-      margin-bottom: 22px; position: relative; z-index: 1;
-    }
-    .logo-icon {
-      width: 36px; height: 36px; border-radius: 9px;
-      background: rgba(255,255,255,0.18);
-      display: flex; align-items: center; justify-content: center;
-      color: white; font-size: 16px;
-    }
-    .logo-name {
-      font-size: 20px; font-weight: 900; color: white; letter-spacing: -0.5px;
-    }
-    .header-title {
-      font-size: 28px; font-weight: 900; color: white;
-      line-height: 1.2; letter-spacing: -0.8px;
-      position: relative; z-index: 1;
-    }
-    .header-sub {
-      font-size: 14px; color: rgba(255,255,255,0.6);
-      margin-top: 6px; position: relative; z-index: 1;
-    }
-
-    /* White body */
-    .card-body {
-      background: #ffffff;
-      padding: 32px 36px 36px;
-    }
-
-    .section-title {
-      font-size: 18px; font-weight: 700; color: #0d1b3e;
-      margin-bottom: 20px;
-    }
-
-    .form-group { margin-bottom: 14px; }
-    .form-label {
-      display: block; font-size: 13px; font-weight: 600;
-      color: #374151; margin-bottom: 6px;
-    }
-    .form-input {
-      width: 100%; padding: 13px 15px;
-      background: #f7f9fc; border: 1.5px solid #e4eaf5;
-      border-radius: 11px; color: #0d1b3e;
-      font-size: 15px; font-family: inherit;
-      outline: none; transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
-    }
-    .form-input::placeholder { color: #adb5cc; }
-    .form-input:focus {
-      border-color: #0c2d85;
-      background: #ffffff;
-      box-shadow: 0 0 0 3px rgba(26,63,170,0.1);
-    }
-
-    .pw-row {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 6px;
-    }
-    .forgot-link {
-      font-size: 12px; color: #0c2d85; text-decoration: none; font-weight: 500;
-    }
-    .forgot-link:hover { text-decoration: underline; }
-
-    .btn-primary {
-      width: 100%; padding: 15px; margin-top: 8px;
-      background: #0c2d85; color: white;
-      border: none; border-radius: 12px;
-      font-size: 15px; font-weight: 700; font-family: inherit;
-      cursor: pointer; transition: background 0.15s, transform 0.1s;
-      letter-spacing: 0.1px;
-    }
-    .btn-primary:hover { background: #0a2470; }
-    .btn-primary:active { transform: scale(0.99); }
-
-    .error-box {
-      background: #fef2f2; border: 1px solid #fecaca;
-      color: #b91c1c; padding: 11px 14px;
-      border-radius: 10px; font-size: 13px; margin-bottom: 16px;
-    }
-
-    hr.divider { border: none; border-top: 1px solid #f1f5f9; margin: 24px 0; }
-
-    .bottom-link {
-      text-align: center; font-size: 14px; color: #6b7280;
-    }
-    .bottom-link a { color: #0c2d85; font-weight: 600; text-decoration: none; }
-    .bottom-link a:hover { text-decoration: underline; }
-
-    .page-footer {
-      margin-top: 20px; font-size: 12px; color: #b0b8cc; text-align: center;
-    }
-
-    @media (max-width: 480px) {
-      .card-header { padding: 28px 24px 24px; }
-      .card-body { padding: 28px 24px 32px; }
-      .header-title { font-size: 24px; }
-    }
+    @media(max-width:480px){.card{padding:28px 24px;}}
   </style>
 </head>
 <body>
 
-  <div class="card">
-    <div class="card-header">
-      <div class="logo">
-        <div class="logo-icon"><i class="fas fa-id-card"></i></div>
-        <span class="logo-name">METI</span>
-      </div>
-      <div class="header-title">차세대<br>디지털 명함</div>
-      <div class="header-sub">NFC · QR · SNS를 하나로</div>
+  <a href="/" class="back">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path d="M15 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    홈으로
+  </a>
+
+  <div class="wrap">
+    <div class="wordmark">
+      <span class="nfcmark">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M5.5 8.5c-1 1.6-1 5.4 0 7M8.7 6.6c-1.8 2.5-1.8 8.3 0 10.8M18.5 8.5c1 1.6 1 5.4 0 7M15.3 6.6c1.8 2.5 1.8 8.3 0 10.8M12 9.5a2.5 2.5 0 0 0 0 5" stroke="#C9A86A" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="wm-text">MET<span class="i">I</span></span>
     </div>
 
-    <div class="card-body">
-      <div class="section-title">로그인</div>
+    <div class="card">
+      <div class="card-title">로그인</div>
+      <div class="card-sub">계속하려면 계정에 로그인하세요</div>
 
-      <div id="error-msg" class="error-box" style="display:none"></div>
+      <div id="err"></div>
 
-      <form id="login-form">
-        <div class="form-group">
-          <label class="form-label" for="email">이메일</label>
-          <input type="email" id="email" placeholder="example@email.com" class="form-input" autocomplete="email">
+      <form id="frm">
+        <div class="field">
+          <label for="email">이메일</label>
+          <input type="email" id="email" placeholder="example@email.com" autocomplete="email">
         </div>
-        <div class="form-group" style="margin-bottom:8px">
-          <div class="pw-row">
-            <label class="form-label" for="password" style="margin:0">비밀번호</label>
-            <a href="/app/forgot-password" class="forgot-link">비밀번호를 잊으셨나요?</a>
+        <div class="field" style="margin-bottom:8px">
+          <div class="label-row">
+            <label for="pw" style="margin:0">비밀번호</label>
+            <a href="/app/forgot-password" class="forgot">비밀번호 찾기</a>
           </div>
-          <input type="password" id="password" placeholder="비밀번호 입력" class="form-input" autocomplete="current-password">
+          <input type="password" id="pw" placeholder="비밀번호 입력" autocomplete="current-password">
         </div>
-        <button type="submit" class="btn-primary">
-          <span id="btn-text">로그인</span>
-          <span id="btn-loading" style="display:none"><i class="fas fa-spinner fa-spin" style="margin-right:8px"></i>로그인 중...</span>
-        </button>
+        <button type="submit" class="btn" id="btn">로그인</button>
       </form>
 
-      <hr class="divider">
-      <div class="bottom-link">계정이 없으신가요? <a href="/app/register">회원가입</a></div>
+      <hr class="div">
+      <div class="bottom">계정이 없으신가요? <a href="/app/register">회원가입</a></div>
     </div>
   </div>
 
-  <div class="page-footer">© 2026 주식회사 모빈</div>
+  <div class="foot">© 2026 주식회사 모빈</div>
 
   <script>
     (function() {
@@ -204,42 +168,37 @@ export function appLoginHtml(): string {
       }
     })();
 
-    document.getElementById('login-form').addEventListener('submit', async (e) => {
+    document.getElementById('frm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const email    = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
-      const btnText    = document.getElementById('btn-text');
-      const btnLoading = document.getElementById('btn-loading');
-      const errorMsg   = document.getElementById('error-msg');
+      const email = document.getElementById('email').value.trim();
+      const pw    = document.getElementById('pw').value;
+      const btn   = document.getElementById('btn');
+      const err   = document.getElementById('err');
 
-      btnText.style.display = 'none';
-      btnLoading.style.display = 'inline';
-      errorMsg.style.display = 'none';
+      btn.textContent = '로그인 중…'; btn.disabled = true;
+      err.style.display = 'none';
 
       try {
         const res  = await fetch('/api/v1/auth/login', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ email, password: pw })
         });
         const data = await res.json();
-
         if (data.success) {
-          localStorage.setItem('meti_token',         data.data.access_token);
-          localStorage.setItem('meti_refresh_token',  data.data.refresh_token);
-          localStorage.setItem('meti_user',           JSON.stringify(data.data.user));
-          const role = data.data.user.role;
-          window.location.href = role === 'super_admin' ? '/admin/dashboard' : '/app/dashboard';
+          localStorage.setItem('meti_token',        data.data.access_token);
+          localStorage.setItem('meti_refresh_token', data.data.refresh_token);
+          localStorage.setItem('meti_user',          JSON.stringify(data.data.user));
+          window.location.href = data.data.user.role === 'super_admin' ? '/admin/dashboard' : '/app/dashboard';
         } else {
-          errorMsg.textContent = data.error || '로그인에 실패했습니다.';
-          errorMsg.style.display = 'block';
+          err.textContent = data.error || '로그인에 실패했습니다.';
+          err.style.display = 'block';
         }
-      } catch (err) {
-        errorMsg.textContent = '서버 연결에 실패했습니다.';
-        errorMsg.style.display = 'block';
+      } catch {
+        err.textContent = '서버 연결에 실패했습니다.';
+        err.style.display = 'block';
       } finally {
-        btnText.style.display = 'inline';
-        btnLoading.style.display = 'none';
+        btn.textContent = '로그인'; btn.disabled = false;
       }
     });
   </script>
@@ -253,251 +212,201 @@ export function appRegisterHtml(): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>METI — 회원가입</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+  <title>회원가입 — METI</title>
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #f2f5fb;
-      min-height: 100vh;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      padding: 24px 16px;
+    :root {
+      --navy:#0B1E40; --navy-deep:#06122A; --navy-glow:#1C3D72;
+      --gold:#C9A86A; --gold-deep:#9A7333;
+      --bg:#F4F5F8; --surface:#fff; --ink:#0E1726; --sub:#5B6577; --mute:#8B95A6;
+      --line:rgba(14,23,38,.08);
+      --danger:#D8513C; --danger-soft:rgba(216,81,60,.10);
+      --success:#1B9C73; --success-soft:rgba(27,156,115,.11);
+      --r-md:14px; --r-lg:18px; --r-card:22px;
+      --font:Pretendard,-apple-system,system-ui,sans-serif;
     }
-
-    .card {
-      width: 100%; max-width: 420px;
-      border-radius: 24px; overflow: hidden;
-      box-shadow: 0 2px 8px rgba(26,63,170,0.06), 0 16px 48px rgba(26,63,170,0.1);
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{min-height:100%;}
+    body{
+      font-family:var(--font);
+      background:radial-gradient(110% 90% at 88% -20%,var(--navy-glow) 0%,var(--navy) 48%,var(--navy-deep) 100%);
+      min-height:100vh;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:24px 16px;
     }
-
-    .card-header {
-      background: #0c2d85;
-      padding: 24px 36px 22px;
-      position: relative; overflow: hidden;
+    body::before{
+      content:'';position:fixed;inset:0;pointer-events:none;
+      background:radial-gradient(circle at 1px 1px,rgba(255,255,255,.055) 1px,transparent 0);
+      background-size:28px 28px;
+      -webkit-mask-image:radial-gradient(120% 80% at 75% 30%,#000 30%,transparent 75%);
+      mask-image:radial-gradient(120% 80% at 75% 30%,#000 30%,transparent 75%);
     }
-    .card-header::after {
-      content: ''; position: absolute;
-      top: -50px; right: -50px;
-      width: 150px; height: 150px;
-      background: rgba(255,255,255,0.05); border-radius: 50%;
+    .back{position:fixed;top:20px;left:24px;display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:rgba(255,255,255,.52);text-decoration:none;transition:color .15s;z-index:10;}
+    .back:hover{color:rgba(255,255,255,.88);}
+    .wrap{width:100%;max-width:420px;position:relative;z-index:1;}
+    .wordmark{display:flex;align-items:center;gap:11px;justify-content:center;margin-bottom:24px;}
+    .nfcmark{width:36px;height:36px;border-radius:11px;border:1.5px solid var(--gold);display:flex;align-items:center;justify-content:center;}
+    .wm-text{font-size:20px;font-weight:800;letter-spacing:.2em;color:#fff;}
+    .wm-text .i{color:var(--gold);}
+    .card{background:var(--surface);border-radius:var(--r-card);padding:32px 36px;box-shadow:0 2px 4px rgba(6,18,42,.28),0 20px 48px -12px rgba(6,18,42,.58);}
+    .card-title{font-size:20px;font-weight:800;color:var(--ink);margin-bottom:5px;letter-spacing:-.02em;}
+    .card-sub{font-size:14px;color:var(--mute);margin-bottom:22px;}
+    .field{margin-bottom:14px;}
+    label{display:block;font-size:12px;font-weight:700;color:var(--sub);margin-bottom:6px;letter-spacing:.04em;}
+    input[type=text],input[type=email],input[type=password]{
+      width:100%;padding:12px 15px;
+      background:var(--bg);border:1.5px solid var(--line);
+      border-radius:var(--r-md);
+      font-family:var(--font);font-size:15px;color:var(--ink);
+      outline:none;transition:border-color .15s,box-shadow .15s,background .15s;
     }
-    .logo {
-      display: flex; align-items: center; gap: 10px;
-      position: relative; z-index: 1;
-    }
-    .logo-icon {
-      width: 34px; height: 34px; border-radius: 9px;
-      background: rgba(255,255,255,0.18);
-      display: flex; align-items: center; justify-content: center;
-      color: white; font-size: 15px;
-    }
-    .logo-name { font-size: 19px; font-weight: 900; color: white; letter-spacing: -0.5px; }
-    .logo-sep { color: rgba(255,255,255,0.35); margin: 0 4px; }
-    .logo-page { font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.7); }
-
-    .card-body { background: #ffffff; padding: 28px 36px 36px; }
-
-    .section-title {
-      font-size: 18px; font-weight: 700; color: #0d1b3e; margin-bottom: 18px;
-    }
-
-    .form-group { margin-bottom: 13px; }
-    .form-label {
-      display: block; font-size: 13px; font-weight: 600;
-      color: #374151; margin-bottom: 5px;
-    }
-    .form-input {
-      width: 100%; padding: 12px 15px;
-      background: #f7f9fc; border: 1.5px solid #e4eaf5;
-      border-radius: 11px; color: #0d1b3e;
-      font-size: 15px; font-family: inherit;
-      outline: none; transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
-    }
-    .form-input::placeholder { color: #adb5cc; }
-    .form-input:focus {
-      border-color: #0c2d85; background: #ffffff;
-      box-shadow: 0 0 0 3px rgba(26,63,170,0.1);
-    }
-
-    .terms-box {
-      background: #f7f9fc; border: 1.5px solid #e4eaf5;
-      border-radius: 12px; padding: 14px 16px; margin: 16px 0;
-    }
-    .agree-all-row {
-      display: flex; align-items: center; gap: 9px;
-      padding-bottom: 11px; margin-bottom: 11px;
-      border-bottom: 1px solid #e4eaf5;
-    }
-    .agree-all-row label { font-size: 14px; font-weight: 700; color: #0d1b3e; cursor: pointer; }
-    .agree-item-row { display: flex; align-items: flex-start; gap: 9px; margin-bottom: 7px; }
-    .agree-item-row:last-child { margin-bottom: 0; }
-    .agree-item-row label { font-size: 13px; color: #6b7280; cursor: pointer; line-height: 1.4; }
-    .agree-item-row label .req { color: #dc2626; font-weight: 700; margin-right: 3px; }
-    .agree-item-row label a { color: #0c2d85; text-decoration: none; }
-    .agree-item-row label a:hover { text-decoration: underline; }
-    input[type="checkbox"] {
-      width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px;
-      accent-color: #0c2d85; cursor: pointer;
-    }
-
-    .btn-primary {
-      width: 100%; padding: 15px;
-      background: #0c2d85; color: white;
-      border: none; border-radius: 12px;
-      font-size: 15px; font-weight: 700; font-family: inherit;
-      cursor: pointer; transition: background 0.15s, transform 0.1s;
-    }
-    .btn-primary:hover { background: #0a2470; }
-    .btn-primary:active { transform: scale(0.99); }
-
-    .error-box {
-      background: #fef2f2; border: 1px solid #fecaca;
-      color: #b91c1c; padding: 11px 14px;
-      border-radius: 10px; font-size: 13px; margin-bottom: 14px;
-    }
-    .success-box {
-      background: #f0fdf4; border: 1px solid #bbf7d0;
-      color: #166534; padding: 11px 14px;
-      border-radius: 10px; font-size: 13px; margin-bottom: 14px;
-    }
-
-    hr.divider { border: none; border-top: 1px solid #f1f5f9; margin: 20px 0; }
-    .bottom-link { text-align: center; font-size: 14px; color: #6b7280; }
-    .bottom-link a { color: #0c2d85; font-weight: 600; text-decoration: none; }
-    .bottom-link a:hover { text-decoration: underline; }
-    .page-footer { margin-top: 20px; font-size: 12px; color: #b0b8cc; text-align: center; }
-
-    @media (max-width: 480px) {
-      .card-header { padding: 20px 24px 18px; }
-      .card-body { padding: 24px 24px 32px; }
-    }
+    input::placeholder{color:var(--mute);}
+    input[type=text]:focus,input[type=email]:focus,input[type=password]:focus{border-color:var(--navy);background:#fff;box-shadow:0 0 0 3px rgba(11,30,64,.09);}
+    .terms{background:var(--bg);border:1.5px solid var(--line);border-radius:14px;padding:14px 16px;margin:16px 0;}
+    .all-row{display:flex;align-items:center;gap:9px;padding-bottom:11px;margin-bottom:11px;border-bottom:1px solid var(--line);}
+    .all-row label{font-size:14px;font-weight:700;color:var(--ink);cursor:pointer;}
+    .item-row{display:flex;align-items:flex-start;gap:9px;margin-bottom:7px;}
+    .item-row:last-child{margin-bottom:0;}
+    .item-row label{font-size:13px;color:var(--sub);cursor:pointer;line-height:1.4;}
+    .item-row label .req{color:var(--danger);font-weight:700;margin-right:3px;}
+    .item-row label a{color:var(--gold-deep);text-decoration:none;font-weight:600;}
+    .item-row label a:hover{text-decoration:underline;}
+    input[type=checkbox]{width:16px;height:16px;flex-shrink:0;margin-top:2px;accent-color:var(--navy);cursor:pointer;}
+    #err{display:none;background:var(--danger-soft);border:1px solid rgba(216,81,60,.22);color:#B5402E;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:14px;}
+    #ok{display:none;background:var(--success-soft);border:1px solid rgba(27,156,115,.22);color:#157A59;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:14px;}
+    .btn{width:100%;padding:15px;background:var(--navy);color:#fff;border:none;border-radius:var(--r-md);font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;transition:filter .15s,transform .08s;}
+    .btn:hover{filter:brightness(1.14);}
+    .btn:active{transform:scale(0.99);}
+    .btn:disabled{opacity:.55;cursor:not-allowed;}
+    .div{border:none;border-top:1px solid var(--line);margin:22px 0;}
+    .bottom{text-align:center;font-size:14px;color:var(--mute);}
+    .bottom a{color:var(--navy);font-weight:700;text-decoration:none;}
+    .bottom a:hover{text-decoration:underline;}
+    .foot{margin-top:22px;font-size:12px;color:rgba(255,255,255,.28);text-align:center;position:relative;z-index:1;}
+    @media(max-width:480px){.card{padding:28px 24px;}}
   </style>
 </head>
 <body>
 
-  <div class="card">
-    <div class="card-header">
-      <div class="logo">
-        <div class="logo-icon"><i class="fas fa-id-card"></i></div>
-        <span class="logo-name">METI</span>
-        <span class="logo-sep">/</span>
-        <span class="logo-page">회원가입</span>
-      </div>
+  <a href="/login" class="back">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path d="M15 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    로그인으로
+  </a>
+
+  <div class="wrap">
+    <div class="wordmark">
+      <span class="nfcmark">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M5.5 8.5c-1 1.6-1 5.4 0 7M8.7 6.6c-1.8 2.5-1.8 8.3 0 10.8M18.5 8.5c1 1.6 1 5.4 0 7M15.3 6.6c1.8 2.5 1.8 8.3 0 10.8M12 9.5a2.5 2.5 0 0 0 0 5" stroke="#C9A86A" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="wm-text">MET<span class="i">I</span></span>
     </div>
 
-    <div class="card-body">
-      <div class="section-title">계정 만들기</div>
+    <div class="card">
+      <div class="card-title">계정 만들기</div>
+      <div class="card-sub">무료로 시작하고, 언제든 업그레이드하세요</div>
 
-      <div id="error-msg" class="error-box" style="display:none"></div>
-      <div id="success-msg" class="success-box" style="display:none"></div>
+      <div id="err"></div>
+      <div id="ok"></div>
 
-      <form id="register-form">
-        <div class="form-group">
-          <label class="form-label" for="name">이름</label>
-          <input type="text" id="name" placeholder="홍길동" class="form-input" autocomplete="name">
+      <form id="frm">
+        <div class="field">
+          <label for="name">이름</label>
+          <input type="text" id="name" placeholder="홍길동" autocomplete="name">
         </div>
-        <div class="form-group">
-          <label class="form-label" for="email">이메일</label>
-          <input type="email" id="email" placeholder="example@email.com" class="form-input" autocomplete="email">
+        <div class="field">
+          <label for="email">이메일</label>
+          <input type="email" id="email" placeholder="example@email.com" autocomplete="email">
         </div>
-        <div class="form-group">
-          <label class="form-label" for="password">비밀번호</label>
-          <input type="password" id="password" placeholder="8자 이상" class="form-input" autocomplete="new-password">
+        <div class="field">
+          <label for="pw">비밀번호</label>
+          <input type="password" id="pw" placeholder="8자 이상" autocomplete="new-password">
         </div>
 
-        <div class="terms-box">
-          <div class="agree-all-row">
-            <input type="checkbox" id="agree-all" onchange="toggleAgreeAll(this)">
+        <div class="terms">
+          <div class="all-row">
+            <input type="checkbox" id="agree-all" onchange="toggleAll(this)">
             <label for="agree-all">전체 동의</label>
           </div>
-          <div class="agree-item-row">
-            <input type="checkbox" id="agree-terms" class="agree-item" onchange="syncAgreeAll()">
+          <div class="item-row">
+            <input type="checkbox" id="agree-terms" class="item" onchange="syncAll()">
             <label for="agree-terms"><span class="req">[필수]</span><a href="/terms" target="_blank">이용약관</a> 동의</label>
           </div>
-          <div class="agree-item-row">
-            <input type="checkbox" id="agree-privacy" class="agree-item" onchange="syncAgreeAll()">
+          <div class="item-row">
+            <input type="checkbox" id="agree-privacy" class="item" onchange="syncAll()">
             <label for="agree-privacy"><span class="req">[필수]</span><a href="/privacy" target="_blank">개인정보처리방침</a> 동의</label>
           </div>
         </div>
 
-        <button type="submit" class="btn-primary">
-          <span id="btn-text">가입하기</span>
-          <span id="btn-loading" style="display:none"><i class="fas fa-spinner fa-spin" style="margin-right:8px"></i>처리 중...</span>
-        </button>
+        <button type="submit" class="btn" id="btn">가입하기</button>
       </form>
 
-      <hr class="divider">
-      <div class="bottom-link">이미 계정이 있으신가요? <a href="/">로그인</a></div>
+      <hr class="div">
+      <div class="bottom">이미 계정이 있으신가요? <a href="/login">로그인</a></div>
     </div>
   </div>
 
-  <div class="page-footer">© 2026 주식회사 모빈</div>
+  <div class="foot">© 2026 주식회사 모빈</div>
 
   <script>
-    function toggleAgreeAll(el) {
-      document.querySelectorAll('.agree-item').forEach(cb => cb.checked = el.checked);
+    function toggleAll(el) {
+      document.querySelectorAll('.item').forEach(cb => cb.checked = el.checked);
     }
-    function syncAgreeAll() {
-      const items = document.querySelectorAll('.agree-item');
+    function syncAll() {
+      const items = document.querySelectorAll('.item');
       document.getElementById('agree-all').checked = [...items].every(cb => cb.checked);
     }
 
-    document.getElementById('register-form').addEventListener('submit', async (e) => {
+    document.getElementById('frm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const btnText    = document.getElementById('btn-text');
-      const btnLoading = document.getElementById('btn-loading');
-      const errorMsg   = document.getElementById('error-msg');
-      const successMsg = document.getElementById('success-msg');
+      const btn = document.getElementById('btn');
+      const err = document.getElementById('err');
+      const ok  = document.getElementById('ok');
 
       if (!document.getElementById('agree-terms').checked || !document.getElementById('agree-privacy').checked) {
-        errorMsg.textContent = '이용약관 및 개인정보처리방침에 동의해 주세요.';
-        errorMsg.style.display = 'block';
-        return;
+        err.textContent = '이용약관 및 개인정보처리방침에 동의해 주세요.';
+        err.style.display = 'block'; return;
       }
 
-      btnText.style.display = 'none';
-      btnLoading.style.display = 'inline';
-      errorMsg.style.display = 'none';
-      successMsg.style.display = 'none';
+      btn.textContent = '처리 중…'; btn.disabled = true;
+      err.style.display = 'none'; ok.style.display = 'none';
 
       try {
         const res  = await fetch('/api/v1/auth/register', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {'Content-Type':'application/json'},
           body: JSON.stringify({
             name:         document.getElementById('name').value.trim(),
             email:        document.getElementById('email').value.trim(),
-            password:     document.getElementById('password').value,
+            password:     document.getElementById('pw').value,
             account_type: 'personal'
           })
         });
         const data = await res.json();
-
         if (data.success) {
-          successMsg.textContent = '가입이 완료되었습니다. 로그인 페이지로 이동합니다.';
-          successMsg.style.display = 'block';
-          document.getElementById('register-form').reset();
-          setTimeout(() => { window.location.href = '/'; }, 1500);
+          ok.textContent = '가입 완료! 로그인 페이지로 이동합니다.';
+          ok.style.display = 'block';
+          document.getElementById('frm').reset();
+          setTimeout(() => { window.location.href = '/login'; }, 1500);
         } else {
-          errorMsg.textContent = data.error || '가입에 실패했습니다.';
-          errorMsg.style.display = 'block';
+          err.textContent = data.error || '가입에 실패했습니다.';
+          err.style.display = 'block';
         }
-      } catch (err) {
-        errorMsg.textContent = '서버 연결에 실패했습니다.';
-        errorMsg.style.display = 'block';
+      } catch {
+        err.textContent = '서버 연결에 실패했습니다.';
+        err.style.display = 'block';
       } finally {
-        btnText.style.display = 'inline';
-        btnLoading.style.display = 'none';
+        btn.textContent = '가입하기'; btn.disabled = false;
       }
     });
   </script>
 </body>
 </html>`
 }
+
 
 export function appLandingHtml(): string {
   return `<!DOCTYPE html>
