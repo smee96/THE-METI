@@ -33,7 +33,7 @@ axios.interceptors.response.use(
 // ── 초기화 ───────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   if (!authToken || !currentUser) {
-    window.location.href = '/app/login';
+    window.location.href = '/';
     return;
   }
   initApp();
@@ -1951,7 +1951,7 @@ function logout() {
   localStorage.removeItem('meti_token');
   localStorage.removeItem('meti_refresh_token');
   localStorage.removeItem('meti_user');
-  window.location.href = '/app/login';
+  window.location.href = '/';
 }
 
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }

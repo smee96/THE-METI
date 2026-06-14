@@ -4,8 +4,8 @@
 // ============================================================
 
 const API = '/api/v1';
-let authToken = localStorage.getItem('meti_admin_token');
-let currentUser = JSON.parse(localStorage.getItem('meti_admin_user') || 'null');
+let authToken = localStorage.getItem('meti_token');
+let currentUser = JSON.parse(localStorage.getItem('meti_user') || 'null');
 let currentSection = 'dashboard';
 let sidebarOpen = false;
 
@@ -26,7 +26,10 @@ axios.interceptors.response.use(
 // ── 초기화 ────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   if (!authToken || !currentUser) {
-    window.location.href = '/admin';
+    localStorage.removeItem('meti_token');
+    localStorage.removeItem('meti_refresh_token');
+    localStorage.removeItem('meti_user');
+    window.location.href = '/';
     return;
   }
   initApp();
@@ -482,7 +485,7 @@ function showToast(msg, type = 'success') {
 }
 
 function logout() {
-  localStorage.removeItem('meti_admin_token');
-  localStorage.removeItem('meti_admin_user');
-  window.location.href = '/admin';
+  localStorage.removeItem('meti_token');
+  localStorage.removeItem('meti_user');
+  window.location.href = '/';
 }

@@ -87,7 +87,7 @@ auth.post(
 
     const result = await c.env.DB.prepare(`
       INSERT INTO users (email, password_hash, name, account_type, plan, is_verified)
-      VALUES (?, ?, ?, 'personal', 'free', 0)
+      VALUES (?, ?, ?, 'personal', 'free', 1)
     `).bind(email, passwordHash, name).run()
 
     const userId = result.meta.last_row_id as number
@@ -108,7 +108,7 @@ auth.post(
     return c.json(ok({
       user_id: userId,
       email,
-    }, '회원가입이 완료되었습니다. 이메일 인증을 진행해주세요.'), 201)
+    }, '회원가입이 완료되었습니다.'), 201)
   }
 )
 

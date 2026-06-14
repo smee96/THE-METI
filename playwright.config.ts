@@ -29,13 +29,12 @@ export default defineConfig({
   },
 
   projects: [
-    // ── 1단계: 로그인 → storageState 파일 생성
+    // ── 어드민: 로그인 셋업
     {
       name: 'setup',
       testMatch: '**/auth.setup.ts',
     },
-
-    // ── 2단계: storageState 재사용하여 실제 테스트 실행
+    // ── 어드민: E2E 테스트
     {
       name: 'chromium',
       use: {
@@ -43,6 +42,39 @@ export default defineConfig({
         storageState: 'tests/.auth/admin.json',
       },
       dependencies: ['setup'],
+      testMatch: '**/admin-*.spec.ts',
+    },
+
+    // ── 일반 유저: 로그인 셋업
+    {
+      name: 'user-setup',
+      testMatch: '**/user.setup.ts',
+    },
+    // ── 일반 유저: E2E 테스트
+    {
+      name: 'chromium-user',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'tests/.auth/user.json',
+      },
+      dependencies: ['user-setup'],
+      testMatch: ['**/app-cards.spec.ts', '**/app-groups.spec.ts'],
+    },
+
+    // ── Pro 유저: 로그인 셋업
+    {
+      name: 'pro-setup',
+      testMatch: '**/pro.setup.ts',
+    },
+    // ── Pro 유저: E2E 테스트
+    {
+      name: 'chromium-pro',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'tests/.auth/pro.json',
+      },
+      dependencies: ['pro-setup'],
+      testMatch: '**/app-pro.spec.ts',
     },
   ],
 

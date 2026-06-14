@@ -19,8 +19,9 @@ import pointsRoutes   from './routes/points'
 import staticRouter   from './static-serve'
 
 // Web UI HTML 템플릿
-import { adminLoginHtml, adminAppHtml }               from './web/admin'
-import { appLoginHtml, appRegisterHtml, appShellHtml } from './web/app'
+import { adminAppHtml }                                from './web/admin'
+import { appLandingHtml, appLoginHtml, appRegisterHtml, appShellHtml } from './web/app'
+import { privacyPolicyHtml, termsOfServiceHtml }       from './web/legal'
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -295,7 +296,7 @@ app.get('/health', (c) =>
 // ════════════════════════════════════════════════════════════
 // ── Admin Web UI  (/admin)
 // ════════════════════════════════════════════════════════════
-app.get('/admin', (c) => c.html(adminLoginHtml()))
+app.get('/admin',  (c) => c.redirect('/'))
 app.get('/admin/*', (c) => c.html(adminAppHtml()))
 
 // ════════════════════════════════════════════════════════════
@@ -318,15 +319,12 @@ app.get('/admin/*', (c) => c.html(adminAppHtml()))
 //    └─ /app/group/:id/invites
 // ════════════════════════════════════════════════════════════
 
-// 로그인 / 회원가입 (인증 불필요)
-app.get('/app/login',    (c) => c.html(appLoginHtml()))
+// 랜딩 페이지 (메인) + 로그인
+app.get('/',             (c) => c.html(appLandingHtml()))
+app.get('/login',        (c) => c.html(appLoginHtml()))
+app.get('/app/login',    (c) => c.redirect('/login'))
 app.get('/app/register', (c) => c.html(appRegisterHtml()))
-
-// 루트 → /app/login 으로 리다이렉트
-app.get('/', (c) => c.redirect('/app/login'))
-
-// /app 루트 → 로그인으로 리다이렉트
-app.get('/app', (c) => c.redirect('/app/login'))
+app.get('/app',          (c) => c.redirect('/'))
 
 // 나머지 /app/* 전체 → SPA shell (JS가 라우팅 처리)
 app.get('/app/*', (c) => c.html(appShellHtml('METI')))
@@ -340,6 +338,10 @@ app.get('/card/:id', (c) => {
 })
 
 // ════════════════════════════════════════════════════════════
+// ── 법적 문서 (개인정보처리방침 / 이용약관) ─────────────────
+app.get('/privacy', (c) => c.html(privacyPolicyHtml()))
+app.get('/terms',   (c) => c.html(termsOfServiceHtml()))
+
 // ── 그룹 초대 페이지 (앱 미설치자용)
 // ════════════════════════════════════════════════════════════
 function invitePageHtml(token: string): string {

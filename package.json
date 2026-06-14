@@ -7,7 +7,7 @@
     "dev:sandbox": "wrangler pages dev dist --d1=meti-production --local --ip 0.0.0.0 --port 3000",
     "build": "vite build",
     "preview": "wrangler pages dev dist --d1=meti-production --local",
-    "deploy": "npm run build && wrangler pages deploy dist --project-name meti-backend",
+    "deploy": "npm run build && wrangler pages deploy dist --project-name the-meti --branch=main",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "db:create": "wrangler d1 create meti-production",
     "db:migrate:local": "wrangler d1 migrations apply meti-production --local",

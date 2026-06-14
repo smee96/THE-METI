@@ -6,54 +6,202 @@ export function appLoginHtml(): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>METI - 로그인</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>tailwind.config = { theme: { extend: { fontSize: { 'xs':'11px','sm':'12px','base':'13px','lg':'14px','xl':'15px','2xl':'16px','3xl':'18px' } } } }</script>
+  <title>METI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f2f5fb;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+
+    /* ── Card ── */
+    .card {
+      width: 100%; max-width: 420px;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(26,63,170,0.06), 0 16px 48px rgba(26,63,170,0.1);
+    }
+
+    /* Blue header */
+    .card-header {
+      background: #0c2d85;
+      padding: 32px 36px 30px;
+      position: relative;
+      overflow: hidden;
+    }
+    .card-header::after {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 180px; height: 180px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 50%;
+    }
+    .card-header::before {
+      content: '';
+      position: absolute;
+      bottom: -40px; left: 30%;
+      width: 120px; height: 120px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 50%;
+    }
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 22px; position: relative; z-index: 1;
+    }
+    .logo-icon {
+      width: 36px; height: 36px; border-radius: 9px;
+      background: rgba(255,255,255,0.18);
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 16px;
+    }
+    .logo-name {
+      font-size: 20px; font-weight: 900; color: white; letter-spacing: -0.5px;
+    }
+    .header-title {
+      font-size: 28px; font-weight: 900; color: white;
+      line-height: 1.2; letter-spacing: -0.8px;
+      position: relative; z-index: 1;
+    }
+    .header-sub {
+      font-size: 14px; color: rgba(255,255,255,0.6);
+      margin-top: 6px; position: relative; z-index: 1;
+    }
+
+    /* White body */
+    .card-body {
+      background: #ffffff;
+      padding: 32px 36px 36px;
+    }
+
+    .section-title {
+      font-size: 18px; font-weight: 700; color: #0d1b3e;
+      margin-bottom: 20px;
+    }
+
+    .form-group { margin-bottom: 14px; }
+    .form-label {
+      display: block; font-size: 13px; font-weight: 600;
+      color: #374151; margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%; padding: 13px 15px;
+      background: #f7f9fc; border: 1.5px solid #e4eaf5;
+      border-radius: 11px; color: #0d1b3e;
+      font-size: 15px; font-family: inherit;
+      outline: none; transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    }
+    .form-input::placeholder { color: #adb5cc; }
+    .form-input:focus {
+      border-color: #0c2d85;
+      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(26,63,170,0.1);
+    }
+
+    .pw-row {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 6px;
+    }
+    .forgot-link {
+      font-size: 12px; color: #0c2d85; text-decoration: none; font-weight: 500;
+    }
+    .forgot-link:hover { text-decoration: underline; }
+
+    .btn-primary {
+      width: 100%; padding: 15px; margin-top: 8px;
+      background: #0c2d85; color: white;
+      border: none; border-radius: 12px;
+      font-size: 15px; font-weight: 700; font-family: inherit;
+      cursor: pointer; transition: background 0.15s, transform 0.1s;
+      letter-spacing: 0.1px;
+    }
+    .btn-primary:hover { background: #0a2470; }
+    .btn-primary:active { transform: scale(0.99); }
+
+    .error-box {
+      background: #fef2f2; border: 1px solid #fecaca;
+      color: #b91c1c; padding: 11px 14px;
+      border-radius: 10px; font-size: 13px; margin-bottom: 16px;
+    }
+
+    hr.divider { border: none; border-top: 1px solid #f1f5f9; margin: 24px 0; }
+
+    .bottom-link {
+      text-align: center; font-size: 14px; color: #6b7280;
+    }
+    .bottom-link a { color: #0c2d85; font-weight: 600; text-decoration: none; }
+    .bottom-link a:hover { text-decoration: underline; }
+
+    .page-footer {
+      margin-top: 20px; font-size: 12px; color: #b0b8cc; text-align: center;
+    }
+
+    @media (max-width: 480px) {
+      .card-header { padding: 28px 24px 24px; }
+      .card-body { padding: 28px 24px 32px; }
+      .header-title { font-size: 24px; }
+    }
+  </style>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center">
-  <div class="w-full max-w-md px-4">
-    <div class="text-center mb-8">
-      <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4 shadow-lg">
-        <i class="fas fa-id-card text-white text-2xl"></i>
+<body>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="logo">
+        <div class="logo-icon"><i class="fas fa-id-card"></i></div>
+        <span class="logo-name">METI</span>
       </div>
-      <h1 class="text-xl font-bold text-gray-800">METI</h1>
-      <p class="text-gray-500 mt-2">디지털 명함 플랫폼</p>
+      <div class="header-title">차세대<br>디지털 명함</div>
+      <div class="header-sub">NFC · QR · SNS를 하나로</div>
     </div>
-    <div class="bg-white rounded-2xl shadow-xl p-8">
-      <h2 class="text-xl font-semibold text-gray-800 mb-6">로그인</h2>
-      <div id="error-msg" class="hidden mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm"></div>
-      <form id="login-form" class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">이메일</label>
-          <input type="email" id="email" placeholder="example@meti.io"
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+
+    <div class="card-body">
+      <div class="section-title">로그인</div>
+
+      <div id="error-msg" class="error-box" style="display:none"></div>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label class="form-label" for="email">이메일</label>
+          <input type="email" id="email" placeholder="example@email.com" class="form-input" autocomplete="email">
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">비밀번호</label>
-          <input type="password" id="password" placeholder="••••••••"
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+        <div class="form-group" style="margin-bottom:8px">
+          <div class="pw-row">
+            <label class="form-label" for="password" style="margin:0">비밀번호</label>
+            <a href="/app/forgot-password" class="forgot-link">비밀번호를 잊으셨나요?</a>
+          </div>
+          <input type="password" id="password" placeholder="비밀번호 입력" class="form-input" autocomplete="current-password">
         </div>
-        <button type="submit"
-          class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors">
+        <button type="submit" class="btn-primary">
           <span id="btn-text">로그인</span>
-          <span id="btn-loading" class="hidden"><i class="fas fa-spinner fa-spin mr-2"></i>로그인 중...</span>
+          <span id="btn-loading" style="display:none"><i class="fas fa-spinner fa-spin" style="margin-right:8px"></i>로그인 중...</span>
         </button>
       </form>
-      <div class="mt-4 text-center">
-        <a href="/app/forgot-password" class="text-sm text-blue-600 hover:underline">비밀번호를 잊으셨나요?</a>
-      </div>
-      <div class="mt-6 pt-6 border-t text-center text-sm text-gray-500">
-        아직 계정이 없으신가요?
-        <a href="/app/register" class="text-blue-600 font-medium hover:underline ml-1">회원가입</a>
-      </div>
+
+      <hr class="divider">
+      <div class="bottom-link">계정이 없으신가요? <a href="/app/register">회원가입</a></div>
     </div>
   </div>
+
+  <div class="page-footer">© 2026 주식회사 모빈</div>
+
   <script>
-    // 이미 로그인된 경우 리다이렉트
     (function() {
       const token = localStorage.getItem('meti_token');
-      if (token) window.location.href = '/app/dashboard';
+      const user  = JSON.parse(localStorage.getItem('meti_user') || 'null');
+      if (token && user) {
+        window.location.href = user.role === 'super_admin' ? '/admin/dashboard' : '/app/dashboard';
+      }
     })();
 
     document.getElementById('login-form').addEventListener('submit', async (e) => {
@@ -64,9 +212,9 @@ export function appLoginHtml(): string {
       const btnLoading = document.getElementById('btn-loading');
       const errorMsg   = document.getElementById('error-msg');
 
-      btnText.classList.add('hidden');
-      btnLoading.classList.remove('hidden');
-      errorMsg.classList.add('hidden');
+      btnText.style.display = 'none';
+      btnLoading.style.display = 'inline';
+      errorMsg.style.display = 'none';
 
       try {
         const res  = await fetch('/api/v1/auth/login', {
@@ -77,27 +225,21 @@ export function appLoginHtml(): string {
         const data = await res.json();
 
         if (data.success) {
-          localStorage.setItem('meti_token',        data.data.access_token);
-          localStorage.setItem('meti_refresh_token', data.data.refresh_token);
-          localStorage.setItem('meti_user',          JSON.stringify(data.data.user));
-
-          // 역할별 분기
+          localStorage.setItem('meti_token',         data.data.access_token);
+          localStorage.setItem('meti_refresh_token',  data.data.refresh_token);
+          localStorage.setItem('meti_user',           JSON.stringify(data.data.user));
           const role = data.data.user.role;
-          if (role === 'super_admin') {
-            window.location.href = '/admin/dashboard';
-          } else {
-            window.location.href = '/app/dashboard';
-          }
+          window.location.href = role === 'super_admin' ? '/admin/dashboard' : '/app/dashboard';
         } else {
           errorMsg.textContent = data.error || '로그인에 실패했습니다.';
-          errorMsg.classList.remove('hidden');
+          errorMsg.style.display = 'block';
         }
       } catch (err) {
         errorMsg.textContent = '서버 연결에 실패했습니다.';
-        errorMsg.classList.remove('hidden');
+        errorMsg.style.display = 'block';
       } finally {
-        btnText.classList.remove('hidden');
-        btnLoading.classList.add('hidden');
+        btnText.style.display = 'inline';
+        btnLoading.style.display = 'none';
       }
     });
   </script>
@@ -111,54 +253,199 @@ export function appRegisterHtml(): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>METI - 회원가입</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>tailwind.config = { theme: { extend: { fontSize: { 'xs':'11px','sm':'12px','base':'13px','lg':'14px','xl':'15px','2xl':'16px','3xl':'18px' } } } }</script>
+  <title>METI — 회원가입</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f2f5fb;
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 24px 16px;
+    }
+
+    .card {
+      width: 100%; max-width: 420px;
+      border-radius: 24px; overflow: hidden;
+      box-shadow: 0 2px 8px rgba(26,63,170,0.06), 0 16px 48px rgba(26,63,170,0.1);
+    }
+
+    .card-header {
+      background: #0c2d85;
+      padding: 24px 36px 22px;
+      position: relative; overflow: hidden;
+    }
+    .card-header::after {
+      content: ''; position: absolute;
+      top: -50px; right: -50px;
+      width: 150px; height: 150px;
+      background: rgba(255,255,255,0.05); border-radius: 50%;
+    }
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      position: relative; z-index: 1;
+    }
+    .logo-icon {
+      width: 34px; height: 34px; border-radius: 9px;
+      background: rgba(255,255,255,0.18);
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 15px;
+    }
+    .logo-name { font-size: 19px; font-weight: 900; color: white; letter-spacing: -0.5px; }
+    .logo-sep { color: rgba(255,255,255,0.35); margin: 0 4px; }
+    .logo-page { font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.7); }
+
+    .card-body { background: #ffffff; padding: 28px 36px 36px; }
+
+    .section-title {
+      font-size: 18px; font-weight: 700; color: #0d1b3e; margin-bottom: 18px;
+    }
+
+    .form-group { margin-bottom: 13px; }
+    .form-label {
+      display: block; font-size: 13px; font-weight: 600;
+      color: #374151; margin-bottom: 5px;
+    }
+    .form-input {
+      width: 100%; padding: 12px 15px;
+      background: #f7f9fc; border: 1.5px solid #e4eaf5;
+      border-radius: 11px; color: #0d1b3e;
+      font-size: 15px; font-family: inherit;
+      outline: none; transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    }
+    .form-input::placeholder { color: #adb5cc; }
+    .form-input:focus {
+      border-color: #0c2d85; background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(26,63,170,0.1);
+    }
+
+    .terms-box {
+      background: #f7f9fc; border: 1.5px solid #e4eaf5;
+      border-radius: 12px; padding: 14px 16px; margin: 16px 0;
+    }
+    .agree-all-row {
+      display: flex; align-items: center; gap: 9px;
+      padding-bottom: 11px; margin-bottom: 11px;
+      border-bottom: 1px solid #e4eaf5;
+    }
+    .agree-all-row label { font-size: 14px; font-weight: 700; color: #0d1b3e; cursor: pointer; }
+    .agree-item-row { display: flex; align-items: flex-start; gap: 9px; margin-bottom: 7px; }
+    .agree-item-row:last-child { margin-bottom: 0; }
+    .agree-item-row label { font-size: 13px; color: #6b7280; cursor: pointer; line-height: 1.4; }
+    .agree-item-row label .req { color: #dc2626; font-weight: 700; margin-right: 3px; }
+    .agree-item-row label a { color: #0c2d85; text-decoration: none; }
+    .agree-item-row label a:hover { text-decoration: underline; }
+    input[type="checkbox"] {
+      width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px;
+      accent-color: #0c2d85; cursor: pointer;
+    }
+
+    .btn-primary {
+      width: 100%; padding: 15px;
+      background: #0c2d85; color: white;
+      border: none; border-radius: 12px;
+      font-size: 15px; font-weight: 700; font-family: inherit;
+      cursor: pointer; transition: background 0.15s, transform 0.1s;
+    }
+    .btn-primary:hover { background: #0a2470; }
+    .btn-primary:active { transform: scale(0.99); }
+
+    .error-box {
+      background: #fef2f2; border: 1px solid #fecaca;
+      color: #b91c1c; padding: 11px 14px;
+      border-radius: 10px; font-size: 13px; margin-bottom: 14px;
+    }
+    .success-box {
+      background: #f0fdf4; border: 1px solid #bbf7d0;
+      color: #166534; padding: 11px 14px;
+      border-radius: 10px; font-size: 13px; margin-bottom: 14px;
+    }
+
+    hr.divider { border: none; border-top: 1px solid #f1f5f9; margin: 20px 0; }
+    .bottom-link { text-align: center; font-size: 14px; color: #6b7280; }
+    .bottom-link a { color: #0c2d85; font-weight: 600; text-decoration: none; }
+    .bottom-link a:hover { text-decoration: underline; }
+    .page-footer { margin-top: 20px; font-size: 12px; color: #b0b8cc; text-align: center; }
+
+    @media (max-width: 480px) {
+      .card-header { padding: 20px 24px 18px; }
+      .card-body { padding: 24px 24px 32px; }
+    }
+  </style>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center py-10">
-  <div class="w-full max-w-md px-4">
-    <div class="text-center mb-8">
-      <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4 shadow-lg">
-        <i class="fas fa-id-card text-white text-2xl"></i>
+<body>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="logo">
+        <div class="logo-icon"><i class="fas fa-id-card"></i></div>
+        <span class="logo-name">METI</span>
+        <span class="logo-sep">/</span>
+        <span class="logo-page">회원가입</span>
       </div>
-      <h1 class="text-xl font-bold text-gray-800">METI</h1>
-      <p class="text-gray-500 mt-2">디지털 명함 플랫폼</p>
     </div>
-    <div class="bg-white rounded-2xl shadow-xl p-8">
-      <h2 class="text-xl font-semibold text-gray-800 mb-6">회원가입</h2>
-      <div id="error-msg" class="hidden mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm"></div>
-      <div id="success-msg" class="hidden mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm"></div>
-      <form id="register-form" class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">이름</label>
-          <input type="text" id="name" placeholder="홍길동"
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+    <div class="card-body">
+      <div class="section-title">계정 만들기</div>
+
+      <div id="error-msg" class="error-box" style="display:none"></div>
+      <div id="success-msg" class="success-box" style="display:none"></div>
+
+      <form id="register-form">
+        <div class="form-group">
+          <label class="form-label" for="name">이름</label>
+          <input type="text" id="name" placeholder="홍길동" class="form-input" autocomplete="name">
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">이메일</label>
-          <input type="email" id="email" placeholder="example@meti.io"
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <div class="form-group">
+          <label class="form-label" for="email">이메일</label>
+          <input type="email" id="email" placeholder="example@email.com" class="form-input" autocomplete="email">
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">비밀번호</label>
-          <input type="password" id="password" placeholder="8자 이상"
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <div class="form-group">
+          <label class="form-label" for="password">비밀번호</label>
+          <input type="password" id="password" placeholder="8자 이상" class="form-input" autocomplete="new-password">
         </div>
 
-        <button type="submit"
-          class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors">
+        <div class="terms-box">
+          <div class="agree-all-row">
+            <input type="checkbox" id="agree-all" onchange="toggleAgreeAll(this)">
+            <label for="agree-all">전체 동의</label>
+          </div>
+          <div class="agree-item-row">
+            <input type="checkbox" id="agree-terms" class="agree-item" onchange="syncAgreeAll()">
+            <label for="agree-terms"><span class="req">[필수]</span><a href="/terms" target="_blank">이용약관</a> 동의</label>
+          </div>
+          <div class="agree-item-row">
+            <input type="checkbox" id="agree-privacy" class="agree-item" onchange="syncAgreeAll()">
+            <label for="agree-privacy"><span class="req">[필수]</span><a href="/privacy" target="_blank">개인정보처리방침</a> 동의</label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary">
           <span id="btn-text">가입하기</span>
-          <span id="btn-loading" class="hidden"><i class="fas fa-spinner fa-spin mr-2"></i>처리 중...</span>
+          <span id="btn-loading" style="display:none"><i class="fas fa-spinner fa-spin" style="margin-right:8px"></i>처리 중...</span>
         </button>
       </form>
-      <div class="mt-6 pt-6 border-t text-center text-sm text-gray-500">
-        이미 계정이 있으신가요?
-        <a href="/app/login" class="text-blue-600 font-medium hover:underline ml-1">로그인</a>
-      </div>
+
+      <hr class="divider">
+      <div class="bottom-link">이미 계정이 있으신가요? <a href="/">로그인</a></div>
     </div>
   </div>
+
+  <div class="page-footer">© 2026 주식회사 모빈</div>
+
   <script>
+    function toggleAgreeAll(el) {
+      document.querySelectorAll('.agree-item').forEach(cb => cb.checked = el.checked);
+    }
+    function syncAgreeAll() {
+      const items = document.querySelectorAll('.agree-item');
+      document.getElementById('agree-all').checked = [...items].every(cb => cb.checked);
+    }
+
     document.getElementById('register-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btnText    = document.getElementById('btn-text');
@@ -166,10 +453,16 @@ export function appRegisterHtml(): string {
       const errorMsg   = document.getElementById('error-msg');
       const successMsg = document.getElementById('success-msg');
 
-      btnText.classList.add('hidden');
-      btnLoading.classList.remove('hidden');
-      errorMsg.classList.add('hidden');
-      successMsg.classList.add('hidden');
+      if (!document.getElementById('agree-terms').checked || !document.getElementById('agree-privacy').checked) {
+        errorMsg.textContent = '이용약관 및 개인정보처리방침에 동의해 주세요.';
+        errorMsg.style.display = 'block';
+        return;
+      }
+
+      btnText.style.display = 'none';
+      btnLoading.style.display = 'inline';
+      errorMsg.style.display = 'none';
+      successMsg.style.display = 'none';
 
       try {
         const res  = await fetch('/api/v1/auth/register', {
@@ -185,23 +478,801 @@ export function appRegisterHtml(): string {
         const data = await res.json();
 
         if (data.success) {
-          successMsg.textContent = '가입이 완료되었습니다. 이메일을 확인해 주세요.';
-          successMsg.classList.remove('hidden');
+          successMsg.textContent = '가입이 완료되었습니다. 로그인 페이지로 이동합니다.';
+          successMsg.style.display = 'block';
           document.getElementById('register-form').reset();
-          setTimeout(() => { window.location.href = '/app/login'; }, 2500);
+          setTimeout(() => { window.location.href = '/'; }, 1500);
         } else {
           errorMsg.textContent = data.error || '가입에 실패했습니다.';
-          errorMsg.classList.remove('hidden');
+          errorMsg.style.display = 'block';
         }
       } catch (err) {
         errorMsg.textContent = '서버 연결에 실패했습니다.';
-        errorMsg.classList.remove('hidden');
+        errorMsg.style.display = 'block';
       } finally {
-        btnText.classList.remove('hidden');
-        btnLoading.classList.add('hidden');
+        btnText.style.display = 'inline';
+        btnLoading.style.display = 'none';
       }
     });
   </script>
+</body>
+</html>`
+}
+
+export function appLandingHtml(): string {
+  return `<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>THE METI — 스마트 디지털 명함 플랫폼</title>
+  <meta name="description" content="NFC·QR 한 번으로 내 모든 정보를 전달하는 스마트 디지털 명함 플랫폼. 개인·팀·기업 모두를 위한 명함 솔루션.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --blue:       #0c2d85;
+      --blue-dark:  #091f5e;
+      --blue-light: #e8eeff;
+      --text:       #0d1b3e;
+      --text-mid:   #475569;
+      --text-light: #94a3b8;
+      --border:     #e2e8f0;
+      --bg:         #f8faff;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', -apple-system, sans-serif; color: var(--text); background: #fff; line-height: 1.6; }
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; }
+
+    /* ── LAYOUT ── */
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+    .section { padding: 80px 0; }
+    .section-sm { padding: 56px 0; }
+    .section-label {
+      display: inline-block; font-size: 12px; font-weight: 700;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--blue); background: var(--blue-light);
+      padding: 5px 14px; border-radius: 20px; margin-bottom: 16px;
+    }
+    .section-title { font-size: clamp(26px, 4vw, 38px); font-weight: 900; letter-spacing: -0.8px; line-height: 1.2; color: var(--text); }
+    .section-sub { font-size: 16px; color: var(--text-mid); margin-top: 12px; line-height: 1.7; }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(255,255,255,0.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+    }
+    .nav-inner {
+      max-width: 1100px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 60px;
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 9px;
+      font-size: 18px; font-weight: 900; color: var(--text); letter-spacing: -0.5px;
+    }
+    .nav-logo-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: var(--blue); display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 14px;
+    }
+    .nav-links { display: flex; align-items: center; gap: 28px; }
+    .nav-links a { font-size: 14px; font-weight: 500; color: var(--text-mid); transition: color 0.15s; }
+    .nav-links a:hover { color: var(--blue); }
+    .nav-cta { display: flex; align-items: center; gap: 10px; }
+    .btn-ghost {
+      padding: 8px 18px; border-radius: 9px; font-size: 14px; font-weight: 600;
+      color: var(--blue); border: 1.5px solid var(--blue);
+      background: transparent; cursor: pointer; font-family: inherit;
+      transition: background 0.15s;
+    }
+    .btn-ghost:hover { background: var(--blue-light); }
+    .btn-solid {
+      padding: 8px 18px; border-radius: 9px; font-size: 14px; font-weight: 600;
+      color: white; background: var(--blue); border: none;
+      cursor: pointer; font-family: inherit; transition: background 0.15s;
+    }
+    .btn-solid:hover { background: var(--blue-dark); }
+    .nav-menu-btn { display: none; background: none; border: none; font-size: 20px; color: var(--text); cursor: pointer; }
+
+    /* ── HERO ── */
+    .hero {
+      background: linear-gradient(160deg, var(--blue-dark) 0%, var(--blue) 55%, #1a4fc4 100%);
+      color: white; padding: 100px 0 80px; text-align: center;
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: ''; position: absolute; inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 20px; padding: 6px 16px; font-size: 13px; font-weight: 500;
+      color: rgba(255,255,255,0.85); margin-bottom: 28px;
+    }
+    .hero-badge i { font-size: 10px; color: #7dd3fc; }
+    .hero h1 {
+      font-size: clamp(32px, 6vw, 58px); font-weight: 900;
+      line-height: 1.12; letter-spacing: -1.5px; margin-bottom: 20px;
+      position: relative; z-index: 1;
+    }
+    .hero h1 em { font-style: normal; color: #7dd3fc; }
+    .hero p {
+      font-size: clamp(15px, 2vw, 18px); color: rgba(255,255,255,0.7);
+      max-width: 520px; margin: 0 auto 36px; position: relative; z-index: 1;
+    }
+    .hero-btns {
+      display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
+      position: relative; z-index: 1;
+    }
+    .btn-hero-primary {
+      padding: 15px 32px; background: white; color: var(--blue);
+      border: none; border-radius: 12px; font-size: 15px; font-weight: 800;
+      cursor: pointer; font-family: inherit; transition: all 0.15s;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    }
+    .btn-hero-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
+    .btn-hero-outline {
+      padding: 15px 32px; background: rgba(255,255,255,0.1);
+      color: white; border: 2px solid rgba(255,255,255,0.35);
+      border-radius: 12px; font-size: 15px; font-weight: 700;
+      cursor: pointer; font-family: inherit; transition: all 0.15s;
+    }
+    .btn-hero-outline:hover { background: rgba(255,255,255,0.18); }
+    .hero-stat {
+      margin-top: 52px; display: flex; gap: 40px; justify-content: center;
+      flex-wrap: wrap; position: relative; z-index: 1;
+    }
+    .hero-stat-item { text-align: center; }
+    .hero-stat-item strong { display: block; font-size: 24px; font-weight: 900; color: white; }
+    .hero-stat-item span { font-size: 13px; color: rgba(255,255,255,0.55); }
+
+    /* ── FEATURE GRID ── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px; margin-top: 48px;
+    }
+    .feature-card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 18px; padding: 28px;
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .feature-card:hover { box-shadow: 0 8px 32px rgba(12,45,133,0.1); transform: translateY(-2px); }
+    .feature-icon {
+      width: 48px; height: 48px; border-radius: 14px;
+      background: var(--blue-light); color: var(--blue);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; margin-bottom: 18px;
+    }
+    .feature-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .feature-card p  { font-size: 14px; color: var(--text-mid); line-height: 1.65; }
+
+    /* ── USE CASES ── */
+    #usecases { background: var(--bg); }
+    .cases-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 20px; margin-top: 48px;
+    }
+    .case-card {
+      background: white; border-radius: 18px; overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .case-header {
+      background: var(--blue); color: white;
+      padding: 24px; display: flex; align-items: center; gap: 14px;
+    }
+    .case-header-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: rgba(255,255,255,0.15);
+      display: flex; align-items: center; justify-content: center; font-size: 18px;
+      flex-shrink: 0;
+    }
+    .case-header h3 { font-size: 15px; font-weight: 700; }
+    .case-header p  { font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 2px; }
+    .case-body { padding: 22px; }
+    .case-body ul { list-style: none; }
+    .case-body li {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 14px; color: var(--text-mid); margin-bottom: 10px;
+    }
+    .case-body li:last-child { margin-bottom: 0; }
+    .case-body li::before {
+      content: '✓'; color: var(--blue); font-weight: 700; flex-shrink: 0; margin-top: 1px;
+    }
+
+    /* ── HOW IT WORKS ── */
+    .steps { display: flex; gap: 0; margin-top: 48px; }
+    .step {
+      flex: 1; text-align: center; padding: 0 20px;
+      position: relative;
+    }
+    .step:not(:last-child)::after {
+      content: ''; position: absolute;
+      top: 28px; right: -12px;
+      width: 24px; height: 2px;
+      background: var(--border);
+    }
+    .step-num {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: var(--blue); color: white;
+      font-size: 20px; font-weight: 900;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+    }
+    .step h3 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+    .step p  { font-size: 13px; color: var(--text-mid); }
+
+    /* ── PRICING ── */
+    #pricing { background: white; }
+    .pricing-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 20px; margin-top: 48px; align-items: start;
+    }
+    .plan-card {
+      border-radius: 20px; padding: 32px;
+      border: 1.5px solid var(--border);
+      background: white;
+    }
+    .plan-card.featured {
+      background: var(--blue); color: white;
+      border-color: var(--blue);
+      transform: scale(1.03);
+      box-shadow: 0 16px 48px rgba(12,45,133,0.25);
+    }
+    .plan-badge {
+      display: inline-block; font-size: 11px; font-weight: 700;
+      padding: 3px 10px; border-radius: 20px; margin-bottom: 16px;
+      background: rgba(255,255,255,0.18); color: white;
+    }
+    .plan-name { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+    .plan-desc { font-size: 13px; color: var(--text-mid); margin-bottom: 20px; }
+    .plan-card.featured .plan-desc { color: rgba(255,255,255,0.7); }
+    .plan-price {
+      font-size: 36px; font-weight: 900; letter-spacing: -1px; margin-bottom: 24px;
+    }
+    .plan-price small { font-size: 14px; font-weight: 500; color: var(--text-mid); }
+    .plan-card.featured .plan-price small { color: rgba(255,255,255,0.6); }
+    .plan-features { list-style: none; margin-bottom: 28px; }
+    .plan-features li {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 14px; color: var(--text-mid); margin-bottom: 10px;
+    }
+    .plan-card.featured .plan-features li { color: rgba(255,255,255,0.85); }
+    .plan-features li::before {
+      content: '✓'; color: var(--blue); font-weight: 700; flex-shrink: 0;
+    }
+    .plan-card.featured .plan-features li::before { color: #7dd3fc; }
+    .btn-plan {
+      display: block; width: 100%; text-align: center;
+      padding: 13px; border-radius: 11px; font-size: 14px; font-weight: 700;
+      cursor: pointer; font-family: inherit; transition: all 0.15s;
+    }
+    .btn-plan-outline {
+      border: 1.5px solid var(--blue); color: var(--blue); background: transparent;
+    }
+    .btn-plan-outline:hover { background: var(--blue-light); }
+    .btn-plan-white {
+      background: white; color: var(--blue); border: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .btn-plan-white:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+    .pricing-note { text-align: center; margin-top: 20px; font-size: 13px; color: var(--text-light); }
+
+    /* ── FINAL CTA ── */
+    #final-cta {
+      background: linear-gradient(135deg, var(--blue-dark), var(--blue));
+      color: white; text-align: center; padding: 80px 24px;
+    }
+    #final-cta h2 { font-size: clamp(26px, 4vw, 38px); font-weight: 900; letter-spacing: -0.8px; margin-bottom: 12px; }
+    #final-cta p  { font-size: 16px; color: rgba(255,255,255,0.65); margin-bottom: 36px; }
+    .cta-btns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--text); color: rgba(255,255,255,0.5);
+      padding: 48px 24px 32px;
+    }
+    .footer-inner {
+      max-width: 1100px; margin: 0 auto;
+      display: flex; flex-wrap: wrap; gap: 40px; justify-content: space-between;
+    }
+    .footer-brand .logo-name { color: white; font-size: 18px; font-weight: 900; }
+    .footer-brand p { font-size: 13px; margin-top: 8px; }
+    .footer-links h4 { color: white; font-size: 13px; font-weight: 700; margin-bottom: 12px; }
+    .footer-links a { display: block; font-size: 13px; margin-bottom: 8px; color: rgba(255,255,255,0.5); }
+    .footer-links a:hover { color: rgba(255,255,255,0.85); }
+    .footer-bottom {
+      max-width: 1100px; margin: 32px auto 0;
+      padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.08);
+      display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between;
+      font-size: 12px;
+    }
+
+    /* ── LOGIN MODAL ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5); z-index: 200;
+      align-items: center; justify-content: center; padding: 24px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: white; border-radius: 20px; overflow: hidden;
+      width: 100%; max-width: 400px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+      animation: modal-in 0.2s ease;
+    }
+    @keyframes modal-in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .modal-header {
+      background: var(--blue); padding: 24px 28px 22px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: relative; overflow: hidden;
+    }
+    .modal-header::after {
+      content: ''; position: absolute; top: -40px; right: -40px;
+      width: 130px; height: 130px; border-radius: 50%;
+      background: rgba(255,255,255,0.06);
+    }
+    .modal-logo { display: flex; align-items: center; gap: 9px; }
+    .modal-logo-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: rgba(255,255,255,0.18);
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 14px;
+    }
+    .modal-logo-name { font-size: 18px; font-weight: 900; color: white; }
+    .modal-close {
+      background: rgba(255,255,255,0.15); border: none; color: white;
+      width: 30px; height: 30px; border-radius: 7px;
+      font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      position: relative; z-index: 1;
+    }
+    .modal-body { padding: 28px; }
+    .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; color: var(--text); }
+    .form-group { margin-bottom: 14px; }
+    .form-label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 5px; }
+    .form-input {
+      width: 100%; padding: 12px 14px;
+      background: #f7f9fc; border: 1.5px solid #e4eaf5; border-radius: 10px;
+      color: var(--text); font-size: 15px; font-family: inherit;
+      outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .form-input::placeholder { color: #adb5cc; }
+    .form-input:focus { border-color: var(--blue); background: white; box-shadow: 0 0 0 3px rgba(12,45,133,0.1); }
+    .pw-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+    .forgot-link { font-size: 12px; color: var(--blue); }
+    .forgot-link:hover { text-decoration: underline; }
+    .btn-modal-submit {
+      width: 100%; padding: 14px; margin-top: 8px;
+      background: var(--blue); color: white;
+      border: none; border-radius: 11px;
+      font-size: 15px; font-weight: 700; font-family: inherit;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .btn-modal-submit:hover { background: var(--blue-dark); }
+    .modal-error {
+      background: #fef2f2; border: 1px solid #fecaca;
+      color: #b91c1c; padding: 10px 13px; border-radius: 9px;
+      font-size: 13px; margin-bottom: 14px;
+    }
+    hr.modal-divider { border: none; border-top: 1px solid #f1f5f9; margin: 20px 0; }
+    .modal-register { text-align: center; font-size: 14px; color: #6b7280; }
+    .modal-register a { color: var(--blue); font-weight: 600; }
+
+    /* ── MOBILE ── */
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .nav-menu-btn { display: block; }
+      .features-grid { grid-template-columns: 1fr; }
+      .cases-grid    { grid-template-columns: 1fr; }
+      .pricing-grid  { grid-template-columns: 1fr; }
+      .plan-card.featured { transform: none; }
+      .steps { flex-direction: column; gap: 24px; }
+      .step:not(:last-child)::after { display: none; }
+      .hero { padding: 72px 0 60px; }
+    }
+    @media (min-width: 769px) and (max-width: 960px) {
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+      .cases-grid    { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── 로그인 모달 ── -->
+<div id="login-modal" class="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-logo">
+        <div class="modal-logo-icon"><i class="fas fa-id-card"></i></div>
+        <span class="modal-logo-name">THE METI</span>
+      </div>
+      <button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-title">로그인</div>
+      <div id="modal-error" class="modal-error" style="display:none"></div>
+      <form id="modal-login-form">
+        <div class="form-group">
+          <label class="form-label" for="m-email">이메일</label>
+          <input type="email" id="m-email" placeholder="example@email.com" class="form-input" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <div class="pw-row">
+            <label class="form-label" for="m-password" style="margin:0">비밀번호</label>
+            <a href="/app/forgot-password" class="forgot-link">비밀번호 찾기</a>
+          </div>
+          <input type="password" id="m-password" placeholder="비밀번호 입력" class="form-input" autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn-modal-submit">
+          <span id="m-btn-text">로그인</span>
+          <span id="m-btn-loading" style="display:none"><i class="fas fa-spinner fa-spin" style="margin-right:8px"></i>로그인 중...</span>
+        </button>
+      </form>
+      <hr class="modal-divider">
+      <div class="modal-register">계정이 없으신가요? <a href="/app/register">무료 회원가입</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 상단 내비게이션 ── -->
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">
+      <div class="nav-logo-icon"><i class="fas fa-id-card"></i></div>
+      THE METI
+    </a>
+    <div class="nav-links">
+      <a href="#features">기능</a>
+      <a href="#usecases">활용 사례</a>
+      <a href="#howitworks">사용 방법</a>
+      <a href="#pricing">요금제</a>
+    </div>
+    <div class="nav-cta">
+      <button class="btn-ghost" onclick="openModal()">로그인</button>
+      <a href="/app/register"><button class="btn-solid">무료로 시작하기</button></a>
+    </div>
+    <button class="nav-menu-btn" onclick="openModal()"><i class="fas fa-bars"></i></button>
+  </div>
+</nav>
+
+<!-- ── 히어로 ── -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-badge"><i class="fas fa-circle"></i> NFC · QR · SNS 통합 명함 플랫폼</div>
+    <h1>한 번의 탭으로<br><em>모든 것을 연결</em>하세요</h1>
+    <p>종이 명함은 이제 그만. NFC 카드 하나로 이름·연락처·SNS·이력을<br>즉시 전달하는 스마트 디지털 명함 플랫폼입니다.</p>
+    <div class="hero-btns">
+      <button class="btn-hero-primary" onclick="location.href='/app/register'">
+        <i class="fas fa-arrow-right" style="margin-right:8px"></i>지금 무료로 시작하기
+      </button>
+      <button class="btn-hero-outline" onclick="openModal()">
+        <i class="fas fa-sign-in-alt" style="margin-right:8px"></i>로그인
+      </button>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-item">
+        <strong>NFC + QR</strong>
+        <span>2가지 공유 방식</span>
+      </div>
+      <div class="hero-stat-item">
+        <strong>개인 · 팀 · 기업</strong>
+        <span>모든 규모에 맞는 플랜</span>
+      </div>
+      <div class="hero-stat-item">
+        <strong>iOS · Android</strong>
+        <span>모바일 앱 지원</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 주요 기능 ── -->
+<section class="section" id="features">
+  <div class="container">
+    <div style="text-align:center">
+      <span class="section-label">주요 기능</span>
+      <h2 class="section-title">명함 그 이상을 담다</h2>
+      <p class="section-sub">단순한 연락처 공유를 넘어, 나를 표현하는 모든 정보를 하나의 명함에.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-id-card"></i></div>
+        <h3>스마트 디지털 명함</h3>
+        <p>이름, 직함, 회사, 연락처, 소개글을 담은 프로페셔널 명함을 무료로 만드세요. 사진 업로드로 한층 더 세련된 첫인상을 남길 수 있습니다.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-wifi"></i></div>
+        <h3>NFC · QR 즉시 공유</h3>
+        <p>NFC 카드에 탭 하거나 QR 코드를 스캔하면 바로 명함이 전달됩니다. 앱 설치 없이도 웹 브라우저로 확인 가능합니다.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-briefcase"></i></div>
+        <h3>이력 & 포트폴리오</h3>
+        <p>경력, 학력, 스킬·키워드를 명함에 추가하세요. 이력서가 필요 없는 올인원 프로필 카드로 활용할 수 있습니다.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-share-alt"></i></div>
+        <h3>소셜 링크 통합</h3>
+        <p>LinkedIn, Instagram, GitHub, YouTube 등 다양한 SNS 계정을 명함 하나에 연결하세요. 링크 하나로 모든 채널을 공유합니다.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-users"></i></div>
+        <h3>그룹 & 팀 관리</h3>
+        <p>팀, 협회, 동호회 단위로 명함을 통합 관리합니다. 멤버 초대, 가입 승인, 그룹 포인트 운영을 웹에서 바로 처리하세요.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-calendar-alt"></i></div>
+        <h3>행사 & 레슨 운영</h3>
+        <p>그룹 내 이벤트를 생성하고 참가자를 관리하세요. 레슨·수업 일정 등록과 포인트 기반 결제까지 플랫폼 하나에서 해결됩니다.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 활용 사례 ── -->
+<section class="section" id="usecases">
+  <div class="container">
+    <div style="text-align:center">
+      <span class="section-label">활용 사례</span>
+      <h2 class="section-title">누구에게나 필요한 명함</h2>
+      <p class="section-sub">개인부터 기업까지, 다양한 상황에서 THE METI를 활용해보세요.</p>
+    </div>
+    <div class="cases-grid">
+      <div class="case-card">
+        <div class="case-header">
+          <div class="case-header-icon"><i class="fas fa-user-tie"></i></div>
+          <div>
+            <h3>비즈니스 프로페셔널</h3>
+            <p>영업, 컨설턴트, 임원</p>
+          </div>
+        </div>
+        <div class="case-body">
+          <ul>
+            <li>미팅마다 종이 명함 없이 NFC 탭 한 번으로 교환</li>
+            <li>연락처 변경 시 실시간 업데이트 — 인쇄 비용 0원</li>
+            <li>LinkedIn·SNS 프로필을 명함과 함께 즉시 공유</li>
+            <li>여러 개의 명함을 상황에 맞게 전환 가능</li>
+          </ul>
+        </div>
+      </div>
+      <div class="case-card">
+        <div class="case-header">
+          <div class="case-header-icon"><i class="fas fa-building"></i></div>
+          <div>
+            <h3>팀 · 기업</h3>
+            <p>스타트업, 중소기업, 대기업</p>
+          </div>
+        </div>
+        <div class="case-body">
+          <ul>
+            <li>신규 입사자 명함을 관리자가 즉시 생성 · 배포</li>
+            <li>퇴직자 명함은 즉시 비활성화로 보안 유지</li>
+            <li>그룹 대시보드에서 전체 멤버 명함 통합 관리</li>
+            <li>행사·세미나에서 참가자 명함 교환을 디지털로</li>
+          </ul>
+        </div>
+      </div>
+      <div class="case-card">
+        <div class="case-header">
+          <div class="case-header-icon"><i class="fas fa-laptop-code"></i></div>
+          <div>
+            <h3>프리랜서 · 크리에이터</h3>
+            <p>디자이너, 개발자, 강사, 아티스트</p>
+          </div>
+        </div>
+        <div class="case-body">
+          <ul>
+            <li>포트폴리오 + 연락처 + SNS를 하나의 링크로</li>
+            <li>경력·학력·스킬을 이력서처럼 상세하게 표현</li>
+            <li>레슨·수업 일정을 플랫폼에서 직접 관리</li>
+            <li>QR 코드를 명함·팸플릿·프레젠테이션에 삽입</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 사용 방법 ── -->
+<section class="section" id="howitworks">
+  <div class="container">
+    <div style="text-align:center">
+      <span class="section-label">사용 방법</span>
+      <h2 class="section-title">3분이면 충분합니다</h2>
+      <p class="section-sub">복잡한 설정 없이 바로 시작할 수 있습니다.</p>
+    </div>
+    <div class="steps" style="margin-top:48px">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>가입</h3>
+        <p>이메일로 30초 만에 무료 계정을 만드세요.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>명함 제작</h3>
+        <p>이름, 직함, 연락처, 사진, SNS를 입력하면 명함 완성.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>공유</h3>
+        <p>QR 코드 또는 링크로 즉시 공유. NFC 카드 신청도 가능.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <h3>관리</h3>
+        <p>대시보드에서 명함 업데이트, 그룹 운영, 행사 관리.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 요금제 ── -->
+<section class="section" id="pricing">
+  <div class="container">
+    <div style="text-align:center">
+      <span class="section-label">요금제</span>
+      <h2 class="section-title">필요에 맞는 플랜을</h2>
+      <p class="section-sub">무료로 시작하고, 필요할 때 업그레이드하세요.</p>
+    </div>
+    <div class="pricing-grid">
+      <div class="plan-card">
+        <div class="plan-name">Free</div>
+        <div class="plan-desc">개인 명함을 시작하기에 충분</div>
+        <div class="plan-price">무료 <small>/ 영구</small></div>
+        <ul class="plan-features">
+          <li>디지털 명함 1개</li>
+          <li>QR 코드 공유</li>
+          <li>기본 연락처 · SNS 링크</li>
+          <li>공개 명함 페이지</li>
+        </ul>
+        <button class="btn-plan btn-plan-outline" onclick="location.href='/app/register'">무료로 시작</button>
+      </div>
+      <div class="plan-card featured">
+        <span class="plan-badge">추천</span>
+        <div class="plan-name">Pro</div>
+        <div class="plan-desc">개인 사용자를 위한 프리미엄</div>
+        <div class="plan-price">앱에서 확인 <small>/ 월</small></div>
+        <ul class="plan-features">
+          <li>디지털 명함 무제한</li>
+          <li>NFC 카드 연동</li>
+          <li>경력 · 학력 · 스킬 상세 프로필</li>
+          <li>그룹 참여</li>
+          <li>포인트 적립</li>
+        </ul>
+        <button class="btn-plan btn-plan-white" onclick="location.href='/app/register'">시작하기</button>
+      </div>
+      <div class="plan-card">
+        <div class="plan-name">Business</div>
+        <div class="plan-desc">팀 · 기업을 위한 그룹 솔루션</div>
+        <div class="plan-price">앱에서 확인 <small>/ 월</small></div>
+        <ul class="plan-features">
+          <li>그룹 개설 · 멤버 관리</li>
+          <li>행사 · 이벤트 운영</li>
+          <li>레슨 · 일정 관리</li>
+          <li>그룹 포인트 시스템</li>
+          <li>초대 링크 · 승인 관리</li>
+        </ul>
+        <button class="btn-plan btn-plan-outline" onclick="location.href='/app/register'">그룹 신청</button>
+      </div>
+    </div>
+    <p class="pricing-note"><i class="fas fa-info-circle" style="margin-right:4px"></i>Pro / Business 플랜 업그레이드는 iOS · Android 앱에서 가능합니다.</p>
+  </div>
+</section>
+
+<!-- ── 최종 CTA ── -->
+<section id="final-cta">
+  <h2>지금 바로 시작하세요</h2>
+  <p>무료로 가입하고 스마트 디지털 명함을 만들어보세요.</p>
+  <div class="cta-btns">
+    <button class="btn-hero-primary" onclick="location.href='/app/register'">
+      <i class="fas fa-arrow-right" style="margin-right:8px"></i>무료 회원가입
+    </button>
+    <button class="btn-hero-outline" onclick="openModal()">이미 계정이 있어요</button>
+  </div>
+</section>
+
+<!-- ── 푸터 ── -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <div class="nav-logo" style="color:white;font-size:18px;font-weight:900;display:flex;align-items:center;gap:9px;margin-bottom:10px">
+        <div class="nav-logo-icon"><i class="fas fa-id-card"></i></div>THE METI
+      </div>
+      <p>스마트 디지털 명함 플랫폼</p>
+      <p style="margin-top:6px">주식회사 모빈</p>
+    </div>
+    <div class="footer-links">
+      <h4>서비스</h4>
+      <a href="#features">주요 기능</a>
+      <a href="#usecases">활용 사례</a>
+      <a href="#pricing">요금제</a>
+    </div>
+    <div class="footer-links">
+      <h4>계정</h4>
+      <a href="#" onclick="openModal();return false">로그인</a>
+      <a href="/app/register">회원가입</a>
+    </div>
+    <div class="footer-links">
+      <h4>법적 정보</h4>
+      <a href="/terms" target="_blank">이용약관</a>
+      <a href="/privacy" target="_blank">개인정보처리방침</a>
+    </div>
+    <div class="footer-links">
+      <h4>문의</h4>
+      <a href="mailto:privacy@mobin-inc.com">privacy@mobin-inc.com</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 주식회사 모빈. All rights reserved.</span>
+    <span>THE METI는 주식회사 모빈의 서비스입니다.</span>
+  </div>
+</footer>
+
+<script>
+  // 이미 로그인된 경우 대시보드로
+  (function() {
+    const token = localStorage.getItem('meti_token');
+    const user  = JSON.parse(localStorage.getItem('meti_user') || 'null');
+    if (token && user) {
+      window.location.href = user.role === 'super_admin' ? '/admin/dashboard' : '/app/dashboard';
+    }
+  })();
+
+  function openModal() {
+    document.getElementById('login-modal').classList.add('open');
+    setTimeout(() => document.getElementById('m-email').focus(), 150);
+  }
+  function closeModal() {
+    document.getElementById('login-modal').classList.remove('open');
+  }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+  document.getElementById('modal-login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email    = document.getElementById('m-email').value.trim();
+    const password = document.getElementById('m-password').value;
+    const btnText    = document.getElementById('m-btn-text');
+    const btnLoading = document.getElementById('m-btn-loading');
+    const errorEl    = document.getElementById('modal-error');
+
+    btnText.style.display = 'none';
+    btnLoading.style.display = 'inline';
+    errorEl.style.display = 'none';
+
+    try {
+      const res  = await fetch('/api/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        localStorage.setItem('meti_token',         data.data.access_token);
+        localStorage.setItem('meti_refresh_token',  data.data.refresh_token);
+        localStorage.setItem('meti_user',           JSON.stringify(data.data.user));
+        const role = data.data.user.role;
+        window.location.href = role === 'super_admin' ? '/admin/dashboard' : '/app/dashboard';
+      } else {
+        errorEl.textContent = data.error || '로그인에 실패했습니다.';
+        errorEl.style.display = 'block';
+      }
+    } catch (err) {
+      errorEl.textContent = '서버 연결에 실패했습니다.';
+      errorEl.style.display = 'block';
+    } finally {
+      btnText.style.display = 'inline';
+      btnLoading.style.display = 'none';
+    }
+  });
+</script>
 </body>
 </html>`
 }
