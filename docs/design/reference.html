@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>METI — 디자인 레퍼런스</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<link rel="stylesheet" href="tokens.css" />
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--meti-font); background: var(--meti-bg); color: var(--meti-ink); -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 56px 32px 80px; }
+  .word { font-weight: 800; letter-spacing: 0.2em; }
+  .word .i { color: var(--meti-gold); }
+  h2 { font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--meti-mute); margin: 56px 0 18px; }
+  .grid { display: grid; gap: 14px; }
+  .sw { border-radius: var(--meti-r-lg); overflow: hidden; background: var(--meti-surface); box-shadow: var(--meti-shadow-card); }
+  .sw .chip { height: 96px; }
+  .sw .meta { padding: 12px 14px; }
+  .sw .name { font-size: 14px; font-weight: 700; }
+  .sw .hex { font-size: 12.5px; color: var(--meti-sub); margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .row { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+  .card-obj { width: 420px; aspect-ratio: 1.62/1; border-radius: var(--meti-r-card); position: relative; overflow: hidden; color: #fff;
+    background: radial-gradient(130% 130% at 78% -10%, var(--meti-navy-glow) 0%, var(--meti-navy) 42%, var(--meti-navy-deep) 100%);
+    box-shadow: var(--meti-shadow-raised); }
+  .card-obj .foilline { position: absolute; inset: 0; border-radius: var(--meti-r-card); border: 1px solid var(--meti-gold); opacity: .4; }
+  .card-obj .tex { position: absolute; inset: 0; opacity: .5; background: repeating-linear-gradient(115deg, rgba(255,255,255,.05) 0 1px, transparent 1px 8px); }
+  .card-obj .pad { position: absolute; inset: 0; padding: 26px; display: flex; flex-direction: column; justify-content: space-between; }
+  .nfcbox { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--meti-gold); display: flex; align-items: center; justify-content: center; }
+  .typerow { display: flex; align-items: baseline; gap: 18px; padding: 14px 0; border-top: 1px solid var(--meti-line); }
+  .typerow .tag { width: 90px; font-size: 12.5px; color: var(--meti-mute); font-weight: 600; }
+  .btn { border: none; cursor: pointer; font-family: var(--meti-font); font-weight: 700; border-radius: var(--meti-r-md); padding: 13px 22px; font-size: 15px; }
+  .btn.primary { background: var(--meti-navy); color: #fff; }
+  .btn.second { background: var(--meti-surface); color: var(--meti-ink); box-shadow: inset 0 0 0 1px var(--meti-line); }
+  .badge { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; padding: 5px 12px; border-radius: 8px; }
+  .dot { width: 6px; height: 6px; border-radius: 6px; }
+  .lead { font-size: 17px; color: var(--meti-sub); line-height: 1.6; max-width: 640px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="row" style="justify-content:space-between; margin-bottom:28px;">
+    <span class="word" style="font-size:26px;">MET<span class="i">I</span></span>
+    <span style="font-size:13px; color:var(--meti-mute); font-weight:600;">Design Reference · v1.0.0</span>
+  </div>
+  <p class="lead"><b>프리미엄 명함, 디지털로.</b> 메인 컬러는 진한 잉크 네이비, 악센트는 골드(샴페인). 종이 명함의 격을 화면에 옮긴 컬러 시스템입니다.</p>
+
+  <h2>브랜드 — 잉크 네이비 / 골드</h2>
+  <div class="grid" style="grid-template-columns: repeat(4,1fr);">
+    <div class="sw"><div class="chip" style="background:#0B1E40"></div><div class="meta"><div class="name">Navy · 메인</div><div class="hex">#0B1E40</div></div></div>
+    <div class="sw"><div class="chip" style="background:#06122A"></div><div class="meta"><div class="name">Navy Deep</div><div class="hex">#06122A</div></div></div>
+    <div class="sw"><div class="chip" style="background:#1C3D72"></div><div class="meta"><div class="name">Navy Glow</div><div class="hex">#1C3D72</div></div></div>
+    <div class="sw"><div class="chip" style="background:#C9A86A"></div><div class="meta"><div class="name">Gold · 악센트</div><div class="hex">#C9A86A</div></div></div>
+  </div>
+
+  <h2>악센트 옵션 (기본 Gold)</h2>
+  <div class="grid" style="grid-template-columns: repeat(4,1fr);">
+    <div class="sw"><div class="chip" style="background:#C9A86A"></div><div class="meta"><div class="name">Gold</div><div class="hex">oklch(.76 .095 85)</div></div></div>
+    <div class="sw"><div class="chip" style="background:oklch(0.74 0.095 168)"></div><div class="meta"><div class="name">Mint</div><div class="hex">oklch(.74 .095 168)</div></div></div>
+    <div class="sw"><div class="chip" style="background:oklch(0.72 0.12 33)"></div><div class="meta"><div class="name">Coral</div><div class="hex">oklch(.72 .12 33)</div></div></div>
+    <div class="sw"><div class="chip" style="background:oklch(0.66 0.13 290)"></div><div class="meta"><div class="name">Violet</div><div class="hex">oklch(.66 .13 290)</div></div></div>
+  </div>
+
+  <h2>시맨틱 (Light)</h2>
+  <div class="grid" style="grid-template-columns: repeat(6,1fr);">
+    <div class="sw"><div class="chip" style="background:#F4F5F8; box-shadow:inset 0 0 0 1px var(--meti-line)"></div><div class="meta"><div class="name">bg</div><div class="hex">#F4F5F8</div></div></div>
+    <div class="sw"><div class="chip" style="background:#FFFFFF; box-shadow:inset 0 0 0 1px var(--meti-line)"></div><div class="meta"><div class="name">surface</div><div class="hex">#FFFFFF</div></div></div>
+    <div class="sw"><div class="chip" style="background:#0E1726"></div><div class="meta"><div class="name">ink</div><div class="hex">#0E1726</div></div></div>
+    <div class="sw"><div class="chip" style="background:#5B6577"></div><div class="meta"><div class="name">sub</div><div class="hex">#5B6577</div></div></div>
+    <div class="sw"><div class="chip" style="background:#8B95A6"></div><div class="meta"><div class="name">mute</div><div class="hex">#8B95A6</div></div></div>
+    <div class="sw"><div class="chip" style="background:#0C0F16"></div><div class="meta"><div class="name">dark.bg</div><div class="hex">#0C0F16</div></div></div>
+  </div>
+
+  <h2>상태</h2>
+  <div class="row">
+    <span class="badge" style="color:#157A59; background:rgba(27,156,115,.12)"><span class="dot" style="background:#157A59"></span>success</span>
+    <span class="badge" style="color:#B5402E; background:rgba(216,81,60,.12)"><span class="dot" style="background:#B5402E"></span>danger</span>
+    <span class="badge" style="color:#9C6A12; background:rgba(201,138,30,.13)"><span class="dot" style="background:#9C6A12"></span>warn</span>
+    <span class="badge" style="color:#2A5DA6; background:rgba(52,112,196,.12)"><span class="dot" style="background:#2A5DA6"></span>info</span>
+  </div>
+
+  <h2>디지털 명함</h2>
+  <div class="card-obj">
+    <div class="foilline"></div><div class="tex"></div>
+    <div class="pad">
+      <div class="row" style="justify-content:space-between; align-items:flex-start;">
+        <span class="word" style="font-size:17px;">MET<span class="i">I</span></span>
+        <div class="nfcbox"><span style="color:var(--meti-gold); font-size:11px; font-weight:800;">NFC</span></div>
+      </div>
+      <div>
+        <div style="font-size:30px; font-weight:700; letter-spacing:-.02em;">강민서</div>
+        <div style="font-size:15px; color:rgba(255,255,255,.72); margin-top:6px;">Product Lead · 프로덕트 총괄</div>
+        <div class="row" style="gap:7px; margin-top:14px;">
+          <span class="dot" style="background:var(--meti-gold)"></span>
+          <span style="font-size:13.5px; color:var(--meti-gold); font-weight:600;">Aurora Labs</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>타이포그래피 — Pretendard</h2>
+  <div>
+    <div class="typerow"><span class="tag">display 30</span><span style="font-size:30px; font-weight:700; letter-spacing:-.02em;">디지털 명함을 교환하다</span></div>
+    <div class="typerow"><span class="tag">title 26</span><span style="font-size:26px; font-weight:800; letter-spacing:-.02em;">대시보드</span></div>
+    <div class="typerow"><span class="tag">heading 19</span><span style="font-size:19px; font-weight:700;">다가오는 행사</span></div>
+    <div class="typerow"><span class="tag">body 15</span><span style="font-size:15px; font-weight:500;">NFC로 명함을 안전하게 주고받습니다.</span></div>
+    <div class="typerow"><span class="tag">caption 12</span><span style="font-size:12px; font-weight:600; color:var(--meti-sub);">2026.06.14 · 실시간</span></div>
+  </div>
+
+  <h2>컴포넌트</h2>
+  <div class="row">
+    <button class="btn primary">명함 공유하기</button>
+    <button class="btn second">스캔</button>
+    <span class="badge" style="color:#9A7333; background:var(--meti-gold-soft)">METI Pro</span>
+    <span style="font-size:13.5px; font-weight:600; color:var(--meti-ink); background:var(--meti-surface); padding:9px 15px; border-radius:9999px; box-shadow:inset 0 0 0 1px var(--meti-line);"># 프로덕트</span>
+  </div>
+</div>
+</body>
+</html>

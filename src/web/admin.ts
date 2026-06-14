@@ -7,76 +7,79 @@ export function adminLoginHtml(): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>METI Admin</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>tailwind.config = { theme: { extend: { fontSize: { 'xs':'11px','sm':'12px','base':'13px','lg':'14px','xl':'15px','2xl':'16px','3xl':'18px' } } } }</script>
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --navy:#0B1E40; --navy-deep:#06122A; --navy-glow:#1C3D72;
+      --gold:#C9A86A; --gold-admin:#C2974E; --gold-soft:rgba(194,151,78,0.16);
+      --bg:#F4F5F8; --surface:#FFFFFF; --ink:#0E1726; --sub:#5B6577; --mute:#8B95A6;
+      --line:rgba(14,23,38,0.08);
+      --danger:#D8513C; --danger-soft:rgba(216,81,60,0.10);
+      --r-md:14px; --r-lg:18px; --r-card:22px;
+      --font:Pretendard,-apple-system,system-ui,sans-serif;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:var(--font);
+      background:radial-gradient(130% 130% at 78% -10%,var(--navy-glow) 0%,var(--navy) 42%,var(--navy-deep) 100%);
+      min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px;
+    }
+    .wrap{width:100%;max-width:380px}
+    .wordmark{font-size:26px;font-weight:800;letter-spacing:0.2em;color:#fff;text-align:center;margin-bottom:6px}
+    .wordmark .i{color:var(--gold)}
+    .tagline{text-align:center;color:rgba(255,255,255,0.42);font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:28px}
+    .card{background:var(--surface);border-radius:var(--r-card);padding:32px;box-shadow:0 2px 4px rgba(6,18,42,.28),0 18px 40px -12px rgba(6,18,42,.58)}
+    label{display:block;font-size:12px;font-weight:700;color:var(--sub);margin-bottom:6px;letter-spacing:0.04em}
+    input{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:var(--r-md);font-family:var(--font);font-size:15px;color:var(--ink);background:var(--bg);outline:none;transition:border-color 0.15s}
+    input:focus{border-color:var(--navy);background:#fff}
+    .field{margin-bottom:16px}
+    .btn{width:100%;padding:14px;background:var(--navy);color:#fff;border:none;border-radius:var(--r-md);font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;transition:opacity 0.15s}
+    .btn:hover{opacity:0.88}
+    .btn:disabled{opacity:0.55;cursor:not-allowed}
+    #err{display:none;background:var(--danger-soft);border:1px solid rgba(216,81,60,.22);color:#B5402E;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:16px}
+  </style>
 </head>
-<body class="bg-gradient-to-br from-slate-900 to-slate-800 min-h-screen flex items-center justify-center">
-  <div class="w-full max-w-md">
-    <div class="text-center mb-8">
-      <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4">
-        <i class="fas fa-id-card text-white text-2xl"></i>
-      </div>
-      <h1 class="text-3xl font-bold text-white">METI Admin</h1>
-      <p class="text-slate-400 mt-2">디지털명함 플랫폼 관리자</p>
-    </div>
-    <div class="bg-white rounded-2xl shadow-2xl p-8">
-      <h2 class="text-xl font-semibold text-gray-800 mb-6">로그인</h2>
-      <div id="error-msg" class="hidden mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm"></div>
-      <form id="login-form" class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">이메일</label>
-          <input type="email" id="email" placeholder="admin@meti.io"
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+<body>
+  <div class="wrap">
+    <div class="wordmark">MET<span class="i">I</span></div>
+    <p class="tagline">Admin Dashboard</p>
+    <div class="card">
+      <div id="err"></div>
+      <form id="frm">
+        <div class="field">
+          <label for="email">이메일</label>
+          <input type="email" id="email" placeholder="admin@meti.io" autocomplete="email">
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">비밀번호</label>
-          <input type="password" id="password" placeholder="••••••••"
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <div class="field">
+          <label for="pw">비밀번호</label>
+          <input type="password" id="pw" placeholder="••••••••" autocomplete="current-password">
         </div>
-        <button type="submit" id="login-btn"
-          class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors">
-          <span id="btn-text">로그인</span>
-          <span id="btn-loading" class="hidden"><i class="fas fa-spinner fa-spin mr-2"></i>로그인 중...</span>
-        </button>
+        <button class="btn" id="btn" type="submit">로그인</button>
       </form>
     </div>
   </div>
   <script>
-    document.getElementById('login-form').addEventListener('submit', async (e) => {
+    document.getElementById('frm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-      const btnText = document.getElementById('btn-text');
-      const btnLoading = document.getElementById('btn-loading');
-      const errorMsg = document.getElementById('error-msg');
-
-      btnText.classList.add('hidden');
-      btnLoading.classList.remove('hidden');
-      errorMsg.classList.add('hidden');
-
+      const btn = document.getElementById('btn');
+      const err = document.getElementById('err');
+      btn.textContent = '로그인 중…'; btn.disabled = true; err.style.display = 'none';
       try {
         const res = await fetch('/api/v1/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ email: document.getElementById('email').value, password: document.getElementById('pw').value })
         });
         const data = await res.json();
         if (data.success) {
-          localStorage.setItem('meti_admin_token', data.data.access_token);
-          localStorage.setItem('meti_admin_user', JSON.stringify(data.data.user));
+          localStorage.setItem('meti_token', data.data.access_token);
+          localStorage.setItem('meti_user', JSON.stringify(data.data.user));
           window.location.href = '/admin/dashboard';
         } else {
-          errorMsg.textContent = data.error || '로그인에 실패했습니다.';
-          errorMsg.classList.remove('hidden');
+          err.textContent = data.error || '로그인에 실패했습니다.'; err.style.display = 'block';
         }
-      } catch (err) {
-        errorMsg.textContent = '서버 연결에 실패했습니다.';
-        errorMsg.classList.remove('hidden');
-      } finally {
-        btnText.classList.remove('hidden');
-        btnLoading.classList.add('hidden');
-      }
+      } catch { err.textContent = '서버 연결에 실패했습니다.'; err.style.display = 'block'; }
+      finally { btn.textContent = '로그인'; btn.disabled = false; }
     });
   </script>
 </body>
@@ -89,39 +92,92 @@ export function adminAppHtml(): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>METI Admin Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>tailwind.config = { theme: { extend: { fontSize: { 'xs':'11px','sm':'12px','base':'13px','lg':'14px','xl':'15px','2xl':'16px','3xl':'18px' } } } }</script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <title>METI Admin</title>
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    html, body { font-size: 13px; }
-    .sidebar-link { display:flex; align-items:center; gap:0.75rem; padding:0.65rem 1rem; border-radius:0.5rem; color:#94a3b8; cursor:pointer; transition:all 0.15s; font-size:13px; }
-    .sidebar-link:hover { background:#1e293b; color:#f1f5f9; }
-    .sidebar-link.active { background:#2563eb; color:#fff; }
-    .sidebar-link i { width:1.1rem; text-align:center; }
+    /* ── METI Design Tokens ───────────────────────────────── */
+    :root {
+      --navy:#0B1E40; --navy-deep:#06122A; --navy-glow:#1C3D72;
+      --gold:#C9A86A; --gold-admin:#C2974E; --gold-soft:rgba(194,151,78,0.14);
+      --bg:#F4F5F8; --surface:#FFFFFF; --surface-2:#F7F8FA;
+      --ink:#0E1726; --sub:#5B6577; --mute:#8B95A6;
+      --line:rgba(14,23,38,0.08); --line-2:rgba(14,23,38,0.05);
+      --success:#1B9C73; --success-soft:rgba(27,156,115,0.12);
+      --danger:#D8513C;  --danger-soft:rgba(216,81,60,0.12);
+      --warn:#C98A1E;    --warn-soft:rgba(201,138,30,0.13);
+      --info:#3470C4;    --info-soft:rgba(52,112,196,0.12);
+      --r-sm:8px; --r-md:14px; --r-lg:18px; --r-card:22px; --r-pill:9999px;
+      --shadow-card:0 1px 2px rgba(14,23,38,.04),0 8px 24px rgba(14,23,38,.06);
+      --font:Pretendard,-apple-system,system-ui,sans-serif;
+    }
+
+    /* ── Base ─────────────────────────────────────────────── */
+    html,body { font-family:var(--font) !important; background:var(--bg) !important; }
+
+    /* ── Sidebar nav links ─────────────────────────────────── */
+    .sidebar-link {
+      display:flex; align-items:center; gap:10px;
+      padding:9px 12px; border-radius:10px;
+      color:rgba(255,255,255,0.50); cursor:pointer;
+      transition:all 0.15s; font-size:13px; font-weight:500;
+      width:100%; border:none; background:transparent; text-align:left; font-family:var(--font);
+    }
+    .sidebar-link:hover { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.88); }
+    .sidebar-link.active { background:var(--gold-soft); color:var(--gold-admin); font-weight:700; }
+    .sidebar-link i { width:14px; text-align:center; font-size:13px; flex-shrink:0; }
+
+    /* ── Shared surface card ───────────────────────────────── */
+    .meti-card {
+      background:var(--surface); border-radius:var(--r-lg);
+      box-shadow:var(--shadow-card); border:1px solid var(--line-2);
+    }
+
+    /* ── Badge ─────────────────────────────────────────────── */
+    .meti-badge {
+      display:inline-flex; align-items:center; gap:5px;
+      font-size:12px; font-weight:700; padding:3px 9px; border-radius:var(--r-pill);
+    }
+
+    /* ── Primary action buttons in content → METI Navy ─────── */
+    #page-content .bg-blue-600              { background-color:var(--navy)      !important; }
+    #page-content .hover\\:bg-blue-700:hover { background-color:var(--navy-deep) !important; }
+    #page-content .focus\\:ring-blue-500:focus { --tw-ring-color:rgba(11,30,64,.25) !important; }
+    #page-content .border-blue-500          { border-color:var(--navy)           !important; }
+
+    /* ── Table defaults ────────────────────────────────────── */
+    .meti-table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    .meti-table th {
+      font-weight:700; color:var(--mute); font-size:11.5px; letter-spacing:0.05em;
+      padding:10px 12px; text-align:left;
+      border-bottom:1px solid var(--line); background:var(--surface-2);
+    }
+    .meti-table td { padding:11px 12px; border-bottom:1px solid var(--line-2); color:var(--ink); vertical-align:middle; }
+    .meti-table tbody tr:hover td { background:var(--surface-2); }
   </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body>
   <div id="app">
     <div id="loading" class="min-h-screen flex items-center justify-center">
       <div class="text-center">
-        <i class="fas fa-spinner fa-spin text-blue-600 text-3xl mb-4"></i>
-        <p class="text-gray-600">로딩 중...</p>
+        <i class="fas fa-spinner fa-spin text-3xl mb-4" style="color:var(--navy)"></i>
+        <p style="color:var(--sub);font-size:14px;font-family:var(--font)">로딩 중…</p>
       </div>
     </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
-  <script src="/static/admin.js?v=20260607"></script>
-  <script src="/static/admin-users.js?v=20260607"></script>
-  <script src="/static/admin-events.js?v=20260607"></script>
-  <script src="/static/admin-plans.js?v=20260607"></script>
-  <script src="/static/admin-lessons.js?v=20260607"></script>
-  <script src="/static/admin-nfc.js?v=20260607"></script>
-  <script src="/static/admin-reports.js?v=20260607"></script>
-  <script src="/static/admin-groups.js?v=20260607"></script>
-  <script src="/static/admin-orders.js?v=20260607"></script>
-  <script src="/static/admin-partner.js?v=20260607"></script>
+  <script src="/static/admin.js?v=20260614"></script>
+  <script src="/static/admin-users.js?v=20260614"></script>
+  <script src="/static/admin-events.js?v=20260614"></script>
+  <script src="/static/admin-plans.js?v=20260614"></script>
+  <script src="/static/admin-lessons.js?v=20260614"></script>
+  <script src="/static/admin-nfc.js?v=20260614"></script>
+  <script src="/static/admin-reports.js?v=20260614"></script>
+  <script src="/static/admin-groups.js?v=20260614"></script>
+  <script src="/static/admin-orders.js?v=20260614"></script>
+  <script src="/static/admin-partner.js?v=20260614"></script>
 </body>
 </html>`
 }

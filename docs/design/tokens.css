@@ -1,0 +1,66 @@
+/* ──────────────────────────────────────────────────────────────
+   METI Design Tokens — CSS Custom Properties  v1.0.0
+   메인 컬러: 진한 잉크 네이비(#0B1E40) / 악센트: 골드(#C9A86A)
+   import:  <link rel="stylesheet" href="tokens.css">
+   font:    Pretendard (CDN 아래 주석 참고)
+   ────────────────────────────────────────────────────────────── */
+/* @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css'); */
+
+:root {
+  /* Brand */
+  --meti-navy:        #0B1E40;
+  --meti-navy-deep:   #06122A;
+  --meti-navy-glow:   #1C3D72;
+  --meti-gold:        #C9A86A;   /* 앱 기본 악센트 */
+  --meti-gold-deep:   #9A7333;
+  --meti-gold-admin:  #C2974E;   /* 밝은 배경(어드민)용 */
+  --meti-gold-soft:   rgba(201,168,106,0.14);
+
+  /* Surfaces — Light (기본) */
+  --meti-bg:        #F4F5F8;
+  --meti-surface:   #FFFFFF;
+  --meti-surface-2: #F7F8FA;
+  --meti-ink:       #0E1726;
+  --meti-sub:       #5B6577;
+  --meti-mute:      #8B95A6;
+  --meti-line:      rgba(14,23,38,0.08);
+  --meti-line-2:    rgba(14,23,38,0.05);
+
+  /* Status */
+  --meti-success:   #1B9C73;  --meti-success-soft: rgba(27,156,115,0.12);
+  --meti-danger:    #D8513C;  --meti-danger-soft:  rgba(216,81,60,0.12);
+  --meti-warn:      #C98A1E;  --meti-warn-soft:    rgba(201,138,30,0.13);
+  --meti-info:      #3470C4;  --meti-info-soft:    rgba(52,112,196,0.12);
+
+  /* Type */
+  --meti-font: Pretendard, -apple-system, system-ui, sans-serif;
+
+  /* Radius */
+  --meti-r-sm: 8px;  --meti-r-md: 14px;  --meti-r-lg: 18px;
+  --meti-r-card: 22px;  --meti-r-pill: 9999px;
+
+  /* Elevation */
+  --meti-shadow-card:   0 1px 2px rgba(14,23,38,0.04), 0 8px 24px rgba(14,23,38,0.04);
+  --meti-shadow-raised: 0 2px 4px rgba(6,18,42,0.25), 0 18px 40px -12px rgba(6,18,42,0.55);
+}
+
+/* Dark theme — <html data-theme="dark"> 또는 .dark */
+[data-theme="dark"], .meti-dark {
+  --meti-bg:        #0C0F16;
+  --meti-surface:   #161A23;
+  --meti-surface-2: #1E232E;
+  --meti-ink:       #F2F4F8;
+  --meti-sub:       #A7B0C0;
+  --meti-mute:      #727C8C;
+  --meti-line:      rgba(255,255,255,0.09);
+  --meti-line-2:    rgba(255,255,255,0.06);
+}
+
+/* 디지털 명함 표면 (네이비 기본 마감) */
+.meti-card-surface {
+  background: radial-gradient(130% 130% at 78% -10%,
+    var(--meti-navy-glow) 0%, var(--meti-navy) 42%, var(--meti-navy-deep) 100%);
+  border-radius: var(--meti-r-card);
+  box-shadow: var(--meti-shadow-raised);
+  color: #fff;
+}
