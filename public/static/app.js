@@ -121,24 +121,24 @@ function buildContextMenu() {
   if (!container) return;
 
   let html = `
-    <button onclick="switchContextToUser()" class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-slate-700 transition text-slate-200">
-      <i class="fas fa-user text-blue-400 w-4 text-center"></i>
+    <button onclick="switchContextToUser()" class="w-full flex items-center gap-2 px-3 py-2 text-sm transition" style="color:rgba(255,255,255,0.82)" onmouseover="this.style.background='rgba(255,255,255,0.07)'" onmouseout="this.style.background=''">
+      <i class="fas fa-user w-4 text-center" style="color:#C9A86A"></i>
       <span>개인 계정</span>
-      ${currentCtx.type === 'user' ? '<i class="fas fa-check text-blue-400 ml-auto"></i>' : ''}
+      ${currentCtx.type === 'user' ? '<i class="fas fa-check ml-auto" style="color:#C9A86A"></i>' : ''}
     </button>`;
 
   const adminGroups = myGroups.filter(g => g.my_role === 'admin' || g.my_role === 'sub_admin');
   if (adminGroups.length > 0) {
-    html += `<div class="border-t border-slate-700 my-1"></div>
-      <p class="px-3 py-1 text-xs text-slate-500 font-semibold uppercase">그룹 관리</p>`;
+    html += `<div class="my-1" style="border-top:1px solid rgba(255,255,255,0.08)"></div>
+      <p class="px-3 py-1 text-xs font-semibold uppercase" style="color:rgba(255,255,255,0.32);letter-spacing:0.07em">그룹 관리</p>`;
     adminGroups.forEach(g => {
       const active = currentCtx.type === 'group' && currentCtx.id === g.id;
       html += `
         <button onclick="switchContextToGroup(${g.id})"
-          class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-slate-700 transition text-slate-200">
-          <i class="fas fa-users text-purple-400 w-4 text-center"></i>
+          class="w-full flex items-center gap-2 px-3 py-2 text-sm transition" style="color:rgba(255,255,255,0.82)" onmouseover="this.style.background='rgba(255,255,255,0.07)'" onmouseout="this.style.background=''">
+          <i class="fas fa-users w-4 text-center" style="color:#C9A86A"></i>
           <span class="truncate flex-1 text-left">${escHtml(g.name)}</span>
-          ${active ? '<i class="fas fa-check text-blue-400 flex-shrink-0"></i>' : ''}
+          ${active ? '<i class="fas fa-check flex-shrink-0" style="color:#C9A86A"></i>' : ''}
         </button>`;
     });
   }
@@ -154,7 +154,9 @@ function toggleContextMenu() {
 // ── 컨텍스트 전환: 개인 ──────────────────────────────────
 function switchContextToUser() {
   currentCtx = { type: 'user' };
-  document.getElementById('ctx-icon').className = 'fas fa-user text-blue-400 text-xs flex-shrink-0';
+  const ctxIcon = document.getElementById('ctx-icon');
+  ctxIcon.className = 'fas fa-user text-xs flex-shrink-0';
+  ctxIcon.style.color = '#C9A86A';
   document.getElementById('ctx-name').textContent = '개인 계정';
   document.getElementById('header-ctx-badge').classList.add('hidden');
   document.getElementById('ctx-menu').classList.add('hidden');
@@ -170,7 +172,9 @@ function switchContextToGroup(groupId, navigate = true) {
   if (!grp) return;
 
   currentCtx = { type: 'group', id: grp.id, name: grp.name, role: grp.my_role };
-  document.getElementById('ctx-icon').className = 'fas fa-users text-purple-400 text-xs flex-shrink-0';
+  const ctxIconG = document.getElementById('ctx-icon');
+  ctxIconG.className = 'fas fa-users text-xs flex-shrink-0';
+  ctxIconG.style.color = '#C9A86A';
   document.getElementById('ctx-name').textContent = grp.name;
 
   const badge = document.getElementById('header-ctx-badge');
@@ -198,10 +202,10 @@ function buildNavMenu() {
       ${navItem('dashboard',    'tachometer-alt', '대시보드')}
       ${navItem('cards',        'id-card',        '내 명함')}
       ${navItem('groups',       'users',          '내 그룹')}
-      <div class="border-t border-slate-700 my-2"></div>
+      <div class="my-2" style="border-top:1px solid rgba(255,255,255,0.08)"></div>
       ${navItem('points',       'coins',          '포인트')}
       ${navItem('subscription', 'crown',          '구독')}
-      <div class="border-t border-slate-700 my-2"></div>
+      <div class="my-2" style="border-top:1px solid rgba(255,255,255,0.08)"></div>
       ${navItem('notifications','bell',           '알림')}`;
   } else {
     const gid = currentCtx.id;
@@ -212,7 +216,7 @@ function buildNavMenu() {
       ${navItem('group-points',    'coins',          '그룹 포인트',     `/app/group/${gid}/points`)}
       ${navItem('group-lessons',   'chalkboard-teacher','레슨 관리',    `/app/group/${gid}/lessons`)}
       ${navItem('group-invites',   'link',           '초대링크',        `/app/group/${gid}/invites`)}
-      <div class="border-t border-slate-700 my-2"></div>
+      <div class="my-2" style="border-top:1px solid rgba(255,255,255,0.08)"></div>
       ${navItem('dashboard',       'arrow-left',     '개인 계정으로')}`;
   }
 

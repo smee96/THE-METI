@@ -806,44 +806,80 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${pageTitle}</title>
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>tailwind.config = { theme: { extend: { fontSize: { 'xs':'11px','sm':'12px','base':'13px','lg':'14px','xl':'15px','2xl':'16px','3xl':'18px' } } } }</script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
   <style>
-    html, body { font-size: 13px; }
-    /* 사이드바 */
-    #sidebar { transition: transform 0.25s ease; }
+    /* ── METI Design Tokens ─────────────────────────── */
+    :root {
+      --navy:#0B1E40; --navy-deep:#06122A; --navy-glow:#1C3D72;
+      --gold:#C9A86A; --gold-deep:#9A7333; --gold-soft:rgba(201,168,106,0.16);
+      --bg:#F4F5F8; --surface:#FFFFFF; --surface-2:#F7F8FA;
+      --ink:#0E1726; --sub:#5B6577; --mute:#8B95A6;
+      --line:rgba(14,23,38,0.08); --line-2:rgba(14,23,38,0.05);
+      --success:#1B9C73; --success-soft:rgba(27,156,115,0.12);
+      --danger:#D8513C;  --danger-soft:rgba(216,81,60,0.12);
+      --warn:#C98A1E;    --warn-soft:rgba(201,138,30,0.13);
+      --info:#3470C4;    --info-soft:rgba(52,112,196,0.12);
+      --font:Pretendard,-apple-system,system-ui,sans-serif;
+      --r-md:14px; --r-lg:18px; --r-card:22px;
+      --shadow-card:0 1px 2px rgba(14,23,38,.04),0 8px 24px rgba(14,23,38,.06);
+    }
+
+    /* ── Base ──────────────────────────────────────── */
+    html, body { font-size:13px; font-family:var(--font) !important; background:var(--bg) !important; }
+
+    /* ── 사이드바 ───────────────────────────────────── */
+    #sidebar { transition:transform 0.25s ease; }
     @media (max-width: 768px) {
-      #sidebar { transform: translateX(-100%); position: fixed; z-index: 50; height: 100vh; }
-      #sidebar.open { transform: translateX(0); }
-      #sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 40; }
-      #sidebar-overlay.open { display: block; }
+      #sidebar { transform:translateX(-100%); position:fixed; z-index:50; height:100vh; }
+      #sidebar.open { transform:translateX(0); }
+      #sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:40; }
+      #sidebar-overlay.open { display:block; }
     }
+
+    /* ── Nav 아이템 ────────────────────────────────── */
     .nav-item {
-      display: flex; align-items: center; gap: 0.75rem;
-      padding: 0.65rem 1rem; border-radius: 0.5rem;
-      color: #94a3b8; cursor: pointer; transition: all 0.15s;
-      font-size: 13px;
+      display:flex; align-items:center; gap:0.75rem;
+      padding:9px 12px; border-radius:10px;
+      color:rgba(255,255,255,0.48); cursor:pointer; transition:all 0.15s;
+      font-size:13px; font-family:var(--font); font-weight:500;
     }
-    .nav-item:hover { background: #1e293b; color: #f1f5f9; }
-    .nav-item.active { background: #2563eb; color: #fff; }
-    .nav-item i { width: 1.1rem; text-align: center; }
+    .nav-item:hover { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.88); }
+    .nav-item.active { background:var(--gold-soft); color:var(--gold); font-weight:700; }
+    .nav-item i { width:1.1rem; text-align:center; }
 
-    /* 컨텍스트 배지 */
-    .ctx-badge {
-      font-size: 0.75rem; padding: 0.1rem 0.5rem;
-      border-radius: 9999px; font-weight: 600;
-    }
-    /* 페이지 섹션 */
-    .page-section { display: none; }
-    .page-section.active { display: block; }
+    /* ── 컨텍스트 배지 ─────────────────────────────── */
+    .ctx-badge { font-size:0.75rem; padding:0.15rem 0.6rem; border-radius:9999px; font-weight:700; }
 
-    /* 카드 */
-    .stat-card { background: #fff; border-radius: 1rem; padding: 1.25rem 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
-    .item-card  { background: #fff; border-radius: 0.75rem; padding: 1rem 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 0.75rem; }
+    /* ── 섹션 ──────────────────────────────────────── */
+    .page-section { display:none; }
+    .page-section.active { display:block; }
+
+    /* ── 카드 ──────────────────────────────────────── */
+    .stat-card { background:var(--surface); border-radius:var(--r-lg); padding:1.25rem 1.5rem; box-shadow:var(--shadow-card); border:1px solid var(--line-2); }
+    .item-card  { background:var(--surface); border-radius:var(--r-md); padding:1rem 1.25rem; box-shadow:0 1px 3px rgba(14,23,38,.05); margin-bottom:0.75rem; border:1px solid var(--line-2); }
+
+    /* ── 콘텐츠 내 파란색 → METI 네이비 오버라이드 ── */
+    .bg-blue-600  { background-color:var(--navy)      !important; }
+    .bg-blue-500  { background-color:var(--navy)      !important; }
+    .hover\\:bg-blue-700:hover { background-color:var(--navy-deep) !important; }
+    .hover\\:bg-blue-600:hover { background-color:var(--navy-deep) !important; }
+    .text-blue-600, .text-blue-700 { color:var(--navy) !important; }
+    .hover\\:text-blue-600:hover   { color:var(--navy) !important; }
+    .border-blue-600 { border-color:var(--navy) !important; }
+    .border-blue-500 { border-color:var(--navy) !important; }
+    .bg-blue-100     { background-color:rgba(11,30,64,0.07) !important; }
+    .bg-blue-50      { background-color:rgba(11,30,64,0.04) !important; }
+    .hover\\:bg-blue-50:hover { background-color:rgba(11,30,64,0.05) !important; }
+    .border-blue-300 { border-color:rgba(11,30,64,0.22) !important; }
+    .hover\\:border-blue-300:hover { border-color:rgba(11,30,64,0.3) !important; }
+    .text-blue-400   { color:var(--gold)    !important; }
+    .text-blue-500   { color:var(--navy)    !important; }
   </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="min-h-screen" style="background:var(--bg);font-family:var(--font)">
 
 <!-- 모바일 오버레이 -->
 <div id="sidebar-overlay" onclick="closeSidebar()"></div>
@@ -852,28 +888,34 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
 <div class="flex min-h-screen">
 
   <!-- ── 사이드바 ── -->
-  <aside id="sidebar" class="w-64 bg-slate-900 text-white flex flex-col flex-shrink-0">
+  <aside id="sidebar" class="w-64 text-white flex flex-col flex-shrink-0"
+    style="background:var(--navy)">
 
     <!-- 로고 -->
-    <div class="flex items-center gap-3 px-5 py-5 border-b border-slate-700">
-      <div class="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
-        <i class="fas fa-id-card text-white text-sm"></i>
+    <div class="flex items-center gap-3 px-5 py-5" style="border-bottom:1px solid rgba(255,255,255,0.08)">
+      <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+        style="background:rgba(255,255,255,0.10)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gold)">
+          <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
+        </svg>
       </div>
-      <span class="font-bold text-lg text-white">METI</span>
+      <span class="font-bold text-lg tracking-widest" style="letter-spacing:0.18em">MET<span style="color:var(--gold)">I</span></span>
     </div>
 
     <!-- 컨텍스트 선택 (개인 ↔ 그룹) -->
-    <div class="px-4 py-3 border-b border-slate-700">
+    <div class="px-4 py-3" style="border-bottom:1px solid rgba(255,255,255,0.08)">
       <button id="ctx-btn" onclick="toggleContextMenu()"
-        class="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition">
+        class="w-full flex items-center justify-between px-3 py-2 rounded-lg transition"
+        style="background:rgba(255,255,255,0.06)">
         <div class="flex items-center gap-2 min-w-0">
-          <i id="ctx-icon" class="fas fa-user text-blue-400 text-xs flex-shrink-0"></i>
+          <i id="ctx-icon" class="fas fa-user text-xs flex-shrink-0" style="color:var(--gold)"></i>
           <span id="ctx-name" class="text-sm font-medium text-white truncate">내 계정</span>
         </div>
-        <i class="fas fa-chevron-down text-slate-400 text-xs flex-shrink-0 ml-1"></i>
+        <i class="fas fa-chevron-down text-xs flex-shrink-0 ml-1" style="color:rgba(255,255,255,0.35)"></i>
       </button>
       <!-- 드롭다운 -->
-      <div id="ctx-menu" class="hidden mt-1 rounded-lg bg-slate-800 border border-slate-700 overflow-hidden">
+      <div id="ctx-menu" class="hidden mt-1 rounded-lg overflow-hidden"
+        style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08)">
         <div id="ctx-menu-items"></div>
       </div>
     </div>
@@ -884,12 +926,13 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
     </nav>
 
     <!-- 하단 사용자 정보 -->
-    <div class="px-4 py-4 border-t border-slate-700">
+    <div class="px-4 py-4" style="border-top:1px solid rgba(255,255,255,0.08)">
       <div class="flex items-center gap-3">
         <!-- 아바타: 클릭 → 프로필 모달 -->
         <button onclick="openProfileModal()" title="프로필 수정"
           class="relative w-9 h-9 rounded-full flex-shrink-0 group">
-          <div id="sidebar-avatar-wrap" class="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden">
+          <div id="sidebar-avatar-wrap" class="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden"
+            style="background:var(--navy-glow)">
             <i id="sidebar-avatar-icon" class="fas fa-user text-white text-sm"></i>
             <img id="sidebar-avatar-img" src="" class="hidden w-9 h-9 object-cover" onerror="this.classList.add('hidden');document.getElementById('sidebar-avatar-icon').classList.remove('hidden')">
           </div>
@@ -899,10 +942,10 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
         </button>
         <div class="flex-1 min-w-0 cursor-pointer" onclick="openProfileModal()">
           <p id="sidebar-username" class="text-sm font-medium text-white truncate">-</p>
-          <p id="sidebar-plan"     class="text-xs text-slate-400 truncate">Free</p>
+          <p id="sidebar-plan" class="text-xs truncate" style="color:rgba(255,255,255,0.42)">Free</p>
         </div>
         <button onclick="logout()" title="로그아웃"
-          class="text-slate-400 hover:text-white transition">
+          class="transition" style="color:rgba(255,255,255,0.38)" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.38)'">
           <i class="fas fa-sign-out-alt"></i>
         </button>
       </div>
@@ -913,13 +956,15 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
   <div class="flex-1 flex flex-col min-w-0">
 
     <!-- 헤더 -->
-    <header class="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 sticky top-0 z-30">
-      <button onclick="openSidebar()" class="md:hidden text-gray-500 hover:text-gray-800">
+    <header class="bg-white px-4 py-3 flex items-center gap-3 sticky top-0 z-30"
+      style="border-bottom:1px solid var(--line);font-family:var(--font)">
+      <button onclick="openSidebar()" class="md:hidden" style="color:var(--sub)">
         <i class="fas fa-bars text-xl"></i>
       </button>
-      <h2 id="page-title" class="font-semibold text-gray-800 text-lg flex-1">대시보드</h2>
-      <span id="header-ctx-badge" class="ctx-badge bg-blue-100 text-blue-700 hidden"></span>
-      <button onclick="showSection('notifications')" class="relative text-gray-500 hover:text-gray-800">
+      <h2 id="page-title" class="font-semibold text-lg flex-1" style="color:var(--ink)">대시보드</h2>
+      <span id="header-ctx-badge" class="ctx-badge hidden"
+        style="background:var(--gold-soft);color:var(--gold-deep)"></span>
+      <button onclick="showSection('notifications')" class="relative" style="color:var(--sub)">
         <i class="fas fa-bell text-xl"></i>
         <span id="notif-badge" class="hidden absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">0</span>
       </button>
@@ -931,8 +976,8 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
       <!-- ── [개인] 대시보드 ── -->
       <section id="section-dashboard" class="page-section active">
         <div class="mb-6">
-          <h3 class="text-lg font-bold text-gray-800">안녕하세요, <span id="greeting-name">-</span>님 👋</h3>
-          <p class="text-gray-500 mt-1">오늘도 좋은 하루 되세요.</p>
+          <h3 class="text-lg font-bold" style="color:var(--ink)">안녕하세요, <span id="greeting-name">-</span>님</h3>
+          <p class="mt-1" style="color:var(--sub)">오늘도 좋은 하루 되세요.</p>
         </div>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div class="stat-card text-center">
@@ -1193,7 +1238,7 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
     <!-- 아바타 업로드 -->
     <div class="flex flex-col items-center mb-5">
       <div class="relative group cursor-pointer" onclick="document.getElementById('avatar-file-input').click()">
-        <div id="profile-avatar-wrap" class="w-24 h-24 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden">
+        <div id="profile-avatar-wrap" class="w-24 h-24 rounded-full flex items-center justify-center overflow-hidden" style="background:var(--navy-glow)">
           <i id="profile-avatar-icon" class="fas fa-user text-white text-3xl"></i>
           <img id="profile-avatar-img" src="" class="hidden w-24 h-24 object-cover"
             onerror="this.classList.add('hidden');document.getElementById('profile-avatar-icon').classList.remove('hidden')">
@@ -1221,7 +1266,7 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
         <input id="profile-plan-display" type="text" class="modal-input bg-gray-50 text-gray-400" readonly>
       </div>
       <div id="profile-form-error" class="hidden text-sm text-red-600"></div>
-      <button type="submit" class="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">
+      <button type="submit" class="w-full py-3 text-white rounded-lg font-medium transition" style="background:var(--navy)" onmouseover="this.style.background='var(--navy-deep)'" onmouseout="this.style.background='var(--navy)'">
         저장
       </button>
     </form>
@@ -1250,9 +1295,9 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
     <!-- 탭 -->
     <div class="flex border-b mx-5 flex-shrink-0">
       <button id="edit-tab-basic" onclick="switchEditTab('basic')"
-        class="flex-1 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600">기본 정보</button>
+        class="flex-1 py-2 text-sm font-medium border-b-2" style="color:var(--navy);border-color:var(--navy)">기본 정보</button>
       <button id="edit-tab-resume" onclick="switchEditTab('resume')"
-        class="flex-1 py-2 text-sm font-medium text-gray-400 border-b-2 border-transparent">이력 &amp; SNS</button>
+        class="flex-1 py-2 text-sm font-medium border-b-2 border-transparent" style="color:var(--mute)">이력 &amp; SNS</button>
     </div>
     <form id="edit-card-form" class="overflow-y-auto flex-1 px-5 py-4">
       <input id="edit-card-id" type="hidden">
@@ -1334,7 +1379,7 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
       </div>
       <!-- 에러 & 제출 -->
       <div id="edit-card-error" class="hidden text-sm text-red-600 mt-3"></div>
-      <button type="submit" class="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 mt-4">
+      <button type="submit" class="w-full py-3 text-white rounded-lg font-medium mt-4 transition" style="background:var(--navy)" onmouseover="this.style.background='var(--navy-deep)'" onmouseout="this.style.background='var(--navy)'">
         저장
       </button>
     </form>
@@ -1570,12 +1615,13 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
 
 <style>
   .modal-input {
-    display: block; width: 100%;
-    padding: 0.65rem 0.9rem;
-    border: 1px solid #d1d5db; border-radius: 0.5rem;
-    font-size: 0.9rem; outline: none; transition: border 0.15s;
+    display:block; width:100%;
+    padding:0.65rem 0.9rem;
+    border:1.5px solid var(--line); border-radius:var(--r-md);
+    font-size:0.9rem; font-family:var(--font); outline:none; transition:border 0.15s;
+    background:var(--surface-2,#F7F8FA); color:var(--ink);
   }
-  .modal-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
+  .modal-input:focus { border-color:var(--navy); box-shadow:0 0 0 3px rgba(11,30,64,0.10); background:#fff; }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>

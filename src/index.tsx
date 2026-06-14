@@ -19,7 +19,7 @@ import pointsRoutes   from './routes/points'
 import staticRouter   from './static-serve'
 
 // Web UI HTML 템플릿
-import { adminAppHtml }                                from './web/admin'
+import { adminLoginHtml, adminAppHtml }                from './web/admin'
 import { appLandingHtml, appLoginHtml, appRegisterHtml, appShellHtml } from './web/app'
 import { privacyPolicyHtml, termsOfServiceHtml }       from './web/legal'
 
@@ -296,8 +296,9 @@ app.get('/health', (c) =>
 // ════════════════════════════════════════════════════════════
 // ── Admin Web UI  (/admin)
 // ════════════════════════════════════════════════════════════
-app.get('/admin',  (c) => c.redirect('/'))
-app.get('/admin/*', (c) => c.html(adminAppHtml()))
+app.get('/admin',        (c) => c.redirect('/admin/login'))
+app.get('/admin/login',  (c) => c.html(adminLoginHtml()))
+app.get('/admin/*',      (c) => c.html(adminAppHtml()))
 
 // ════════════════════════════════════════════════════════════
 // ── App Web UI  (/app)
