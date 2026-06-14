@@ -1,4 +1,4 @@
-// ── App Web UI HTML 템플릿 (사용자 / 그룹관리자) ──────
+﻿// ── App Web UI HTML 템플릿 (사용자 / 그룹관리자) ──────
 
 export function appLoginHtml(): string {
   return `<!DOCTYPE html>
@@ -503,775 +503,388 @@ export function appLandingHtml(): string {
   return `<!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>THE METI — 스마트 디지털 명함 플랫폼</title>
-  <meta name="description" content="NFC·QR 한 번으로 내 모든 정보를 전달하는 스마트 디지털 명함 플랫폼. 개인·팀·기업 모두를 위한 명함 솔루션.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --blue:       #0c2d85;
-      --blue-dark:  #091f5e;
-      --blue-light: #e8eeff;
-      --text:       #0d1b3e;
-      --text-mid:   #475569;
-      --text-light: #94a3b8;
-      --border:     #e2e8f0;
-      --bg:         #f8faff;
-    }
-    html { scroll-behavior: smooth; }
-    body { font-family: 'Inter', -apple-system, sans-serif; color: var(--text); background: #fff; line-height: 1.6; }
-    a { color: inherit; text-decoration: none; }
-    img { max-width: 100%; }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>METI — 명함을 넘어, 관계로</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<style>
+  :root{
+    --navy:#0B1E40; --navy-deep:#06122A; --navy-glow:#1C3D72;
+    --gold:#C9A86A; --gold-deep:#9A7333; --gold-soft:rgba(201,168,106,.13);
+    --mint:oklch(0.74 0.095 168); --coral:oklch(0.72 0.12 33); --violet:oklch(0.66 0.13 290);
+    --bg:#F4F5F8; --surface:#FFFFFF; --surface2:#F7F8FA; --ink:#0E1726; --sub:#5B6577; --mute:#8B95A6;
+    --line:rgba(14,23,38,0.09); --font:Pretendard,-apple-system,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;font-family:var(--font);background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;word-break:keep-all;line-break:strict;}
+  a{color:inherit;text-decoration:none;}
+  .word{font-weight:800;letter-spacing:0.2em;display:inline-flex;}
+  .word .i{color:var(--gold);}
+  .wrap{max-width:1160px;margin:0 auto;padding:0 32px;}
+  .nfcmark{border-radius:11px;border:1.5px solid var(--gold);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  section{position:relative;}
+  h2.sec{font-size:34px;font-weight:800;letter-spacing:-0.025em;margin:0;text-wrap:balance;}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;letter-spacing:.05em;color:var(--gold-deep);
+    background:var(--gold-soft);padding:7px 14px;border-radius:100px;white-space:nowrap;text-transform:uppercase;}
+  .lead{font-size:17px;line-height:1.65;color:var(--sub);}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;cursor:pointer;font-family:var(--font);font-weight:700;border-radius:13px;white-space:nowrap;transition:filter .15s,transform .05s,background .15s;}
+  .btn-nav{background:var(--navy);color:#fff;height:44px;padding:0 20px;font-size:14.5px;}
+  .btn-nav:hover{filter:brightness(1.14);}
+  .btn-ghost{background:transparent;color:var(--ink);height:44px;padding:0 16px;font-size:14.5px;}
+  .btn-lg{height:54px;padding:0 26px;font-size:16px;}
+  .btn-gold{background:var(--gold);color:#3a2c10;}
+  .btn-gold:hover{filter:brightness(1.06);}
+  .btn-light{background:#fff;color:var(--navy);}
+  .btn-outline-d{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.22);}
+  .btn-outline-d:hover{background:rgba(255,255,255,.14);}
 
-    /* ── LAYOUT ── */
-    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
-    .section { padding: 80px 0; }
-    .section-sm { padding: 56px 0; }
-    .section-label {
-      display: inline-block; font-size: 12px; font-weight: 700;
-      letter-spacing: 1.5px; text-transform: uppercase;
-      color: var(--blue); background: var(--blue-light);
-      padding: 5px 14px; border-radius: 20px; margin-bottom: 16px;
-    }
-    .section-title { font-size: clamp(26px, 4vw, 38px); font-weight: 900; letter-spacing: -0.8px; line-height: 1.2; color: var(--text); }
-    .section-sub { font-size: 16px; color: var(--text-mid); margin-top: 12px; line-height: 1.7; }
+  /* ── Nav ── */
+  .nav{position:sticky;top:0;z-index:50;background:rgba(244,245,248,.82);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--line);}
+  .nav .inner{display:flex;align-items:center;gap:28px;height:68px;}
+  .nav .links{display:flex;gap:26px;margin-left:14px;flex-shrink:0;}
+  .nav .links a{font-size:15px;font-weight:600;color:var(--sub);white-space:nowrap;}
+  .nav .links a:hover{color:var(--ink);}
+  .nav .sp{flex:1;}
+  .nav .auth{display:flex;align-items:center;gap:8px;flex-shrink:0;}
 
-    /* ── NAV ── */
-    nav {
-      position: sticky; top: 0; z-index: 100;
-      background: rgba(255,255,255,0.92); backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
-      padding: 0 24px;
-    }
-    .nav-inner {
-      max-width: 1100px; margin: 0 auto;
-      display: flex; align-items: center; justify-content: space-between;
-      height: 60px;
-    }
-    .nav-logo {
-      display: flex; align-items: center; gap: 9px;
-      font-size: 18px; font-weight: 900; color: var(--text); letter-spacing: -0.5px;
-    }
-    .nav-logo-icon {
-      width: 32px; height: 32px; border-radius: 8px;
-      background: var(--blue); display: flex; align-items: center; justify-content: center;
-      color: white; font-size: 14px;
-    }
-    .nav-links { display: flex; align-items: center; gap: 28px; }
-    .nav-links a { font-size: 14px; font-weight: 500; color: var(--text-mid); transition: color 0.15s; }
-    .nav-links a:hover { color: var(--blue); }
-    .nav-cta { display: flex; align-items: center; gap: 10px; }
-    .btn-ghost {
-      padding: 8px 18px; border-radius: 9px; font-size: 14px; font-weight: 600;
-      color: var(--blue); border: 1.5px solid var(--blue);
-      background: transparent; cursor: pointer; font-family: inherit;
-      transition: background 0.15s;
-    }
-    .btn-ghost:hover { background: var(--blue-light); }
-    .btn-solid {
-      padding: 8px 18px; border-radius: 9px; font-size: 14px; font-weight: 600;
-      color: white; background: var(--blue); border: none;
-      cursor: pointer; font-family: inherit; transition: background 0.15s;
-    }
-    .btn-solid:hover { background: var(--blue-dark); }
-    .nav-menu-btn { display: none; background: none; border: none; font-size: 20px; color: var(--text); cursor: pointer; }
+  /* ── Hero ── */
+  .hero{overflow:hidden;color:#fff;background:radial-gradient(110% 90% at 88% -20%,var(--navy-glow) 0%,var(--navy) 48%,var(--navy-deep) 100%);}
+  .hero .inner{display:grid;grid-template-columns:1.05fr .95fr;gap:40px;align-items:center;padding:84px 0 92px;position:relative;z-index:2;}
+  .blob{position:absolute;border-radius:50%;filter:blur(76px);pointer-events:none;z-index:1;}
+  .b-gold{width:420px;height:420px;background:rgba(201,168,106,.30);top:-120px;right:-60px;}
+  .b-mint{width:300px;height:300px;background:color-mix(in oklch,var(--mint),transparent 66%);bottom:-80px;left:6%;}
+  .b-violet{width:260px;height:260px;background:color-mix(in oklch,var(--violet),transparent 72%);top:30%;right:30%;}
+  .grain{position:absolute;inset:0;opacity:.5;pointer-events:none;z-index:1;background:radial-gradient(circle at 1px 1px,rgba(255,255,255,.09) 1px,transparent 0);background-size:28px 28px;
+    -webkit-mask-image:radial-gradient(120% 80% at 75% 30%,#000 35%,transparent 78%);mask-image:radial-gradient(120% 80% at 75% 30%,#000 35%,transparent 78%);}
+  h1.hh{font-size:52px;line-height:1.1;font-weight:800;letter-spacing:-0.03em;margin:22px 0 0;text-wrap:balance;}
+  h1.hh .ac{color:var(--gold);}
+  .hero .sub{font-size:18px;line-height:1.6;color:rgba(255,255,255,.68);margin:22px 0 0;max-width:480px;}
+  .hero .cta{display:flex;gap:12px;margin-top:34px;flex-wrap:wrap;}
+  .hero .meta{display:flex;gap:26px;margin-top:34px;flex-wrap:wrap;}
+  .hero .meta>div{flex-shrink:0;}
+  .hero .meta .n{font-size:26px;font-weight:800;letter-spacing:-.02em;white-space:nowrap;}
+  .hero .meta .l{font-size:13px;color:rgba(255,255,255,.55);font-weight:600;margin-top:2px;white-space:nowrap;}
 
-    /* ── HERO ── */
-    .hero {
-      background: linear-gradient(160deg, var(--blue-dark) 0%, var(--blue) 55%, #1a4fc4 100%);
-      color: white; padding: 100px 0 80px; text-align: center;
-      position: relative; overflow: hidden;
-    }
-    .hero::before {
-      content: ''; position: absolute; inset: 0;
-      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-    }
-    .hero-badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
-      border-radius: 20px; padding: 6px 16px; font-size: 13px; font-weight: 500;
-      color: rgba(255,255,255,0.85); margin-bottom: 28px;
-    }
-    .hero-badge i { font-size: 10px; color: #7dd3fc; }
-    .hero h1 {
-      font-size: clamp(32px, 6vw, 58px); font-weight: 900;
-      line-height: 1.12; letter-spacing: -1.5px; margin-bottom: 20px;
-      position: relative; z-index: 1;
-    }
-    .hero h1 em { font-style: normal; color: #7dd3fc; }
-    .hero p {
-      font-size: clamp(15px, 2vw, 18px); color: rgba(255,255,255,0.7);
-      max-width: 520px; margin: 0 auto 36px; position: relative; z-index: 1;
-    }
-    .hero-btns {
-      display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
-      position: relative; z-index: 1;
-    }
-    .btn-hero-primary {
-      padding: 15px 32px; background: white; color: var(--blue);
-      border: none; border-radius: 12px; font-size: 15px; font-weight: 800;
-      cursor: pointer; font-family: inherit; transition: all 0.15s;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-    }
-    .btn-hero-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
-    .btn-hero-outline {
-      padding: 15px 32px; background: rgba(255,255,255,0.1);
-      color: white; border: 2px solid rgba(255,255,255,0.35);
-      border-radius: 12px; font-size: 15px; font-weight: 700;
-      cursor: pointer; font-family: inherit; transition: all 0.15s;
-    }
-    .btn-hero-outline:hover { background: rgba(255,255,255,0.18); }
-    .hero-stat {
-      margin-top: 52px; display: flex; gap: 40px; justify-content: center;
-      flex-wrap: wrap; position: relative; z-index: 1;
-    }
-    .hero-stat-item { text-align: center; }
-    .hero-stat-item strong { display: block; font-size: 24px; font-weight: 900; color: white; }
-    .hero-stat-item span { font-size: 13px; color: rgba(255,255,255,0.55); }
+  /* cards cluster */
+  .cluster{position:relative;height:380px;}
+  .bizcard{position:absolute;width:330px;aspect-ratio:1.62/1;border-radius:20px;overflow:hidden;color:#fff;box-shadow:0 2px 6px rgba(6,18,42,.3),0 30px 60px -18px rgba(6,18,42,.75);}
+  .bizcard .foil{position:absolute;inset:0;border-radius:20px;border:1px solid var(--gold);opacity:.4;}
+  .bizcard .tex{position:absolute;inset:0;opacity:.5;background:repeating-linear-gradient(115deg,rgba(255,255,255,.05) 0 1px,transparent 1px 8px);}
+  .bizcard .pad{position:absolute;inset:0;padding:22px;display:flex;flex-direction:column;justify-content:space-between;}
+  .nf{width:27px;height:27px;border-radius:7px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:var(--gold);}
+  .c-b2{transform:rotate(-10deg) translate(2px,52px) scale(.9);opacity:.5;right:30px;top:0;background:radial-gradient(130% 130% at 78% -10%,#0C5163,#06303A 46%,#021C23);}
+  .c-b1{transform:rotate(-5deg) translate(-6px,26px) scale(.95);opacity:.78;right:30px;top:0;background:radial-gradient(130% 130% at 78% -10%,#2A2E38,#14161C 46%,#070809);}
+  .c-b1 .foil{border-color:var(--violet);opacity:.5;}
+  .c-f{right:30px;top:0;transform:rotate(3deg);animation:flt 6s ease-in-out infinite;background:radial-gradient(130% 130% at 78% -10%,var(--navy-glow),var(--navy) 44%,var(--navy-deep));}
+  @keyframes flt{0%,100%{transform:rotate(3deg) translateY(0);}50%{transform:rotate(3deg) translateY(-13px);}}
+  @media (prefers-reduced-motion:reduce){.c-f{animation:none;}}
 
-    /* ── FEATURE GRID ── */
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px; margin-top: 48px;
-    }
-    .feature-card {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: 18px; padding: 28px;
-      transition: box-shadow 0.2s, transform 0.2s;
-    }
-    .feature-card:hover { box-shadow: 0 8px 32px rgba(12,45,133,0.1); transform: translateY(-2px); }
-    .feature-icon {
-      width: 48px; height: 48px; border-radius: 14px;
-      background: var(--blue-light); color: var(--blue);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 20px; margin-bottom: 18px;
-    }
-    .feature-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
-    .feature-card p  { font-size: 14px; color: var(--text-mid); line-height: 1.65; }
+  /* ── Features ── */
+  .pad-sec{padding:92px 0;}
+  .center{text-align:center;max-width:680px;margin:0 auto;}
+  .feat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:48px;}
+  .fcard{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:26px 22px;box-shadow:0 1px 2px rgba(14,23,38,.03),0 14px 30px -22px rgba(14,23,38,.25);}
+  .fic{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;}
+  .fcard h3{font-size:18px;font-weight:700;margin:0 0 8px;letter-spacing:-.01em;}
+  .fcard p{font-size:14.5px;line-height:1.6;color:var(--sub);margin:0;}
 
-    /* ── USE CASES ── */
-    #usecases { background: var(--bg); }
-    .cases-grid {
-      display: grid; grid-template-columns: repeat(3, 1fr);
-      gap: 20px; margin-top: 48px;
-    }
-    .case-card {
-      background: white; border-radius: 18px; overflow: hidden;
-      border: 1px solid var(--border);
-    }
-    .case-header {
-      background: var(--blue); color: white;
-      padding: 24px; display: flex; align-items: center; gap: 14px;
-    }
-    .case-header-icon {
-      width: 40px; height: 40px; border-radius: 10px;
-      background: rgba(255,255,255,0.15);
-      display: flex; align-items: center; justify-content: center; font-size: 18px;
-      flex-shrink: 0;
-    }
-    .case-header h3 { font-size: 15px; font-weight: 700; }
-    .case-header p  { font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 2px; }
-    .case-body { padding: 22px; }
-    .case-body ul { list-style: none; }
-    .case-body li {
-      display: flex; align-items: flex-start; gap: 10px;
-      font-size: 14px; color: var(--text-mid); margin-bottom: 10px;
-    }
-    .case-body li:last-child { margin-bottom: 0; }
-    .case-body li::before {
-      content: '✓'; color: var(--blue); font-weight: 700; flex-shrink: 0; margin-top: 1px;
-    }
+  /* ── 충전 ── */
+  .recharge{background:var(--surface);}
+  .recharge .inner{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;padding:92px 0;}
+  .uselist{display:flex;flex-direction:column;gap:14px;margin-top:28px;}
+  .use{display:flex;align-items:flex-start;gap:14px;}
+  .use .d{width:34px;height:34px;border-radius:10px;background:var(--gold-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .use b{font-size:15.5px;font-weight:700;}
+  .use p{margin:3px 0 0;font-size:14px;color:var(--sub);line-height:1.5;}
+  .charge-card{background:linear-gradient(180deg,#fff,#FBFBFD);border:1px solid var(--line);border-radius:24px;padding:28px;box-shadow:0 2px 6px rgba(14,23,38,.05),0 30px 60px -28px rgba(14,23,38,.35);}
+  .charge-card .top{display:flex;align-items:center;justify-content:space-between;}
+  .balance{font-size:13px;color:var(--mute);font-weight:600;}
+  .balance b{display:block;font-size:26px;color:var(--ink);font-weight:800;letter-spacing:-.02em;margin-top:3px;font-variant-numeric:tabular-nums;}
+  .amts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:22px 0 18px;}
+  .amt{position:relative;border:1.5px solid var(--line);border-radius:14px;padding:14px 16px;cursor:pointer;transition:border-color .15s,background .15s;background:#fff;}
+  .amt.on{border-color:var(--navy);background:#fff;box-shadow:0 0 0 3px rgba(11,30,64,.08);}
+  .amt .v{font-size:18px;font-weight:800;letter-spacing:-.01em;font-variant-numeric:tabular-nums;}
+  .amt .b{font-size:12px;font-weight:700;color:var(--gold-deep);margin-top:3px;}
+  .amt .best{position:absolute;top:-9px;right:10px;font-size:10.5px;font-weight:800;color:#3a2c10;background:var(--gold);padding:2px 8px;border-radius:100px;}
+  .pay{display:flex;align-items:center;justify-content:space-between;padding:16px 4px;border-top:1px solid var(--line);}
+  .pay .t{font-size:14px;color:var(--sub);font-weight:600;}
+  .pay .tot{font-size:22px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
+  .pay .tot small{font-size:13px;color:var(--gold-deep);font-weight:700;margin-left:6px;}
 
-    /* ── HOW IT WORKS ── */
-    .steps { display: flex; gap: 0; margin-top: 48px; }
-    .step {
-      flex: 1; text-align: center; padding: 0 20px;
-      position: relative;
-    }
-    .step:not(:last-child)::after {
-      content: ''; position: absolute;
-      top: 28px; right: -12px;
-      width: 24px; height: 2px;
-      background: var(--border);
-    }
-    .step-num {
-      width: 56px; height: 56px; border-radius: 50%;
-      background: var(--blue); color: white;
-      font-size: 20px; font-weight: 900;
-      display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 16px;
-    }
-    .step h3 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
-    .step p  { font-size: 13px; color: var(--text-mid); }
+  /* ── Pricing ── */
+  .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:48px;}
+  .plan{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:30px 28px;display:flex;flex-direction:column;}
+  .plan.hot{background:linear-gradient(180deg,#0B1E40,#06122A);color:#fff;border:none;position:relative;box-shadow:0 30px 60px -26px rgba(6,18,42,.6);}
+  .plan .pn{font-size:15px;font-weight:800;letter-spacing:.02em;}
+  .plan.hot .pn{color:var(--gold);}
+  .plan .pp{font-size:38px;font-weight:800;letter-spacing:-.03em;margin:14px 0 2px;font-variant-numeric:tabular-nums;}
+  .plan .pp small{font-size:15px;font-weight:600;color:var(--mute);}
+  .plan.hot .pp small{color:rgba(255,255,255,.55);}
+  .plan .pd{font-size:14px;color:var(--sub);margin:0 0 22px;}
+  .plan.hot .pd{color:rgba(255,255,255,.6);}
+  .plan ul{list-style:none;padding:0;margin:0 0 26px;display:flex;flex-direction:column;gap:12px;flex:1;}
+  .plan li{display:flex;align-items:flex-start;gap:10px;font-size:14.5px;color:var(--ink);}
+  .plan.hot li{color:rgba(255,255,255,.85);}
+  .plan .tag{position:absolute;top:20px;right:24px;font-size:11.5px;font-weight:800;color:#3a2c10;background:var(--gold);padding:4px 10px;border-radius:100px;}
 
-    /* ── PRICING ── */
-    #pricing { background: white; }
-    .pricing-grid {
-      display: grid; grid-template-columns: repeat(3, 1fr);
-      gap: 20px; margin-top: 48px; align-items: start;
-    }
-    .plan-card {
-      border-radius: 20px; padding: 32px;
-      border: 1.5px solid var(--border);
-      background: white;
-    }
-    .plan-card.featured {
-      background: var(--blue); color: white;
-      border-color: var(--blue);
-      transform: scale(1.03);
-      box-shadow: 0 16px 48px rgba(12,45,133,0.25);
-    }
-    .plan-badge {
-      display: inline-block; font-size: 11px; font-weight: 700;
-      padding: 3px 10px; border-radius: 20px; margin-bottom: 16px;
-      background: rgba(255,255,255,0.18); color: white;
-    }
-    .plan-name { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
-    .plan-desc { font-size: 13px; color: var(--text-mid); margin-bottom: 20px; }
-    .plan-card.featured .plan-desc { color: rgba(255,255,255,0.7); }
-    .plan-price {
-      font-size: 36px; font-weight: 900; letter-spacing: -1px; margin-bottom: 24px;
-    }
-    .plan-price small { font-size: 14px; font-weight: 500; color: var(--text-mid); }
-    .plan-card.featured .plan-price small { color: rgba(255,255,255,0.6); }
-    .plan-features { list-style: none; margin-bottom: 28px; }
-    .plan-features li {
-      display: flex; align-items: flex-start; gap: 10px;
-      font-size: 14px; color: var(--text-mid); margin-bottom: 10px;
-    }
-    .plan-card.featured .plan-features li { color: rgba(255,255,255,0.85); }
-    .plan-features li::before {
-      content: '✓'; color: var(--blue); font-weight: 700; flex-shrink: 0;
-    }
-    .plan-card.featured .plan-features li::before { color: #7dd3fc; }
-    .btn-plan {
-      display: block; width: 100%; text-align: center;
-      padding: 13px; border-radius: 11px; font-size: 14px; font-weight: 700;
-      cursor: pointer; font-family: inherit; transition: all 0.15s;
-    }
-    .btn-plan-outline {
-      border: 1.5px solid var(--blue); color: var(--blue); background: transparent;
-    }
-    .btn-plan-outline:hover { background: var(--blue-light); }
-    .btn-plan-white {
-      background: white; color: var(--blue); border: none;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    .btn-plan-white:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
-    .pricing-note { text-align: center; margin-top: 20px; font-size: 13px; color: var(--text-light); }
+  /* ── CTA + footer ── */
+  .ctaband{margin:0 0 0;color:#fff;background:radial-gradient(120% 160% at 80% -40%,var(--navy-glow),var(--navy) 50%,var(--navy-deep));}
+  .ctaband .inner{text-align:center;padding:80px 0;position:relative;z-index:2;}
+  footer{background:#06122A;color:rgba(255,255,255,.6);}
+  footer .inner{display:flex;justify-content:space-between;gap:30px;flex-wrap:wrap;padding:48px 0 40px;}
+  footer .cols{display:flex;gap:64px;flex-wrap:wrap;}
+  footer h4{font-size:13px;color:rgba(255,255,255,.4);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin:0 0 14px;}
+  footer a{display:block;font-size:14px;margin-bottom:10px;color:rgba(255,255,255,.62);}
+  footer a:hover{color:#fff;}
+  .copy{border-top:1px solid rgba(255,255,255,.08);font-size:13px;color:rgba(255,255,255,.4);padding:20px 0;}
 
-    /* ── FINAL CTA ── */
-    #final-cta {
-      background: linear-gradient(135deg, var(--blue-dark), var(--blue));
-      color: white; text-align: center; padding: 80px 24px;
-    }
-    #final-cta h2 { font-size: clamp(26px, 4vw, 38px); font-weight: 900; letter-spacing: -0.8px; margin-bottom: 12px; }
-    #final-cta p  { font-size: 16px; color: rgba(255,255,255,0.65); margin-bottom: 36px; }
-    .cta-btns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-
-    /* ── FOOTER ── */
-    footer {
-      background: var(--text); color: rgba(255,255,255,0.5);
-      padding: 48px 24px 32px;
-    }
-    .footer-inner {
-      max-width: 1100px; margin: 0 auto;
-      display: flex; flex-wrap: wrap; gap: 40px; justify-content: space-between;
-    }
-    .footer-brand .logo-name { color: white; font-size: 18px; font-weight: 900; }
-    .footer-brand p { font-size: 13px; margin-top: 8px; }
-    .footer-links h4 { color: white; font-size: 13px; font-weight: 700; margin-bottom: 12px; }
-    .footer-links a { display: block; font-size: 13px; margin-bottom: 8px; color: rgba(255,255,255,0.5); }
-    .footer-links a:hover { color: rgba(255,255,255,0.85); }
-    .footer-bottom {
-      max-width: 1100px; margin: 32px auto 0;
-      padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.08);
-      display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between;
-      font-size: 12px;
-    }
-
-    /* ── LOGIN MODAL ── */
-    .modal-overlay {
-      display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,0.5); z-index: 200;
-      align-items: center; justify-content: center; padding: 24px;
-    }
-    .modal-overlay.open { display: flex; }
-    .modal-box {
-      background: white; border-radius: 20px; overflow: hidden;
-      width: 100%; max-width: 400px;
-      box-shadow: 0 24px 64px rgba(0,0,0,0.2);
-      animation: modal-in 0.2s ease;
-    }
-    @keyframes modal-in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-    .modal-header {
-      background: var(--blue); padding: 24px 28px 22px;
-      display: flex; align-items: center; justify-content: space-between;
-      position: relative; overflow: hidden;
-    }
-    .modal-header::after {
-      content: ''; position: absolute; top: -40px; right: -40px;
-      width: 130px; height: 130px; border-radius: 50%;
-      background: rgba(255,255,255,0.06);
-    }
-    .modal-logo { display: flex; align-items: center; gap: 9px; }
-    .modal-logo-icon {
-      width: 32px; height: 32px; border-radius: 8px;
-      background: rgba(255,255,255,0.18);
-      display: flex; align-items: center; justify-content: center;
-      color: white; font-size: 14px;
-    }
-    .modal-logo-name { font-size: 18px; font-weight: 900; color: white; }
-    .modal-close {
-      background: rgba(255,255,255,0.15); border: none; color: white;
-      width: 30px; height: 30px; border-radius: 7px;
-      font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-      position: relative; z-index: 1;
-    }
-    .modal-body { padding: 28px; }
-    .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; color: var(--text); }
-    .form-group { margin-bottom: 14px; }
-    .form-label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 5px; }
-    .form-input {
-      width: 100%; padding: 12px 14px;
-      background: #f7f9fc; border: 1.5px solid #e4eaf5; border-radius: 10px;
-      color: var(--text); font-size: 15px; font-family: inherit;
-      outline: none; transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .form-input::placeholder { color: #adb5cc; }
-    .form-input:focus { border-color: var(--blue); background: white; box-shadow: 0 0 0 3px rgba(12,45,133,0.1); }
-    .pw-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
-    .forgot-link { font-size: 12px; color: var(--blue); }
-    .forgot-link:hover { text-decoration: underline; }
-    .btn-modal-submit {
-      width: 100%; padding: 14px; margin-top: 8px;
-      background: var(--blue); color: white;
-      border: none; border-radius: 11px;
-      font-size: 15px; font-weight: 700; font-family: inherit;
-      cursor: pointer; transition: background 0.15s;
-    }
-    .btn-modal-submit:hover { background: var(--blue-dark); }
-    .modal-error {
-      background: #fef2f2; border: 1px solid #fecaca;
-      color: #b91c1c; padding: 10px 13px; border-radius: 9px;
-      font-size: 13px; margin-bottom: 14px;
-    }
-    hr.modal-divider { border: none; border-top: 1px solid #f1f5f9; margin: 20px 0; }
-    .modal-register { text-align: center; font-size: 14px; color: #6b7280; }
-    .modal-register a { color: var(--blue); font-weight: 600; }
-
-    /* ── MOBILE ── */
-    @media (max-width: 768px) {
-      .nav-links { display: none; }
-      .nav-menu-btn { display: block; }
-      .features-grid { grid-template-columns: 1fr; }
-      .cases-grid    { grid-template-columns: 1fr; }
-      .pricing-grid  { grid-template-columns: 1fr; }
-      .plan-card.featured { transform: none; }
-      .steps { flex-direction: column; gap: 24px; }
-      .step:not(:last-child)::after { display: none; }
-      .hero { padding: 72px 0 60px; }
-    }
-    @media (min-width: 769px) and (max-width: 960px) {
-      .features-grid { grid-template-columns: repeat(2, 1fr); }
-      .cases-grid    { grid-template-columns: repeat(2, 1fr); }
-    }
-  </style>
+  @media (max-width:920px){
+    .nav .links{display:none;}
+    .hero .inner{grid-template-columns:1fr;padding:56px 0 64px;}
+    .cluster{height:300px;margin-top:12px;}
+    h1.hh{font-size:38px;}
+    .feat-grid{grid-template-columns:1fr 1fr;}
+    .recharge .inner{grid-template-columns:1fr;gap:36px;padding:64px 0;}
+    .price-grid{grid-template-columns:1fr;}
+    .pad-sec{padding:64px 0;}
+  }
+  @media (max-width:560px){ .feat-grid{grid-template-columns:1fr;} .hero .meta{gap:18px;} }
+</style>
 </head>
 <body>
 
-<!-- ── 로그인 모달 ── -->
-<div id="login-modal" class="modal-overlay" onclick="if(event.target===this)closeModal()">
-  <div class="modal-box">
-    <div class="modal-header">
-      <div class="modal-logo">
-        <div class="modal-logo-icon"><i class="fas fa-id-card"></i></div>
-        <span class="modal-logo-name">THE METI</span>
-      </div>
-      <button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
-    </div>
-    <div class="modal-body">
-      <div class="modal-title">로그인</div>
-      <div id="modal-error" class="modal-error" style="display:none"></div>
-      <form id="modal-login-form">
-        <div class="form-group">
-          <label class="form-label" for="m-email">이메일</label>
-          <input type="email" id="m-email" placeholder="example@email.com" class="form-input" autocomplete="email">
-        </div>
-        <div class="form-group">
-          <div class="pw-row">
-            <label class="form-label" for="m-password" style="margin:0">비밀번호</label>
-            <a href="/app/forgot-password" class="forgot-link">비밀번호 찾기</a>
-          </div>
-          <input type="password" id="m-password" placeholder="비밀번호 입력" class="form-input" autocomplete="current-password">
-        </div>
-        <button type="submit" class="btn-modal-submit">
-          <span id="m-btn-text">로그인</span>
-          <span id="m-btn-loading" style="display:none"><i class="fas fa-spinner fa-spin" style="margin-right:8px"></i>로그인 중...</span>
-        </button>
-      </form>
-      <hr class="modal-divider">
-      <div class="modal-register">계정이 없으신가요? <a href="/app/register">무료 회원가입</a></div>
+<!-- NAV -->
+<div class="nav">
+  <div class="wrap inner">
+    <a href="/" style="display:flex;align-items:center;gap:11px;">
+      <span class="nfcmark" style="width:36px;height:36px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5.5 8.5c-1 1.6-1 5.4 0 7M8.7 6.6c-1.8 2.5-1.8 8.3 0 10.8M18.5 8.5c1 1.6 1 5.4 0 7M15.3 6.6c1.8 2.5 1.8 8.3 0 10.8M12 9.5a2.5 2.5 0 0 0 0 5" stroke="#C9A86A" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </span>
+      <span class="word" style="font-size:19px;color:var(--navy);">MET<span class="i">I</span></span>
+    </a>
+    <nav class="links">
+      <a href="#features">기능</a>
+      <a href="#charge">충전</a>
+      <a href="#pricing">요금제</a>
+      <a href="#faq">도움말</a>
+    </nav>
+    <div class="sp"></div>
+    <div class="auth">
+      <a class="btn btn-ghost" href="/login">로그인</a>
+      <a class="btn btn-nav" href="/login">무료로 시작하기</a>
     </div>
   </div>
 </div>
 
-<!-- ── 상단 내비게이션 ── -->
-<nav>
-  <div class="nav-inner">
-    <a href="/" class="nav-logo">
-      <div class="nav-logo-icon"><i class="fas fa-id-card"></i></div>
-      THE METI
-    </a>
-    <div class="nav-links">
-      <a href="#features">기능</a>
-      <a href="#usecases">활용 사례</a>
-      <a href="#howitworks">사용 방법</a>
-      <a href="#pricing">요금제</a>
-    </div>
-    <div class="nav-cta">
-      <button class="btn-ghost" onclick="openModal()">로그인</button>
-      <a href="/app/register"><button class="btn-solid">무료로 시작하기</button></a>
-    </div>
-    <button class="nav-menu-btn" onclick="openModal()"><i class="fas fa-bars"></i></button>
-  </div>
-</nav>
-
-<!-- ── 히어로 ── -->
-<section class="hero">
-  <div class="container">
-    <div class="hero-badge"><i class="fas fa-circle"></i> NFC · QR · SNS 통합 명함 플랫폼</div>
-    <h1>한 번의 탭으로<br><em>모든 것을 연결</em>하세요</h1>
-    <p>종이 명함은 이제 그만. NFC 카드 하나로 이름·연락처·SNS·이력을<br>즉시 전달하는 스마트 디지털 명함 플랫폼입니다.</p>
-    <div class="hero-btns">
-      <button class="btn-hero-primary" onclick="location.href='/app/register'">
-        <i class="fas fa-arrow-right" style="margin-right:8px"></i>지금 무료로 시작하기
-      </button>
-      <button class="btn-hero-outline" onclick="openModal()">
-        <i class="fas fa-sign-in-alt" style="margin-right:8px"></i>로그인
-      </button>
-    </div>
-    <div class="hero-stat">
-      <div class="hero-stat-item">
-        <strong>NFC + QR</strong>
-        <span>2가지 공유 방식</span>
+<!-- HERO -->
+<section class="hero" id="top">
+  <div class="blob b-gold"></div><div class="blob b-mint"></div><div class="blob b-violet"></div>
+  <div class="grain"></div>
+  <div class="wrap inner">
+    <div>
+      <span class="eyebrow" style="color:var(--gold);background:rgba(201,168,106,.12);border:1px solid rgba(201,168,106,.3);"><span style="width:6px;height:6px;border-radius:6px;background:var(--gold);"></span> 디지털 명함 네트워킹 플랫폼</span>
+      <h1 class="hh">명함을 넘어,<br /><span class="ac">관계</span>로 이어지다.</h1>
+      <p class="sub">NFC 한 번으로 주고받고, 그룹·행사·채팅·리워드까지 한곳에서. 포인트를 충전해 더 빠르게 연결되세요.</p>
+      <div class="cta">
+        <a class="btn btn-lg btn-gold" href="/login">무료로 시작하기</a>
+        <a class="btn btn-lg btn-outline-d" href="#charge">충전 알아보기 →</a>
       </div>
-      <div class="hero-stat-item">
-        <strong>개인 · 팀 · 기업</strong>
-        <span>모든 규모에 맞는 플랜</span>
-      </div>
-      <div class="hero-stat-item">
-        <strong>iOS · Android</strong>
-        <span>모바일 앱 지원</span>
+      <div class="meta">
+        <div><div class="n">24,580+</div><div class="l">활성 회원</div></div>
+        <div><div class="n">182만</div><div class="l">교환된 명함</div></div>
+        <div><div class="n">18</div><div class="l">연동 파트너</div></div>
       </div>
     </div>
-  </div>
-</section>
-
-<!-- ── 주요 기능 ── -->
-<section class="section" id="features">
-  <div class="container">
-    <div style="text-align:center">
-      <span class="section-label">주요 기능</span>
-      <h2 class="section-title">명함 그 이상을 담다</h2>
-      <p class="section-sub">단순한 연락처 공유를 넘어, 나를 표현하는 모든 정보를 하나의 명함에.</p>
-    </div>
-    <div class="features-grid">
-      <div class="feature-card">
-        <div class="feature-icon"><i class="fas fa-id-card"></i></div>
-        <h3>스마트 디지털 명함</h3>
-        <p>이름, 직함, 회사, 연락처, 소개글을 담은 프로페셔널 명함을 무료로 만드세요. 사진 업로드로 한층 더 세련된 첫인상을 남길 수 있습니다.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon"><i class="fas fa-wifi"></i></div>
-        <h3>NFC · QR 즉시 공유</h3>
-        <p>NFC 카드에 탭 하거나 QR 코드를 스캔하면 바로 명함이 전달됩니다. 앱 설치 없이도 웹 브라우저로 확인 가능합니다.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon"><i class="fas fa-briefcase"></i></div>
-        <h3>이력 & 포트폴리오</h3>
-        <p>경력, 학력, 스킬·키워드를 명함에 추가하세요. 이력서가 필요 없는 올인원 프로필 카드로 활용할 수 있습니다.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon"><i class="fas fa-share-alt"></i></div>
-        <h3>소셜 링크 통합</h3>
-        <p>LinkedIn, Instagram, GitHub, YouTube 등 다양한 SNS 계정을 명함 하나에 연결하세요. 링크 하나로 모든 채널을 공유합니다.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon"><i class="fas fa-users"></i></div>
-        <h3>그룹 & 팀 관리</h3>
-        <p>팀, 협회, 동호회 단위로 명함을 통합 관리합니다. 멤버 초대, 가입 승인, 그룹 포인트 운영을 웹에서 바로 처리하세요.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon"><i class="fas fa-calendar-alt"></i></div>
-        <h3>행사 & 레슨 운영</h3>
-        <p>그룹 내 이벤트를 생성하고 참가자를 관리하세요. 레슨·수업 일정 등록과 포인트 기반 결제까지 플랫폼 하나에서 해결됩니다.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ── 활용 사례 ── -->
-<section class="section" id="usecases">
-  <div class="container">
-    <div style="text-align:center">
-      <span class="section-label">활용 사례</span>
-      <h2 class="section-title">누구에게나 필요한 명함</h2>
-      <p class="section-sub">개인부터 기업까지, 다양한 상황에서 THE METI를 활용해보세요.</p>
-    </div>
-    <div class="cases-grid">
-      <div class="case-card">
-        <div class="case-header">
-          <div class="case-header-icon"><i class="fas fa-user-tie"></i></div>
+    <div class="cluster">
+      <div class="bizcard c-b2"><div class="foil"></div><div class="tex"></div></div>
+      <div class="bizcard c-b1"><div class="foil"></div><div class="tex"></div></div>
+      <div class="bizcard c-f">
+        <div class="foil"></div><div class="tex"></div>
+        <div class="pad">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <span class="word" style="font-size:15px;">MET<span class="i">I</span></span><span class="nf">NFC</span>
+          </div>
           <div>
-            <h3>비즈니스 프로페셔널</h3>
-            <p>영업, 컨설턴트, 임원</p>
+            <div style="font-size:25px;font-weight:700;letter-spacing:-.02em;">강민서</div>
+            <div style="font-size:13px;color:rgba(255,255,255,.7);margin-top:5px;">Product Lead · Aurora Labs</div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:12px;">
+              <span style="width:5px;height:5px;border-radius:5px;background:var(--gold);"></span>
+              <span style="font-size:12px;color:var(--gold);font-weight:600;">minseo@aurora.io</span>
+            </div>
           </div>
         </div>
-        <div class="case-body">
-          <ul>
-            <li>미팅마다 종이 명함 없이 NFC 탭 한 번으로 교환</li>
-            <li>연락처 변경 시 실시간 업데이트 — 인쇄 비용 0원</li>
-            <li>LinkedIn·SNS 프로필을 명함과 함께 즉시 공유</li>
-            <li>여러 개의 명함을 상황에 맞게 전환 가능</li>
-          </ul>
-        </div>
-      </div>
-      <div class="case-card">
-        <div class="case-header">
-          <div class="case-header-icon"><i class="fas fa-building"></i></div>
-          <div>
-            <h3>팀 · 기업</h3>
-            <p>스타트업, 중소기업, 대기업</p>
-          </div>
-        </div>
-        <div class="case-body">
-          <ul>
-            <li>신규 입사자 명함을 관리자가 즉시 생성 · 배포</li>
-            <li>퇴직자 명함은 즉시 비활성화로 보안 유지</li>
-            <li>그룹 대시보드에서 전체 멤버 명함 통합 관리</li>
-            <li>행사·세미나에서 참가자 명함 교환을 디지털로</li>
-          </ul>
-        </div>
-      </div>
-      <div class="case-card">
-        <div class="case-header">
-          <div class="case-header-icon"><i class="fas fa-laptop-code"></i></div>
-          <div>
-            <h3>프리랜서 · 크리에이터</h3>
-            <p>디자이너, 개발자, 강사, 아티스트</p>
-          </div>
-        </div>
-        <div class="case-body">
-          <ul>
-            <li>포트폴리오 + 연락처 + SNS를 하나의 링크로</li>
-            <li>경력·학력·스킬을 이력서처럼 상세하게 표현</li>
-            <li>레슨·수업 일정을 플랫폼에서 직접 관리</li>
-            <li>QR 코드를 명함·팸플릿·프레젠테이션에 삽입</li>
-          </ul>
-        </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ── 사용 방법 ── -->
-<section class="section" id="howitworks">
-  <div class="container">
-    <div style="text-align:center">
-      <span class="section-label">사용 방법</span>
-      <h2 class="section-title">3분이면 충분합니다</h2>
-      <p class="section-sub">복잡한 설정 없이 바로 시작할 수 있습니다.</p>
+<!-- FEATURES -->
+<section class="pad-sec" id="features">
+  <div class="wrap">
+    <div class="center">
+      <span class="eyebrow">기능</span>
+      <h2 class="sec" style="margin-top:18px;">비즈니스 인맥, 한 앱에서 완성</h2>
+      <p class="lead" style="margin-top:14px;">교환부터 관리, 커뮤니티와 리워드까지 — 흩어진 명함 관리를 하나의 우아한 흐름으로.</p>
     </div>
-    <div class="steps" style="margin-top:48px">
-      <div class="step">
-        <div class="step-num">1</div>
-        <h3>가입</h3>
-        <p>이메일로 30초 만에 무료 계정을 만드세요.</p>
+    <div class="feat-grid">
+      <div class="fcard">
+        <div class="fic" style="background:var(--gold-soft);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5.5 8.5c-1 1.6-1 5.4 0 7M8.7 6.6c-1.8 2.5-1.8 8.3 0 10.8M18.5 8.5c1 1.6 1 5.4 0 7M15.3 6.6c1.8 2.5 1.8 8.3 0 10.8M12 9.5a2.5 2.5 0 0 0 0 5" stroke="#9A7333" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+        <h3>NFC·QR 즉시 교환</h3>
+        <p>기기를 맞대거나 QR을 스캔해 명함을 안전하게 주고받습니다. 앱이 없어도 링크로 공유.</p>
       </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <h3>명함 제작</h3>
-        <p>이름, 직함, 연락처, 사진, SNS를 입력하면 명함 완성.</p>
+      <div class="fcard">
+        <div class="fic" style="background:color-mix(in oklch,var(--mint),transparent 86%);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v13A1.5 1.5 0 0 1 18.5 20h-13A1.5 1.5 0 0 1 4 18.5zM13.5 9h3.5M13.5 12h3.5M10.5 10a1.75 1.75 0 1 1-3.5 0 1.75 1.75 0 0 1 3.5 0zM6.5 16.2c.5-1.6 4.5-1.6 5 0" stroke="oklch(0.5 0.09 168)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <h3>스마트 명함첩</h3>
+        <p>받은 명함을 태그·그룹·만난 행사별로 자동 정리. 검색과 즐겨찾기로 빠르게 다시 연결.</p>
       </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <h3>공유</h3>
-        <p>QR 코드 또는 링크로 즉시 공유. NFC 카드 신청도 가능.</p>
+      <div class="fcard">
+        <div class="fic" style="background:color-mix(in oklch,var(--violet),transparent 86%);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3.5 19c.6-3.2 4-4.5 5.5-4.5S13.9 15.8 14.5 19M16 11.2a2.6 2.6 0 0 0 0-5.2M17.5 14.6c2 .5 3.4 1.9 3.8 4.4" stroke="oklch(0.5 0.13 290)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <h3>그룹 · 행사</h3>
+        <p>관심사 기반 그룹을 운영하고, 행사를 열어 QR로 입장 처리. 커뮤니티가 곧 인맥이 됩니다.</p>
       </div>
-      <div class="step">
-        <div class="step-num">4</div>
-        <h3>관리</h3>
-        <p>대시보드에서 명함 업데이트, 그룹 운영, 행사 관리.</p>
+      <div class="fcard">
+        <div class="fic" style="background:color-mix(in oklch,var(--coral),transparent 86%);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 11h16v8.5A1.5 1.5 0 0 1 18.5 21h-13A1.5 1.5 0 0 1 4 19.5zM3 8h18v3H3zM12 8V21" stroke="oklch(0.5 0.12 33)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <h3>리워드 · 충전</h3>
+        <p>파트너 연동으로 포인트를 적립하고, 웹에서 충전해 실물 NFC 카드·프리미엄 기능에 사용.</p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ── 요금제 ── -->
-<section class="section" id="pricing">
-  <div class="container">
-    <div style="text-align:center">
-      <span class="section-label">요금제</span>
-      <h2 class="section-title">필요에 맞는 플랜을</h2>
-      <p class="section-sub">무료로 시작하고, 필요할 때 업그레이드하세요.</p>
+<!-- 충전 -->
+<section class="recharge" id="charge">
+  <div class="wrap inner">
+    <div>
+      <span class="eyebrow">충전 · 크레딧</span>
+      <h2 class="sec" style="margin-top:18px;">필요한 만큼,<br />웹에서 바로 충전</h2>
+      <p class="lead" style="margin-top:16px;max-width:440px;">충전한 크레딧으로 리워드 사용, 실물 명함 발급, 리크루팅·프리미엄 기능까지. 결제는 안전하게, 사용은 자유롭게.</p>
+      <div class="uselist">
+        <div class="use"><span class="d"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 11h16v8.5A1.5 1.5 0 0 1 18.5 21h-13A1.5 1.5 0 0 1 4 19.5zM3 8h18v3H3z" stroke="#9A7333" stroke-width="1.7" stroke-linejoin="round"/></svg></span><div><b>리워드 포인트</b><p>파트너 서비스에서 적립·사용하는 포인트 충전</p></div></div>
+        <div class="use"><span class="d"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h13A2.5 2.5 0 0 1 21 8.5v9A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5zM3 10.5h18" stroke="#9A7333" stroke-width="1.7" stroke-linejoin="round"/></svg></span><div><b>실물 NFC 카드 발급</b><p>메탈·우드 등 프리미엄 실물 명함 제작 결제</p></div></div>
+        <div class="use"><span class="d"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.8 4.7L18.5 9l-4.7 1.3L12 15l-1.8-4.7L5.5 9l4.7-1.3z" stroke="#9A7333" stroke-width="1.7" stroke-linejoin="round"/></svg></span><div><b>프리미엄 · 리크루팅</b><p>Pro 기능, 채용공고·헤드헌터 크레딧에 사용</p></div></div>
+      </div>
     </div>
-    <div class="pricing-grid">
-      <div class="plan-card">
-        <div class="plan-name">Free</div>
-        <div class="plan-desc">개인 명함을 시작하기에 충분</div>
-        <div class="plan-price">무료 <small>/ 영구</small></div>
-        <ul class="plan-features">
-          <li>디지털 명함 1개</li>
-          <li>QR 코드 공유</li>
-          <li>기본 연락처 · SNS 링크</li>
-          <li>공개 명함 페이지</li>
+
+    <div class="charge-card">
+      <div class="top">
+        <div class="balance">보유 크레딧 <b>₩32,500</b></div>
+        <span class="nfcmark" style="width:40px;height:40px;border-color:var(--gold-soft);background:var(--gold-soft);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7H18a1.5 1.5 0 0 1 1.5 1.5V9H5.5M4 8.5v9A1.5 1.5 0 0 0 5.5 19h13a1.5 1.5 0 0 0 1.5-1.5v-8M16 13.5h.01" stroke="#9A7333" stroke-width="1.7" stroke-linejoin="round"/></svg></span>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--sub);margin-top:20px;">충전 금액 선택</div>
+      <div class="amts" id="amts">
+        <div class="amt" data-amt="10000" data-bonus="0"><div class="v">₩10,000</div><div class="b">기본</div></div>
+        <div class="amt" data-amt="30000" data-bonus="1500"><div class="v">₩30,000</div><div class="b">+1,500P 보너스</div></div>
+        <div class="amt on" data-amt="50000" data-bonus="3500"><span class="best">BEST</span><div class="v">₩50,000</div><div class="b">+3,500P 보너스</div></div>
+        <div class="amt" data-amt="100000" data-bonus="10000"><div class="v">₩100,000</div><div class="b">+10,000P 보너스</div></div>
+      </div>
+      <div class="pay">
+        <span class="t">결제 금액 · 신용/체크카드</span>
+        <span class="tot" id="tot">₩50,000 <small id="bon">+3,500P</small></span>
+      </div>
+      <button class="btn btn-lg btn-nav" style="width:100%;margin-top:8px;" onclick="window.location.href='/login'">충전하기</button>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pad-sec" id="pricing" style="background:var(--bg);">
+  <div class="wrap">
+    <div class="center">
+      <span class="eyebrow">요금제</span>
+      <h2 class="sec" style="margin-top:18px;">팀 규모에 맞게 시작하세요</h2>
+      <p class="lead" style="margin-top:14px;">개인은 무료로, 팀과 기업은 더 강력하게. 충전 크레딧은 모든 플랜에서 사용 가능합니다.</p>
+    </div>
+    <div class="price-grid">
+      <div class="plan">
+        <div class="pn" style="color:var(--sub);">FREE</div>
+        <div class="pp">₩0<small> /월</small></div>
+        <p class="pd">개인 네트워킹의 시작</p>
+        <ul>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#1B9C73" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 디지털 명함 1개</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#1B9C73" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> NFC·QR 교환 무제한</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#1B9C73" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 명함첩 · 그룹 참여</li>
         </ul>
-        <button class="btn-plan btn-plan-outline" onclick="location.href='/app/register'">무료로 시작</button>
+        <a class="btn btn-lg btn-light" style="border:1px solid var(--line);" href="/login">무료로 시작</a>
       </div>
-      <div class="plan-card featured">
-        <span class="plan-badge">추천</span>
-        <div class="plan-name">Pro</div>
-        <div class="plan-desc">개인 사용자를 위한 프리미엄</div>
-        <div class="plan-price">앱에서 확인 <small>/ 월</small></div>
-        <ul class="plan-features">
-          <li>디지털 명함 무제한</li>
-          <li>NFC 카드 연동</li>
-          <li>경력 · 학력 · 스킬 상세 프로필</li>
-          <li>그룹 참여</li>
-          <li>포인트 적립</li>
+      <div class="plan hot">
+        <span class="tag">인기</span>
+        <div class="pn">PRO</div>
+        <div class="pp">₩9,900<small> /월</small></div>
+        <p class="pd">전문가를 위한 모든 것</p>
+        <ul>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#C9A86A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 명함 무제한 + 맞춤 마감</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#C9A86A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 그룹 개설 · 행사 주최</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#C9A86A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 리워드 적립 2배 · 충전 보너스</li>
         </ul>
-        <button class="btn-plan btn-plan-white" onclick="location.href='/app/register'">시작하기</button>
+        <a class="btn btn-lg btn-gold" href="/login">Pro 시작하기</a>
       </div>
-      <div class="plan-card">
-        <div class="plan-name">Business</div>
-        <div class="plan-desc">팀 · 기업을 위한 그룹 솔루션</div>
-        <div class="plan-price">앱에서 확인 <small>/ 월</small></div>
-        <ul class="plan-features">
-          <li>그룹 개설 · 멤버 관리</li>
-          <li>행사 · 이벤트 운영</li>
-          <li>레슨 · 일정 관리</li>
-          <li>그룹 포인트 시스템</li>
-          <li>초대 링크 · 승인 관리</li>
+      <div class="plan">
+        <div class="pn" style="color:var(--sub);">BUSINESS</div>
+        <div class="pp">맞춤<small> 견적</small></div>
+        <p class="pd">조직을 위한 통합 관리</p>
+        <ul>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#1B9C73" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 팀 명함 · 브랜드 통일</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#1B9C73" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 어드민 콘솔 · 통계</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#1B9C73" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 파트너 API · 전담 지원</li>
         </ul>
-        <button class="btn-plan btn-plan-outline" onclick="location.href='/app/register'">그룹 신청</button>
+        <a class="btn btn-lg btn-light" style="border:1px solid var(--line);" href="mailto:hello@meti.io">문의하기</a>
       </div>
     </div>
-    <p class="pricing-note"><i class="fas fa-info-circle" style="margin-right:4px"></i>Pro / Business 플랜 업그레이드는 iOS · Android 앱에서 가능합니다.</p>
   </div>
 </section>
 
-<!-- ── 최종 CTA ── -->
-<section id="final-cta">
-  <h2>지금 바로 시작하세요</h2>
-  <p>무료로 가입하고 스마트 디지털 명함을 만들어보세요.</p>
-  <div class="cta-btns">
-    <button class="btn-hero-primary" onclick="location.href='/app/register'">
-      <i class="fas fa-arrow-right" style="margin-right:8px"></i>무료 회원가입
-    </button>
-    <button class="btn-hero-outline" onclick="openModal()">이미 계정이 있어요</button>
+<!-- CTA -->
+<section class="ctaband">
+  <div class="blob b-gold" style="opacity:.5;"></div>
+  <div class="wrap inner">
+    <span class="eyebrow" style="color:var(--gold);background:rgba(201,168,106,.12);border:1px solid rgba(201,168,106,.3);">지금 시작하기</span>
+    <h2 class="sec" style="color:#fff;margin-top:18px;font-size:40px;">첫 명함 교환까지, 1분이면 충분합니다</h2>
+    <p class="lead" style="color:rgba(255,255,255,.66);margin:16px auto 0;max-width:520px;">이메일만으로 가입하고, 나만의 프리미엄 디지털 명함을 만들어보세요.</p>
+    <div style="display:flex;gap:12px;justify-content:center;margin-top:30px;flex-wrap:wrap;">
+      <a class="btn btn-lg btn-gold" href="/login">무료로 시작하기</a>
+      <a class="btn btn-lg btn-outline-d" href="#features">기능 둘러보기</a>
+    </div>
   </div>
 </section>
 
-<!-- ── 푸터 ── -->
-<footer>
-  <div class="footer-inner">
-    <div class="footer-brand">
-      <div class="nav-logo" style="color:white;font-size:18px;font-weight:900;display:flex;align-items:center;gap:9px;margin-bottom:10px">
-        <div class="nav-logo-icon"><i class="fas fa-id-card"></i></div>THE METI
+<!-- FOOTER -->
+<footer id="faq">
+  <div class="wrap">
+    <div class="inner">
+      <div style="max-width:260px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <span class="nfcmark" style="width:32px;height:32px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5.5 8.5c-1 1.6-1 5.4 0 7M8.7 6.6c-1.8 2.5-1.8 8.3 0 10.8M18.5 8.5c1 1.6 1 5.4 0 7M15.3 6.6c1.8 2.5 1.8 8.3 0 10.8M12 9.5a2.5 2.5 0 0 0 0 5" stroke="#C9A86A" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+          <span class="word" style="font-size:18px;color:#fff;">MET<span class="i">I</span></span>
+        </div>
+        <p style="font-size:13.5px;line-height:1.6;color:rgba(255,255,255,.5);margin:0;">디지털 명함 기반 종합 네트워킹 플랫폼. 명함을 넘어, 관계로.</p>
       </div>
-      <p>스마트 디지털 명함 플랫폼</p>
-      <p style="margin-top:6px">주식회사 모빈</p>
+      <div class="cols">
+        <div><h4>제품</h4><a href="#features">기능</a><a href="#charge">충전</a><a href="#pricing">요금제</a><a href="/login">로그인</a></div>
+        <div><h4>회사</h4><a href="#">소개</a><a href="#">파트너</a><a href="#">채용</a></div>
+        <div><h4>지원</h4><a href="#">도움말</a><a href="mailto:hello@meti.io">문의하기</a><a href="/terms">이용약관</a><a href="/privacy">개인정보처리방침</a></div>
+      </div>
     </div>
-    <div class="footer-links">
-      <h4>서비스</h4>
-      <a href="#features">주요 기능</a>
-      <a href="#usecases">활용 사례</a>
-      <a href="#pricing">요금제</a>
-    </div>
-    <div class="footer-links">
-      <h4>계정</h4>
-      <a href="#" onclick="openModal();return false">로그인</a>
-      <a href="/app/register">회원가입</a>
-    </div>
-    <div class="footer-links">
-      <h4>법적 정보</h4>
-      <a href="/terms" target="_blank">이용약관</a>
-      <a href="/privacy" target="_blank">개인정보처리방침</a>
-    </div>
-    <div class="footer-links">
-      <h4>문의</h4>
-      <a href="mailto:privacy@mobin-inc.com">privacy@mobin-inc.com</a>
-    </div>
-  </div>
-  <div class="footer-bottom">
-    <span>© 2026 주식회사 모빈. All rights reserved.</span>
-    <span>THE METI는 주식회사 모빈의 서비스입니다.</span>
+    <div class="copy">© 2026 METI. All rights reserved.</div>
   </div>
 </footer>
 
 <script>
-  // 이미 로그인된 경우 대시보드로
-  (function() {
-    const token = localStorage.getItem('meti_token');
-    const user  = JSON.parse(localStorage.getItem('meti_user') || 'null');
-    if (token && user) {
-      window.location.href = user.role === 'super_admin' ? '/admin/dashboard' : '/app/dashboard';
-    }
+  (function(){
+    var amts = document.getElementById('amts');
+    var tot  = document.getElementById('tot');
+    var bon  = document.getElementById('bon');
+    var fmt  = function(n){ return '₩' + n.toLocaleString(); };
+    amts.addEventListener('click', function(e){
+      var el = e.target.closest('.amt');
+      if(!el) return;
+      amts.querySelectorAll('.amt').forEach(function(a){ a.classList.remove('on'); });
+      el.classList.add('on');
+      var amt = +el.dataset.amt, b = +el.dataset.bonus;
+      tot.firstChild.textContent = fmt(amt) + ' ';
+      bon.textContent = b ? '+' + b.toLocaleString() + 'P' : '';
+    });
   })();
-
-  function openModal() {
-    document.getElementById('login-modal').classList.add('open');
-    setTimeout(() => document.getElementById('m-email').focus(), 150);
-  }
-  function closeModal() {
-    document.getElementById('login-modal').classList.remove('open');
-  }
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
-
-  document.getElementById('modal-login-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email    = document.getElementById('m-email').value.trim();
-    const password = document.getElementById('m-password').value;
-    const btnText    = document.getElementById('m-btn-text');
-    const btnLoading = document.getElementById('m-btn-loading');
-    const errorEl    = document.getElementById('modal-error');
-
-    btnText.style.display = 'none';
-    btnLoading.style.display = 'inline';
-    errorEl.style.display = 'none';
-
-    try {
-      const res  = await fetch('/api/v1/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-      const data = await res.json();
-
-      if (data.success) {
-        localStorage.setItem('meti_token',         data.data.access_token);
-        localStorage.setItem('meti_refresh_token',  data.data.refresh_token);
-        localStorage.setItem('meti_user',           JSON.stringify(data.data.user));
-        const role = data.data.user.role;
-        window.location.href = role === 'super_admin' ? '/admin/dashboard' : '/app/dashboard';
-      } else {
-        errorEl.textContent = data.error || '로그인에 실패했습니다.';
-        errorEl.style.display = 'block';
-      }
-    } catch (err) {
-      errorEl.textContent = '서버 연결에 실패했습니다.';
-      errorEl.style.display = 'block';
-    } finally {
-      btnText.style.display = 'inline';
-      btnLoading.style.display = 'none';
-    }
-  });
 </script>
 </body>
 </html>`
