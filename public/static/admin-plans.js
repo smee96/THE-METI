@@ -71,14 +71,14 @@ async function loadPlanConfigs(tab = _planTab) {
                   </div>
                   <span class="text-sm text-gray-400">code: ${p.code}</span>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label class="block text-sm font-semibold text-gray-600 mb-1">그룹 최대 멤버 수</label>
                     <div class="flex gap-2">
                       <input type="number" id="plan-members-${p.code}" value="${p.max_group_members ?? ''}" placeholder="무제한"
                         min="1" class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                       <button onclick="updatePlanConfig('${p.code}', 'max_group_members')"
-                        class="px-3 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition">저장</button>
+                        class="flex-shrink-0 px-3 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition">저장</button>
                     </div>
                     <p class="text-xs text-gray-400 mt-1">현재: ${p.max_group_members !== null ? p.max_group_members + '명' : '무제한'}</p>
                   </div>
@@ -88,7 +88,7 @@ async function loadPlanConfigs(tab = _planTab) {
                       <input type="number" id="plan-cards-${p.code}" value="${p.max_cards ?? ''}" placeholder="무제한"
                         min="1" class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                       <button onclick="updatePlanConfig('${p.code}', 'max_cards')"
-                        class="px-3 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition">저장</button>
+                        class="flex-shrink-0 px-3 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition">저장</button>
                     </div>
                     <p class="text-xs text-gray-400 mt-1">현재: ${p.max_cards !== null ? p.max_cards + '개' : '무제한'}</p>
                   </div>

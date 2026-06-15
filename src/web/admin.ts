@@ -145,11 +145,55 @@ export function adminAppHtml(): string {
       font-size:12px; font-weight:700; padding:3px 9px; border-radius:var(--r-pill);
     }
 
-    /* ── Primary action buttons in content → METI Navy ─────── */
-    #page-content .bg-blue-600              { background-color:var(--navy)      !important; }
-    #page-content .hover\\:bg-blue-700:hover { background-color:var(--navy-deep) !important; }
-    #page-content .focus\\:ring-blue-500:focus { --tw-ring-color:rgba(11,30,64,.25) !important; }
-    #page-content .border-blue-500          { border-color:var(--navy)           !important; }
+    /* ── 콘텐츠 영역 Tailwind → METI 토큰 오버라이드 ──────── */
+    /* 파란색 → 네이비 */
+    #page-content .bg-blue-600,
+    #page-content .bg-blue-700              { background-color:var(--navy)           !important; }
+    #page-content .hover\\:bg-blue-700:hover,
+    #page-content .hover\\:bg-blue-600:hover { background-color:var(--navy-deep)      !important; }
+    #page-content .text-blue-600,
+    #page-content .text-blue-700            { color:var(--navy)                      !important; }
+    #page-content .hover\\:text-blue-700:hover { color:var(--navy-deep)              !important; }
+    #page-content .border-blue-200          { border-color:rgba(11,30,64,0.18)       !important; }
+    #page-content .border-blue-400,
+    #page-content .border-blue-500,
+    #page-content .border-blue-600          { border-color:var(--navy)               !important; }
+    #page-content .bg-blue-50               { background-color:rgba(11,30,64,0.04)   !important; }
+    #page-content .bg-blue-100              { background-color:rgba(11,30,64,0.07)   !important; }
+    #page-content .hover\\:bg-blue-50:hover  { background-color:rgba(11,30,64,0.04)  !important; }
+    #page-content .hover\\:bg-blue-100:hover { background-color:rgba(11,30,64,0.07)  !important; }
+    #page-content .focus\\:ring-blue-400:focus,
+    #page-content .focus\\:ring-blue-500:focus { --tw-ring-color:rgba(11,30,64,.22)  !important; }
+
+    /* 회색 → METI 서피스/잉크 */
+    #page-content .text-gray-900            { color:var(--ink)                       !important; }
+    #page-content .text-gray-800            { color:var(--ink)                       !important; }
+    #page-content .text-gray-700            { color:var(--sub)                       !important; }
+    #page-content .text-gray-600            { color:var(--sub)                       !important; }
+    #page-content .text-gray-500            { color:var(--sub)                       !important; }
+    #page-content .text-gray-400            { color:var(--mute)                      !important; }
+    #page-content .bg-gray-50               { background-color:var(--surface-2)      !important; }
+    #page-content .bg-gray-100              { background-color:rgba(14,23,38,0.05)   !important; }
+    #page-content .border-gray-100          { border-color:var(--line-2)             !important; }
+    #page-content .border-gray-200          { border-color:var(--line)               !important; }
+    #page-content .border-gray-300          { border-color:rgba(14,23,38,0.16)       !important; }
+    #page-content .divide-gray-100>*+*      { border-color:var(--line-2)             !important; }
+    #page-content .divide-gray-200>*+*      { border-color:var(--line)               !important; }
+    #page-content .hover\\:bg-gray-50:hover  { background-color:var(--surface-2)     !important; }
+    #page-content .hover\\:bg-gray-100:hover { background-color:rgba(14,23,38,0.05)  !important; }
+
+    /* 모듈 공용 input → METI 포커스 */
+    #page-content input[type="text"]:focus,
+    #page-content input[type="number"]:focus,
+    #page-content input[type="email"]:focus,
+    #page-content input[type="date"]:focus,
+    #page-content input[type="datetime-local"]:focus,
+    #page-content textarea:focus,
+    #page-content select:focus {
+      border-color:var(--navy) !important;
+      box-shadow:0 0 0 2px rgba(11,30,64,0.12) !important;
+      outline:none !important;
+    }
 
     /* ── Table defaults ────────────────────────────────────── */
     .meti-table { width:100%; border-collapse:collapse; font-size:13.5px; }

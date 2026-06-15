@@ -56,12 +56,12 @@ async function loadOrders(page = 1, status = _ordersStatus, method = _ordersMeth
                 ${{all:'전체',web:'웹결제',inapp_apple:'Apple',inapp_google:'Google'}[m]}
                </button>`).join('')}
           </div>
-          <div class="flex gap-2 ml-auto">
+          <div class="flex gap-2 w-full sm:w-auto sm:ml-auto">
             <input id="orders-search-val" type="text" placeholder="유저명/이메일 검색"
-              class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-44"
+              class="flex-1 sm:w-44 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
               onkeydown="if(event.key==='Enter') loadOrders(1)">
             <button onclick="loadOrders(1)"
-              class="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition">
+              class="flex-shrink-0 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition">
               <i class="fas fa-search"></i>
             </button>
           </div>
