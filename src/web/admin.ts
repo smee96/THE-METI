@@ -23,13 +23,17 @@ export function adminLoginHtml(): string {
     body{
       font-family:var(--font);
       background:radial-gradient(130% 130% at 78% -10%,var(--navy-glow) 0%,var(--navy) 42%,var(--navy-deep) 100%);
-      min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px;
+      min-height:100vh;display:flex;align-items:center;justify-content:center;
+      padding:24px 20px;
+      padding-left:max(20px, env(safe-area-inset-left, 20px));
+      padding-right:max(20px, env(safe-area-inset-right, 20px));
     }
     .wrap{width:100%;max-width:380px}
     .wordmark{font-size:26px;font-weight:800;letter-spacing:0.2em;color:#fff;text-align:center;margin-bottom:6px}
     .wordmark .i{color:var(--gold)}
     .tagline{text-align:center;color:rgba(255,255,255,0.42);font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:28px}
     .card{background:var(--surface);border-radius:var(--r-card);padding:32px;box-shadow:0 2px 4px rgba(6,18,42,.28),0 18px 40px -12px rgba(6,18,42,.58)}
+    @media(max-width:420px){.card{padding:28px 24px}}
     label{display:block;font-size:12px;font-weight:700;color:var(--sub);margin-bottom:6px;letter-spacing:0.04em}
     input{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:var(--r-md);font-family:var(--font);font-size:15px;color:var(--ink);background:var(--bg);outline:none;transition:border-color 0.15s}
     input:focus{border-color:var(--navy);background:#fff}
