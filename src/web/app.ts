@@ -460,7 +460,7 @@ export function appLandingHtml(): string {
 
   /* ── Hero ── */
   .hero{overflow:hidden;color:#fff;background:radial-gradient(110% 90% at 88% -20%,var(--navy-glow) 0%,var(--navy) 48%,var(--navy-deep) 100%);}
-  .hero .inner{display:grid;grid-template-columns:1.05fr .95fr;gap:40px;align-items:center;padding:84px 0 92px;position:relative;z-index:2;}
+  .hero .inner{display:grid;grid-template-columns:1.05fr .95fr;gap:40px;align-items:center;padding-top:84px;padding-bottom:92px;position:relative;z-index:2;}
   .blob{position:absolute;border-radius:50%;filter:blur(76px);pointer-events:none;z-index:1;}
   .b-gold{width:420px;height:420px;background:rgba(201,168,106,.30);top:-120px;right:-60px;}
   .b-mint{width:300px;height:300px;background:color-mix(in oklch,var(--mint),transparent 66%);bottom:-80px;left:6%;}
@@ -501,7 +501,7 @@ export function appLandingHtml(): string {
 
   /* ── 충전 ── */
   .recharge{background:var(--surface);}
-  .recharge .inner{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;padding:92px 0;}
+  .recharge .inner{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;padding-top:92px;padding-bottom:92px;}
   .uselist{display:flex;flex-direction:column;gap:14px;margin-top:28px;}
   .use{display:flex;align-items:flex-start;gap:14px;}
   .use .d{width:34px;height:34px;border-radius:10px;background:var(--gold-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
@@ -540,7 +540,7 @@ export function appLandingHtml(): string {
 
   /* ── CTA + footer ── */
   .ctaband{margin:0 0 0;overflow:hidden;color:#fff;background:radial-gradient(120% 160% at 80% -40%,var(--navy-glow),var(--navy) 50%,var(--navy-deep));}
-  .ctaband .inner{text-align:center;padding:80px 0;position:relative;z-index:2;}
+  .ctaband .inner{text-align:center;padding-top:80px;padding-bottom:80px;position:relative;z-index:2;}
   footer{background:#06122A;color:rgba(255,255,255,.6);}
   footer .inner{display:flex;justify-content:space-between;gap:30px;flex-wrap:wrap;padding:48px 0 40px;}
   footer .cols{display:flex;gap:64px;flex-wrap:wrap;}
@@ -551,12 +551,12 @@ export function appLandingHtml(): string {
 
   @media (max-width:920px){
     .nav .links{display:none;}
-    .hero .inner{grid-template-columns:1fr;padding:56px 0 64px;}
+    .hero .inner{grid-template-columns:1fr;padding-top:56px;padding-bottom:64px;}
     .cluster{height:300px;margin-top:12px;}
     .bizcard{width:min(330px, calc(100% - 30px));}
     h1.hh{font-size:38px;}
     .feat-grid{grid-template-columns:1fr 1fr;}
-    .recharge .inner{grid-template-columns:1fr;gap:36px;padding:64px 0;}
+    .recharge .inner{grid-template-columns:1fr;gap:36px;padding-top:64px;padding-bottom:64px;}
     .price-grid{grid-template-columns:1fr;}
     .pad-sec{padding:64px 0;}
   }
@@ -569,7 +569,7 @@ export function appLandingHtml(): string {
     h1.hh{font-size:32px;}
     h2.sec{font-size:26px;}
     .hero .sub{font-size:16px;}
-    .ctaband .inner{padding:60px 0;}
+    .ctaband .inner{padding-top:60px;padding-bottom:60px;}
     footer .cols{gap:32px;}
     .plan{padding:24px 20px;}
   }
