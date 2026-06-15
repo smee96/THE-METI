@@ -425,6 +425,7 @@ export function appLandingHtml(): string {
     --line:rgba(14,23,38,0.09); --font:Pretendard,-apple-system,system-ui,sans-serif;
   }
   *{box-sizing:border-box;}
+  html,body{overflow-x:hidden;}
   html{scroll-behavior:smooth;}
   body{margin:0;font-family:var(--font);background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;word-break:keep-all;line-break:strict;}
   a{color:inherit;text-decoration:none;}
@@ -538,7 +539,7 @@ export function appLandingHtml(): string {
   .plan .tag{position:absolute;top:20px;right:24px;font-size:11.5px;font-weight:800;color:#3a2c10;background:var(--gold);padding:4px 10px;border-radius:100px;}
 
   /* ── CTA + footer ── */
-  .ctaband{margin:0 0 0;color:#fff;background:radial-gradient(120% 160% at 80% -40%,var(--navy-glow),var(--navy) 50%,var(--navy-deep));}
+  .ctaband{margin:0 0 0;overflow:hidden;color:#fff;background:radial-gradient(120% 160% at 80% -40%,var(--navy-glow),var(--navy) 50%,var(--navy-deep));}
   .ctaband .inner{text-align:center;padding:80px 0;position:relative;z-index:2;}
   footer{background:#06122A;color:rgba(255,255,255,.6);}
   footer .inner{display:flex;justify-content:space-between;gap:30px;flex-wrap:wrap;padding:48px 0 40px;}
@@ -552,13 +553,26 @@ export function appLandingHtml(): string {
     .nav .links{display:none;}
     .hero .inner{grid-template-columns:1fr;padding:56px 0 64px;}
     .cluster{height:300px;margin-top:12px;}
+    .bizcard{width:min(330px, calc(100% - 30px));}
     h1.hh{font-size:38px;}
     .feat-grid{grid-template-columns:1fr 1fr;}
     .recharge .inner{grid-template-columns:1fr;gap:36px;padding:64px 0;}
     .price-grid{grid-template-columns:1fr;}
     .pad-sec{padding:64px 0;}
   }
-  @media (max-width:560px){ .feat-grid{grid-template-columns:1fr;} .hero .meta{gap:18px;} }
+  @media (max-width:560px){
+    .nav .btn-nav{display:none;}
+    .wrap{padding:0 20px;}
+    .cluster{height:240px;}
+    .feat-grid{grid-template-columns:1fr;}
+    .hero .meta{gap:18px;}
+    h1.hh{font-size:32px;}
+    h2.sec{font-size:26px;}
+    .hero .sub{font-size:16px;}
+    .ctaband .inner{padding:60px 0;}
+    footer .cols{gap:32px;}
+    .plan{padding:24px 20px;}
+  }
 </style>
 </head>
 <body>
