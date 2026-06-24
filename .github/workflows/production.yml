@@ -27,9 +27,8 @@ jobs:
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
-        env:
-          # API 토큰이 다중 계정에 연결돼 있어 비대화형에서 계정 선택 불가 → 명시 필요
-          CLOUDFLARE_ACCOUNT_ID: bbff6e9bc7c37ea1aa3b7a1de23895a9
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          # API 토큰이 다중 계정에 연결돼 있어 비대화형에서 계정 선택 불가 → 명시 필요
+          accountId: bbff6e9bc7c37ea1aa3b7a1de23895a9
           command: pages deploy dist --project-name the-meti --branch main

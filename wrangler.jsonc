@@ -1,8 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "the-meti",
-  // API 토큰이 다중 계정에 연결돼 비대화형(CI)에서 계정 선택 불가 → the-meti 소유 계정 고정
-  "account_id": "bbff6e9bc7c37ea1aa3b7a1de23895a9",
   "compatibility_date": "2026-04-13",
   "pages_build_output_dir": "./dist",
   "compatibility_flags": ["nodejs_compat"],
