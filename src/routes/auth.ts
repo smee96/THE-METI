@@ -114,8 +114,9 @@ auth.post(
       VALUES (?, ?, ?)
     `).bind(userId, verifyToken, expiresAt).run()
 
+    // 포인트 지갑 생성 (point_wallets 단일 원장)
     await c.env.DB.prepare(
-      'INSERT INTO reward_balances (user_id, points) VALUES (?, 0)'
+      `INSERT OR IGNORE INTO point_wallets (owner_type, owner_id, balance) VALUES ('user', ?, 0)`
     ).bind(userId).run()
 
     // TODO: 이메일 발송 (추후 이메일 서비스 연동)

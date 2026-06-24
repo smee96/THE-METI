@@ -4,6 +4,7 @@ import { z } from 'zod'
 import type { Bindings, Variables } from '../types'
 import { ok, fail } from '../middleware/response'
 import { authMiddleware } from '../middleware/auth'
+import { creditWallet } from '../lib/wallet'
 
 const partner = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -73,12 +74,15 @@ partner.post(
   zValidator('json', z.object({
     external_user_key: z.string(),
     event_type: z.string().min(1),
-    points: z.number().int().min(1).max(10000),
+    points: z.number().int().min(1).max(10000),     // 유저 적립 포인트
+    amount: z.number().int().positive().optional(), // 유저 소진 원금(통화 최소단위) — 정산용
+    currency: z.string().length(3).optional(),      // ISO 4217 (기본 KRW)
     description: z.string().optional(),
     payload: z.record(z.unknown()).optional()
   })),
   async (c) => {
     const partnerId = c.get('partnerId') as number
+    const partnerName = c.get('partnerName') as string
     const body = c.req.valid('json')
 
     // 유저 매핑 조회
@@ -93,47 +97,74 @@ partner.post(
 
     const userId = mapping.user_id
 
-    // 리워드 이벤트 로그 기록
+    // 정산 계산 — 소진 금액(amount)이 있으면 파트너 수수료율로 METI 수취분 산출
+    const pinfo = await c.env.DB.prepare(
+      `SELECT commission_rate FROM partner_services WHERE id = ?`
+    ).bind(partnerId).first<{ commission_rate: number }>()
+    const rate = pinfo?.commission_rate ?? 0.15
+
+    const gross = body.amount ?? null
+    const currency = body.currency ?? (gross != null ? 'KRW' : null)
+    const settlement = gross != null ? Math.floor(gross * rate) : 0
+    const billingPeriod = new Date().toISOString().slice(0, 7)  // YYYY-MM
+
+    // 리워드 이벤트 로그 기록 (정산 필드 포함)
     const logResult = await c.env.DB.prepare(`
-      INSERT INTO partner_reward_events (partner_id, external_user_key, user_id, event_type, points_awarded, payload)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO partner_reward_events
+        (partner_id, external_user_key, user_id, event_type, points_awarded, payload,
+         gross_amount, currency, commission_rate, settlement_amount, billing_period)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       partnerId, body.external_user_key, userId,
-      body.event_type, body.points, JSON.stringify(body.payload ?? {})
+      body.event_type, body.points, JSON.stringify(body.payload ?? {}),
+      gross, currency, gross != null ? rate : null, settlement, billingPeriod
     ).run()
+    const eventId = logResult.meta.last_row_id as number
 
-    // 리워드 지급 (트랜잭션)
-    await c.env.DB.batch([
-      // 리워드 잔액 업데이트
-      c.env.DB.prepare(`
-        INSERT INTO reward_balances (user_id, points) VALUES (?, ?)
-        ON CONFLICT(user_id) DO UPDATE SET points = points + ?, updated_at = datetime('now')
-      `).bind(userId, body.points, body.points),
-      // 리워드 이력 저장
+    // 포인트 적립 — point_wallets 단일 원장으로 일원화
+    const credit = await creditWallet(c.env.DB, 'user', userId, body.points, {
+      type: 'charge_partner',
+      pointType: 'reward',
+      refType: 'partner_reward_event',
+      refId: eventId,
+      description: body.description ?? `${partnerName} 리워드`,
+    })
+
+    // 부가 기록: 감사이력 / 처리완료 / 알림 / 정산 월집계
+    const ops = [
       c.env.DB.prepare(`
         INSERT INTO rewards (user_id, type, source, partner_id, points, description)
         VALUES (?, 'partner', 'partner', ?, ?, ?)
       `).bind(userId, partnerId, body.points, body.description ?? body.event_type),
-      // 이벤트 처리 완료 표시
       c.env.DB.prepare(`
         UPDATE partner_reward_events SET processed = 1, processed_at = datetime('now') WHERE id = ?
-      `).bind(logResult.meta.last_row_id),
-      // 알림 생성
+      `).bind(eventId),
       c.env.DB.prepare(`
         INSERT INTO notifications (user_id, type, title, body)
         VALUES (?, 'reward', '리워드 지급', ?)
-      `).bind(userId, `${c.get('partnerName')} 파트너 혜택으로 ${body.points}P가 지급되었습니다.`)
-    ])
-
-    // 업데이트된 잔액 조회
-    const balance = await c.env.DB.prepare(
-      'SELECT points FROM reward_balances WHERE user_id = ?'
-    ).bind(userId).first<{ points: number }>()
+      `).bind(userId, `${partnerName} 파트너 혜택으로 ${body.points}P가 지급되었습니다.`),
+    ]
+    if (gross != null) {
+      // 월·파트너·통화 단위 정산 집계 누적
+      ops.push(c.env.DB.prepare(`
+        INSERT INTO partner_settlements
+          (partner_id, billing_period, currency, gross_total, settlement_total, event_count)
+        VALUES (?, ?, ?, ?, ?, 1)
+        ON CONFLICT(partner_id, billing_period, currency) DO UPDATE SET
+          gross_total      = gross_total + excluded.gross_total,
+          settlement_total = settlement_total + excluded.settlement_total,
+          event_count      = event_count + 1,
+          updated_at       = datetime('now')
+      `).bind(partnerId, billingPeriod, currency, gross, settlement))
+    }
+    await c.env.DB.batch(ops)
 
     return c.json(ok({
       user_id: userId,
       points_awarded: body.points,
-      new_balance: balance?.points ?? 0
+      new_balance: credit.balanceAfter,
+      settlement_amount: settlement,
+      currency
     }, '리워드가 지급되었습니다.'))
   }
 )
@@ -157,11 +188,11 @@ partner.get('/user-balance', partnerAuth, async (c) => {
     return c.json(fail('유저 매핑을 찾을 수 없습니다.'), 404)
   }
 
-  const balance = await c.env.DB.prepare(
-    'SELECT points FROM reward_balances WHERE user_id = ?'
-  ).bind(mapping.user_id).first<{ points: number }>()
+  const wallet = await c.env.DB.prepare(
+    `SELECT balance FROM point_wallets WHERE owner_type = 'user' AND owner_id = ?`
+  ).bind(mapping.user_id).first<{ balance: number }>()
 
-  return c.json(ok({ points: balance?.points ?? 0 }))
+  return c.json(ok({ points: wallet?.balance ?? 0 }))
 })
 
 // ══════════════════════════════════════════════════════════════
