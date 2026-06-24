@@ -69,3 +69,50 @@ export async function creditWallet(
 
   return { walletId: wallet.id, balanceAfter }
 }
+
+export interface DebitOpts {
+  type: string                 // point_transactions.type (예: use_event_create)
+  pointType?: PointType        // 기본 'reward'
+  refType?: string | null
+  refId?: number | null
+  description?: string | null
+}
+
+// 지갑 차감 (−) — 잔액 부족 시 { ok:false, balance } 반환(예외 아님)
+export async function debitWallet(
+  db: D1Database,
+  ownerType: OwnerType,
+  ownerId: number,
+  amount: number,
+  opts: DebitOpts
+): Promise<{ ok: true; walletId: number; balanceAfter: number } | { ok: false; balance: number }> {
+  if (!Number.isInteger(amount) || amount <= 0) {
+    throw new Error('debitWallet: amount는 양의 정수여야 합니다.')
+  }
+
+  const wallet = await getOrCreateWallet(db, ownerType, ownerId)
+  if (wallet.balance < amount) {
+    return { ok: false, balance: wallet.balance }
+  }
+
+  const balanceAfter = wallet.balance - amount
+  const now = new Date().toISOString()
+
+  await db.batch([
+    db.prepare(
+      `UPDATE point_wallets SET balance = ?, total_used = total_used + ?, updated_at = ? WHERE id = ?`
+    ).bind(balanceAfter, amount, now, wallet.id),
+    db.prepare(`
+      INSERT INTO point_transactions
+        (wallet_id, type, point_type, amount, balance_after, ref_type, ref_id, description, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      wallet.id, opts.type, opts.pointType ?? 'reward',
+      -amount, balanceAfter,
+      opts.refType ?? null, opts.refId ?? null,
+      opts.description ?? null, now
+    ),
+  ])
+
+  return { ok: true, walletId: wallet.id, balanceAfter }
+}

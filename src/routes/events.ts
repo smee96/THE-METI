@@ -4,6 +4,7 @@ import { z } from 'zod'
 import type { Bindings, Variables } from '../types'
 import { authMiddleware } from '../middleware/auth'
 import { ok, fail, paginate, parsePagination } from '../middleware/response'
+import { creditWallet, debitWallet } from '../lib/wallet'
 
 const events = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -27,13 +28,12 @@ events.get('/', async (c) => {
 
   let query = `
     SELECT e.*,
-      e.max_participants AS capacity,
       g.name AS group_name,
       u.name AS organizer_name,
       (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id AND status != 'cancelled') AS participant_count
     FROM events e
     JOIN groups g ON g.id = e.group_id
-    JOIN users u ON u.id = e.organizer_id
+    JOIN users u ON u.id = e.created_by
     WHERE e.visibility = 'public' AND e.is_deleted = 0 AND e.status != 'cancelled'
   `
   const params: unknown[] = []
@@ -72,10 +72,10 @@ events.get('/groups/:groupId/events', authMiddleware, async (c) => {
   let query = `
     SELECT e.*,
       u.name AS creator_name,
-      (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id AND status = 'confirmed') AS participant_count
+      (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id AND status != 'cancelled') AS participant_count
     FROM events e
     JOIN users u ON u.id = e.created_by
-    WHERE e.group_id = ?
+    WHERE e.group_id = ? AND e.is_deleted = 0
   `
   const params: unknown[] = [groupId]
   if (status) { query += ` AND e.status = ?`; params.push(status) }
@@ -85,7 +85,7 @@ events.get('/groups/:groupId/events', authMiddleware, async (c) => {
   const [rows, countRow] = await Promise.all([
     c.env.DB.prepare(query).bind(...params).all(),
     c.env.DB.prepare(
-      `SELECT COUNT(*) as total FROM events WHERE group_id = ?`
+      `SELECT COUNT(*) as total FROM events WHERE group_id = ? AND is_deleted = 0`
     ).bind(groupId).first<{ total: number }>()
   ])
 
@@ -133,47 +133,57 @@ events.post(
       pointCost = 3000
     }
 
-    // 그룹 포인트 확인 및 차감
-    const groupPoint = await c.env.DB.prepare(
-      `SELECT balance FROM group_points WHERE group_id = ?`
+    // 그룹 포인트 잔액 확인 (point_wallets 단일 원장)
+    const gWallet = await c.env.DB.prepare(
+      `SELECT balance FROM point_wallets WHERE owner_type = 'group' AND owner_id = ?`
     ).bind(groupId).first<{ balance: number }>()
 
-    const balance = groupPoint?.balance ?? 0
+    const balance = gWallet?.balance ?? 0
     if (balance < pointCost) {
-      return c.json(fail('그룹 포인트가 부족합니다.', {
+      return c.json({
+        success   : false,
+        error     : '그룹 포인트가 부족합니다.',
         error_code: 'insufficient_group_points',
         required  : pointCost,
         current   : balance,
         shortage  : pointCost - balance
-      }), 402)
+      }, 402)
     }
 
-    await c.env.DB.batch([
-      c.env.DB.prepare(
-        `UPDATE group_points SET balance = balance - ?, updated_at = datetime('now') WHERE group_id = ?`
-      ).bind(pointCost, groupId),
-      c.env.DB.prepare(`
-        INSERT INTO point_transactions
-          (owner_type, owner_id, type, amount, description, created_by)
-        VALUES ('group', ?, 'event_open_cost', ?, '행사 개설 비용', ?)
-      `).bind(groupId, -pointCost, userId)
-    ])
-
+    // 행사 생성 (organizer_id/created_by 모두 기록 — 스키마 호환)
     const result = await c.env.DB.prepare(`
       INSERT INTO events
-        (group_id, created_by, title, description, location,
+        (group_id, organizer_id, created_by, title, description, location,
          starts_at, ends_at, capacity, visibility, registration_type,
          entry_method, point_cost, entry_fee)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
-      groupId, userId, body.title, body.description ?? null,
+      groupId, userId, userId, body.title, body.description ?? null,
       body.location ?? null, body.starts_at, body.ends_at ?? null,
       body.capacity ?? null, body.visibility, body.registration_type,
       body.entry_method, pointCost, body.entry_fee
     ).run()
+    const eventId = result.meta.last_row_id as number
+
+    // 그룹 포인트 차감 (개설 비용)
+    const debit = await debitWallet(c.env.DB, 'group', groupId, pointCost, {
+      type: 'use_event_create',
+      refType: 'event',
+      refId: eventId,
+      description: '행사 개설 비용',
+    })
+    if (!debit.ok) {
+      // 동시성 등으로 차감 실패 시 생성 롤백
+      await c.env.DB.prepare(`DELETE FROM events WHERE id = ?`).bind(eventId).run()
+      return c.json({
+        success: false, error: '그룹 포인트가 부족합니다.',
+        error_code: 'insufficient_group_points',
+        required: pointCost, current: debit.balance, shortage: pointCost - debit.balance
+      }, 402)
+    }
 
     return c.json(ok({
-      event_id  : result.meta.last_row_id,
+      event_id  : eventId,
       point_cost: pointCost,
       entry_fee : body.entry_fee
     }, '행사가 생성되었습니다.'), 201)
@@ -192,11 +202,11 @@ events.get('/:id', authMiddleware, async (c) => {
     SELECT e.*,
       u.name AS creator_name,
       g.name AS group_name,
-      (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id AND status = 'confirmed') AS participant_count
+      (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id AND status != 'cancelled') AS participant_count
     FROM events e
     JOIN users u ON u.id = e.created_by
     JOIN groups g ON g.id = e.group_id
-    WHERE e.id = ?
+    WHERE e.id = ? AND e.is_deleted = 0
   `).bind(eventId).first()
 
   if (!event) return c.json(fail('행사를 찾을 수 없습니다.'), 404)
@@ -320,42 +330,36 @@ events.post('/:id/join', authMiddleware, async (c) => {
   // 정원 확인
   if (event.capacity) {
     const cnt = await c.env.DB.prepare(
-      `SELECT COUNT(*) as cnt FROM event_participants WHERE event_id = ? AND status = 'confirmed'`
+      `SELECT COUNT(*) as cnt FROM event_participants WHERE event_id = ? AND status != 'cancelled'`
     ).bind(eventId).first<{ cnt: number }>()
     if ((cnt?.cnt ?? 0) >= event.capacity) {
       return c.json(fail('행사 정원이 가득 찼습니다.'), 409)
     }
   }
 
-  // 참가비 차감
+  // 참가비 차감 (개인 → 그룹, point_wallets 단일 원장)
   if (event.entry_fee > 0) {
-    const userPoint = await c.env.DB.prepare(
-      `SELECT balance FROM user_points WHERE user_id = ?`
-    ).bind(userId).first<{ balance: number }>()
-    const balance = userPoint?.balance ?? 0
-    if (balance < event.entry_fee) {
-      return c.json(fail('포인트가 부족합니다.', {
+    const debit = await debitWallet(c.env.DB, 'user', userId, event.entry_fee, {
+      type: 'use_event_entry',
+      pointType: 'charged',
+      refType: 'event',
+      refId: eventId,
+      description: '행사 참가비',
+    })
+    if (!debit.ok) {
+      return c.json({
+        success: false, error: '포인트가 부족합니다.',
         error_code: 'insufficient_points',
-        required  : event.entry_fee,
-        current   : balance,
-        shortage  : event.entry_fee - balance
-      }), 402)
+        required: event.entry_fee, current: debit.balance, shortage: event.entry_fee - debit.balance
+      }, 402)
     }
-
-    await c.env.DB.batch([
-      c.env.DB.prepare(
-        `UPDATE user_points SET balance = balance - ?, updated_at = datetime('now') WHERE user_id = ?`
-      ).bind(event.entry_fee, userId),
-      c.env.DB.prepare(`
-        INSERT INTO point_transactions
-          (owner_type, owner_id, type, amount, description, ref_id)
-        VALUES ('user', ?, 'event_entry_fee', ?, '행사 참가비', ?)
-      `).bind(userId, -event.entry_fee, eventId),
-      // 행사 포인트 → 그룹 포인트로 이체
-      c.env.DB.prepare(
-        `UPDATE group_points SET balance = balance + ?, updated_at = datetime('now') WHERE group_id = ?`
-      ).bind(event.entry_fee, event.group_id),
-    ])
+    // 참가비를 그룹 포인트로 이체
+    await creditWallet(c.env.DB, 'group', event.group_id, event.entry_fee, {
+      type: 'charge_event_entry',
+      refType: 'event',
+      refId: eventId,
+      description: '행사 참가비 수입',
+    })
   }
 
   await c.env.DB.prepare(`
@@ -380,7 +384,7 @@ events.delete('/:id/join', authMiddleware, async (c) => {
   if (!event) return c.json(fail('행사를 찾을 수 없습니다.'), 404)
 
   const existing = await c.env.DB.prepare(
-    `SELECT id FROM event_participants WHERE event_id = ? AND user_id = ? AND status = 'confirmed'`
+    `SELECT id FROM event_participants WHERE event_id = ? AND user_id = ? AND status != 'cancelled'`
   ).bind(eventId, userId).first()
   if (!existing) return c.json(fail('참가 신청 내역이 없습니다.'), 404)
 
@@ -388,21 +392,21 @@ events.delete('/:id/join', authMiddleware, async (c) => {
     `UPDATE event_participants SET status = 'cancelled' WHERE event_id = ? AND user_id = ?`
   ).bind(eventId, userId).run()
 
-  // 참가비 환불
+  // 참가비 환불 (그룹 → 개인, point_wallets 단일 원장)
   if (event.entry_fee > 0) {
-    await c.env.DB.batch([
-      c.env.DB.prepare(
-        `UPDATE user_points SET balance = balance + ?, updated_at = datetime('now') WHERE user_id = ?`
-      ).bind(event.entry_fee, userId),
-      c.env.DB.prepare(`
-        INSERT INTO point_transactions
-          (owner_type, owner_id, type, amount, description, ref_id)
-        VALUES ('user', ?, 'event_entry_refund', ?, '행사 참가 취소 환불', ?)
-      `).bind(userId, event.entry_fee, eventId),
-      c.env.DB.prepare(
-        `UPDATE group_points SET balance = balance - ?, updated_at = datetime('now') WHERE group_id = ?`
-      ).bind(event.entry_fee, event.group_id),
-    ])
+    await creditWallet(c.env.DB, 'user', userId, event.entry_fee, {
+      type: 'charge_event_refund',
+      refType: 'event',
+      refId: eventId,
+      description: '행사 참가 취소 환불',
+    })
+    // 그룹 수입 환수 (잔액 부족 시 best-effort)
+    await debitWallet(c.env.DB, 'group', event.group_id, event.entry_fee, {
+      type: 'use_event_refund',
+      refType: 'event',
+      refId: eventId,
+      description: '행사 참가 취소 환불',
+    })
   }
 
   return c.json(ok(null, '참가 취소가 완료되었습니다.'))
