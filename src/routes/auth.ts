@@ -70,10 +70,24 @@ auth.post(
     email: z.string().email('유효한 이메일을 입력해주세요.'),
     password: z.string().min(8, '비밀번호는 8자 이상이어야 합니다.'),
     name: z.string().min(2, '이름은 2자 이상이어야 합니다.').max(50),
+    birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD 형식의 생년월일을 입력해주세요.'),
     account_type: z.enum(['personal']).default('personal').optional()
   })),
   async (c) => {
-    const { email, password, name } = c.req.valid('json')
+    const { email, password, name, birth_date } = c.req.valid('json')
+
+    // 만 19세 미만 가입 차단 (클라이언트 우회 방지 — 서버 측 강제)
+    const [by, bm, bd] = birth_date.split('-').map(Number)
+    const today = new Date()
+    let age = today.getFullYear() - by
+    if (today.getMonth() + 1 < bm || (today.getMonth() + 1 === bm && today.getDate() < bd)) age--
+    if (age < 19) {
+      return c.json({
+        success: false,
+        error: '만 19세 미만은 가입할 수 없습니다.',
+        error_code: 'age_restricted'
+      }, 403)
+    }
 
     const existing = await c.env.DB.prepare(
       'SELECT id FROM users WHERE email = ? AND is_deleted = 0'
@@ -86,9 +100,9 @@ auth.post(
     const passwordHash = await hashPassword(password)
 
     const result = await c.env.DB.prepare(`
-      INSERT INTO users (email, password_hash, name, account_type, plan, is_verified)
-      VALUES (?, ?, ?, 'personal', 'free', 1)
-    `).bind(email, passwordHash, name).run()
+      INSERT INTO users (email, password_hash, name, account_type, plan, is_verified, birth_date)
+      VALUES (?, ?, ?, 'personal', 'free', 1, ?)
+    `).bind(email, passwordHash, name, birth_date).run()
 
     const userId = result.meta.last_row_id as number
 

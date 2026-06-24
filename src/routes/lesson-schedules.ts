@@ -29,18 +29,9 @@ schedules.get('/:groupId/schedules', authMiddleware, async (c) => {
   const { page, limit, offset } = parsePagination(c.req.query('page'), c.req.query('limit'))
   const status  = c.req.query('status')
 
-  // 그룹 멤버 확인 (보호자도 접근 가능 — 그룹 멤버거나 담당 학생의 그룹인 경우)
+  // 그룹 멤버(강사/관리자/학생)만 접근 가능 — 비멤버는 403
   const member = await getMemberRole(c.env.DB, groupId, userId)
-  if (!member) {
-    // 보호자 자격으로 접근 허용 여부 확인
-    const isGuardianOfGroupStudent = await c.env.DB.prepare(
-      `SELECT 1 FROM user_guardians ug
-       JOIN group_members gm ON gm.user_id = ug.user_id
-       WHERE ug.guardian_user_id = ? AND gm.group_id = ? AND ug.status = 'active' AND gm.status = 'active'
-       LIMIT 1`
-    ).bind(userId, groupId).first()
-    if (!isGuardianOfGroupStudent) return c.json(fail('접근 권한이 없습니다.'), 403)
-  }
+  if (!member) return c.json(fail('접근 권한이 없습니다.'), 403)
 
   let query = `
     SELECT ls.id, ls.group_id, ls.title, ls.description,
@@ -67,7 +58,7 @@ schedules.get('/:groupId/schedules', authMiddleware, async (c) => {
   ])
 
   const total = countRow?.total ?? 0
-  return c.json(paginate(rows.results, page, limit, total))
+  return c.json(paginate(rows.results, total, page, limit))
 })
 
 // ══════════════════════════════════════════════════════════════
@@ -132,20 +123,10 @@ schedules.get('/:groupId/schedules/:scheduleId', authMiddleware, async (c) => {
   const groupId    = parseInt(c.req.param('groupId'))
   const scheduleId = parseInt(c.req.param('scheduleId'))
 
+  // 그룹 멤버(강사/관리자/학생)만 접근 가능 — 비멤버는 403
   const member = await getMemberRole(c.env.DB, groupId, userId)
-  const isInstructor = member && INSTRUCTOR_ROLES.includes(member.role)
-
-  let isGuardian = false
-  if (!isInstructor) {
-    const guardianCheck = await c.env.DB.prepare(
-      `SELECT 1 FROM user_guardians ug
-       JOIN group_members gm ON gm.user_id = ug.user_id
-       WHERE ug.guardian_user_id = ? AND gm.group_id = ? AND ug.status = 'active' AND gm.status = 'active'
-       LIMIT 1`
-    ).bind(userId, groupId).first()
-    if (!guardianCheck && !member) return c.json(fail('접근 권한이 없습니다.'), 403)
-    if (guardianCheck) isGuardian = true
-  }
+  if (!member) return c.json(fail('접근 권한이 없습니다.'), 403)
+  const isInstructor = INSTRUCTOR_ROLES.includes(member.role)
 
   // 일정 기본 정보
   const schedule = await c.env.DB.prepare(
@@ -178,20 +159,8 @@ schedules.get('/:groupId/schedules/:scheduleId', authMiddleware, async (c) => {
       WHERE gm.group_id = ? AND gm.status = 'active' AND gm.user_id != ?
       ORDER BY u.name ASC`
     attendanceParams = [scheduleId, groupId, schedule.instructor_id]
-  } else if (isGuardian) {
-    // 보호자: 담당 학생들만
-    attendanceQuery = `
-      SELECT u.id AS student_id, u.name, u.user_type, u.avatar_url,
-             la.status AS attendance_status, la.checked_at, la.note
-      FROM user_guardians ug
-      JOIN users u ON u.id = ug.user_id
-      JOIN group_members gm ON gm.user_id = u.id AND gm.group_id = ?
-      LEFT JOIN lesson_attendances la ON la.schedule_id = ? AND la.student_id = u.id
-      WHERE ug.guardian_user_id = ? AND ug.status = 'active' AND gm.status = 'active'
-      ORDER BY u.name ASC`
-    attendanceParams = [groupId, scheduleId, userId]
   } else {
-    // 일반 멤버: 자신의 출석만
+    // 일반 멤버(학생): 자신의 출석만
     attendanceQuery = `
       SELECT u.id AS student_id, u.name, u.user_type, u.avatar_url,
              la.status AS attendance_status, la.checked_at, la.note

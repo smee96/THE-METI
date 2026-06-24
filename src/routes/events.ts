@@ -16,6 +16,46 @@ async function getMemberRole(db: D1Database, groupId: number, userId: number) {
 }
 
 // ══════════════════════════════════════════════════════════════
+// GET /api/v1/events
+// 전체 공개 행사 피드 (커뮤니티 행사 탭) — 인증 불필요
+//   visibility='public' 인 행사 전체 (그룹 무관), 취소 제외
+//   각 카드에 group_name / organizer_name 포함
+// ══════════════════════════════════════════════════════════════
+events.get('/', async (c) => {
+  const { page, limit, offset } = parsePagination(c.req.query('page'), c.req.query('limit'))
+  const status = c.req.query('status')   // upcoming | ongoing | ended
+
+  let query = `
+    SELECT e.*,
+      g.name AS group_name,
+      u.name AS organizer_name,
+      (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id AND status = 'confirmed') AS participant_count
+    FROM events e
+    JOIN groups g ON g.id = e.group_id
+    JOIN users u ON u.id = e.created_by
+    WHERE e.visibility = 'public' AND e.status != 'cancelled'
+  `
+  const params: unknown[] = []
+  let countWhere = `WHERE visibility = 'public' AND status != 'cancelled'`
+  const countParams: unknown[] = []
+  if (status) {
+    query += ` AND e.status = ?`;  params.push(status)
+    countWhere += ` AND status = ?`; countParams.push(status)
+  }
+  query += ` ORDER BY e.starts_at ASC LIMIT ? OFFSET ?`
+  params.push(limit, offset)
+
+  const [rows, countRow] = await Promise.all([
+    c.env.DB.prepare(query).bind(...params).all(),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) as total FROM events ${countWhere}`
+    ).bind(...countParams).first<{ total: number }>()
+  ])
+
+  return c.json(paginate(rows.results, countRow?.total ?? 0, page, limit))
+})
+
+// ══════════════════════════════════════════════════════════════
 // GET /api/v1/groups/:groupId/events
 // 그룹 내 행사 목록
 // ══════════════════════════════════════════════════════════════

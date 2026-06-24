@@ -28,7 +28,29 @@ chat.get('/', authMiddleware, async (c) => {
     ORDER BY last_message_at DESC
   `).bind(userId).all()
 
-  return c.json(ok(rooms.results))
+  const roomList = rooms.results as any[]
+
+  // 각 방의 상대 멤버(본인 제외) 정보 — 한 번의 쿼리로 조회해 members 배열로 매핑
+  if (roomList.length > 0) {
+    const roomIds = roomList.map(r => r.id)
+    const placeholders = roomIds.map(() => '?').join(',')
+    const memberRows = await c.env.DB.prepare(`
+      SELECT crm.room_id, u.id AS user_id, u.name, u.avatar_url
+      FROM chat_room_members crm
+      JOIN users u ON u.id = crm.user_id
+      WHERE crm.room_id IN (${placeholders}) AND crm.user_id != ? AND crm.left_at IS NULL
+    `).bind(...roomIds, userId).all()
+
+    const byRoom = new Map<number, any[]>()
+    for (const m of memberRows.results as any[]) {
+      const list = byRoom.get(m.room_id) ?? []
+      list.push({ user_id: m.user_id, name: m.name, avatar_url: m.avatar_url })
+      byRoom.set(m.room_id, list)
+    }
+    for (const r of roomList) r.members = byRoom.get(r.id) ?? []
+  }
+
+  return c.json(ok(roomList))
 })
 
 // ── 1:1 채팅방 시작 / 조회 ───────────────────────────

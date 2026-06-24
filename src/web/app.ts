@@ -325,6 +325,10 @@ export function appRegisterHtml(): string {
           <label for="pw">비밀번호</label>
           <input type="password" id="pw" placeholder="8자 이상" autocomplete="new-password">
         </div>
+        <div class="field">
+          <label for="birth">생년월일</label>
+          <input type="date" id="birth" autocomplete="bday">
+        </div>
 
         <div class="terms">
           <div class="all-row">
@@ -371,6 +375,21 @@ export function appRegisterHtml(): string {
         err.style.display = 'block'; return;
       }
 
+      const birth = document.getElementById('birth').value;
+      if (!birth) {
+        err.textContent = '생년월일을 입력해 주세요.';
+        err.style.display = 'block'; return;
+      }
+      // 만 19세 미만 가입 차단 (서버에서도 재검증)
+      const b = new Date(birth), now = new Date();
+      let age = now.getFullYear() - b.getFullYear();
+      const m = now.getMonth() - b.getMonth();
+      if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
+      if (age < 19) {
+        err.textContent = '만 19세 미만은 가입할 수 없습니다.';
+        err.style.display = 'block'; return;
+      }
+
       btn.textContent = '처리 중…'; btn.disabled = true;
       err.style.display = 'none'; ok.style.display = 'none';
 
@@ -382,6 +401,7 @@ export function appRegisterHtml(): string {
             name:         document.getElementById('name').value.trim(),
             email:        document.getElementById('email').value.trim(),
             password:     document.getElementById('pw').value,
+            birth_date:   birth,
             account_type: 'personal'
           })
         });
