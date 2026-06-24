@@ -27,16 +27,17 @@ events.get('/', async (c) => {
 
   let query = `
     SELECT e.*,
+      e.max_participants AS capacity,
       g.name AS group_name,
       u.name AS organizer_name,
-      (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id AND status = 'confirmed') AS participant_count
+      (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id AND status != 'cancelled') AS participant_count
     FROM events e
     JOIN groups g ON g.id = e.group_id
-    JOIN users u ON u.id = e.created_by
-    WHERE e.visibility = 'public' AND e.status != 'cancelled'
+    JOIN users u ON u.id = e.organizer_id
+    WHERE e.visibility = 'public' AND e.is_deleted = 0 AND e.status != 'cancelled'
   `
   const params: unknown[] = []
-  let countWhere = `WHERE visibility = 'public' AND status != 'cancelled'`
+  let countWhere = `WHERE visibility = 'public' AND is_deleted = 0 AND status != 'cancelled'`
   const countParams: unknown[] = []
   if (status) {
     query += ` AND e.status = ?`;  params.push(status)
