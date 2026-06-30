@@ -14,7 +14,7 @@ async function loadPartners() {
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm text-gray-500">등록된 파트너 서비스 ${partners.length}개</p>
-            <p class="text-xs text-gray-400 mt-0.5">해피트리, 미니게임 등 WebView 방식으로 메티 앱 내에서 동작합니다.</p>
+            <p class="text-xs text-gray-400 mt-0.5">해피트리, 미니게임 등 WebView 방식으로 엘리드 앱 내에서 동작합니다.</p>
           </div>
           <button onclick="showCreatePartnerModal()"
             class="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition flex items-center gap-2">
@@ -130,7 +130,7 @@ function showCreatePartnerModal() {
           <label class="block text-sm font-semibold text-gray-700 mb-1">WebView URL</label>
           <input id="partner-webview" type="url" placeholder="https://partner-game.com/meti"
             class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
-          <p class="text-xs text-gray-400 mt-1">메티 앱에서 WebView로 열릴 파트너 서비스 URL</p>
+          <p class="text-xs text-gray-400 mt-1">엘리드 앱에서 WebView로 열릴 파트너 서비스 URL</p>
         </div>
 
         <div>

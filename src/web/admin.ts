@@ -6,7 +6,11 @@ export function adminLoginHtml(): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>METI Admin</title>
+  <title>ELID Admin</title>
+  <link rel="icon" type="image/svg+xml" href="/static/brand/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/brand/favicon-16.png">
+  <link rel="apple-touch-icon" href="/static/brand/favicon-180.png">
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
   <style>
@@ -46,7 +50,7 @@ export function adminLoginHtml(): string {
 </head>
 <body>
   <div class="wrap">
-    <div class="wordmark">MET<span class="i">I</span></div>
+    <div class="wordmark">EL<span class="i">I</span>D</div>
     <p class="tagline">Admin Dashboard</p>
     <div class="card">
       <div id="err"></div>
@@ -96,13 +100,17 @@ export function adminAppHtml(): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>METI Admin</title>
+  <title>ELID Admin</title>
+  <link rel="icon" type="image/svg+xml" href="/static/brand/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/brand/favicon-16.png">
+  <link rel="apple-touch-icon" href="/static/brand/favicon-180.png">
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* ── METI Design Tokens ───────────────────────────────── */
+    /* ── ELID Design Tokens ───────────────────────────────── */
     :root {
       --navy:#0B1E40; --navy-deep:#06122A; --navy-glow:#1C3D72;
       --gold:#C9A86A; --gold-admin:#C2974E; --gold-soft:rgba(194,151,78,0.14);
@@ -145,7 +153,7 @@ export function adminAppHtml(): string {
       font-size:12px; font-weight:700; padding:3px 9px; border-radius:var(--r-pill);
     }
 
-    /* ── 콘텐츠 영역 Tailwind → METI 토큰 오버라이드 ──────── */
+    /* ── 콘텐츠 영역 Tailwind → ELID 토큰 오버라이드 ──────── */
     /* 파란색 → 네이비 */
     #page-content .bg-blue-600,
     #page-content .bg-blue-700              { background-color:var(--navy)           !important; }
@@ -165,7 +173,7 @@ export function adminAppHtml(): string {
     #page-content .focus\\:ring-blue-400:focus,
     #page-content .focus\\:ring-blue-500:focus { --tw-ring-color:rgba(11,30,64,.22)  !important; }
 
-    /* 회색 → METI 서피스/잉크 */
+    /* 회색 → ELID 서피스/잉크 */
     #page-content .text-gray-900            { color:var(--ink)                       !important; }
     #page-content .text-gray-800            { color:var(--ink)                       !important; }
     #page-content .text-gray-700            { color:var(--sub)                       !important; }
@@ -182,7 +190,7 @@ export function adminAppHtml(): string {
     #page-content .hover\\:bg-gray-50:hover  { background-color:var(--surface-2)     !important; }
     #page-content .hover\\:bg-gray-100:hover { background-color:rgba(14,23,38,0.05)  !important; }
 
-    /* 모듈 공용 input → METI 포커스 */
+    /* 모듈 공용 input → ELID 포커스 */
     #page-content input[type="text"]:focus,
     #page-content input[type="number"]:focus,
     #page-content input[type="email"]:focus,

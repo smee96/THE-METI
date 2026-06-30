@@ -29,7 +29,7 @@ const partnerAuth = async (c: any, next: () => Promise<void>) => {
 }
 
 // ── POST /api/v1/partner/user-map ─────────────────────
-// 파트너가 METI 유저 매핑 토큰 요청
+// 파트너가 ELID 유저 매핑 토큰 요청
 partner.post(
   '/user-map',
   partnerAuth,
@@ -97,7 +97,7 @@ partner.post(
 
     const userId = mapping.user_id
 
-    // 정산 계산 — 소진 금액(amount)이 있으면 파트너 수수료율로 METI 수취분 산출
+    // 정산 계산 — 소진 금액(amount)이 있으면 파트너 수수료율로 ELID 수취분 산출
     const pinfo = await c.env.DB.prepare(
       `SELECT commission_rate FROM partner_services WHERE id = ?`
     ).bind(partnerId).first<{ commission_rate: number }>()

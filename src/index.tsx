@@ -34,10 +34,15 @@ function cardPublicHtml(cardId: string): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>METI 디지털 명함</title>
+  <title>ELID 디지털 명함</title>
+  <link rel="icon" type="image/svg+xml" href="/static/brand/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/brand/favicon-16.png">
+  <link rel="apple-touch-icon" href="/static/brand/favicon-180.png">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
-  <meta property="og:title" content="METI 디지털 명함">
+  <meta property="og:title" content="ELID 디지털 명함">
+  <meta property="og:image" content="https://the-meti.pages.dev/static/brand/elid-appicon-navy-512.png">
   <meta property="og:description" content="QR 코드로 명함을 교환하세요">
   <style>
     .section-title { font-size:.7rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#94a3b8; margin-bottom:.5rem; }
@@ -50,9 +55,9 @@ function cardPublicHtml(cardId: string): string {
 </head>
 <body class="bg-gradient-to-br from-slate-100 to-blue-50 min-h-screen flex items-center justify-center p-4">
   <div class="w-full max-w-sm">
-    <!-- METI 워터마크 -->
+    <!-- ELID 워터마크 -->
     <div class="text-center mb-4">
-      <p class="text-xs text-gray-400 font-semibold tracking-widest">METI</p>
+      <p class="text-xs text-gray-400 font-semibold tracking-widest">EL<span style="color:#C9A86A">I</span>D</p>
     </div>
 
     <!-- 로딩 -->
@@ -127,7 +132,7 @@ function cardPublicHtml(cardId: string): string {
       <!-- ⑧ CTA -->
       <a href="https://the-meti.pages.dev" target="_blank"
         class="block w-full py-3.5 bg-blue-600 text-white text-center rounded-2xl font-semibold hover:bg-blue-700 transition shadow">
-        <i class="fas fa-id-card mr-2"></i>METI로 명함 교환하기
+        <i class="fas fa-id-card mr-2"></i>ELID로 명함 교환하기
       </a>
     </div>
 
@@ -163,7 +168,7 @@ function cardPublicHtml(cardId: string): string {
         const card = data.data;
 
         document.getElementById('card-content').classList.remove('hidden');
-        document.title = (card.name || 'METI') + ' - 디지털 명함';
+        document.title = (card.name || 'ELID') + ' - 디지털 명함';
 
         // ① 헤더
         document.getElementById('card-name').textContent    = card.name    || '';
@@ -290,7 +295,7 @@ app.route('/api/v1',          productsRoutes)  // /groups/:id/products, /orders,
 
 // ── 헬스체크 ──────────────────────────────────────────────
 app.get('/health', (c) =>
-  c.json({ status: 'ok', service: 'METI Backend', version: '1.0.0' })
+  c.json({ status: 'ok', service: 'ELID Backend', version: '1.0.0' })
 )
 
 // ════════════════════════════════════════════════════════════
@@ -328,7 +333,7 @@ app.get('/app/register', (c) => c.html(appRegisterHtml()))
 app.get('/app',          (c) => c.redirect('/'))
 
 // 나머지 /app/* 전체 → SPA shell (JS가 라우팅 처리)
-app.get('/app/*', (c) => c.html(appShellHtml('METI')))
+app.get('/app/*', (c) => c.html(appShellHtml('ELID')))
 
 // ════════════════════════════════════════════════════════════
 // ── 명함 공개 페이지 (앱 미설치자용)
@@ -351,17 +356,22 @@ function invitePageHtml(token: string): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>METI 그룹 초대</title>
+  <title>ELID 그룹 초대</title>
+  <link rel="icon" type="image/svg+xml" href="/static/brand/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/brand/favicon-16.png">
+  <link rel="apple-touch-icon" href="/static/brand/favicon-180.png">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
-  <meta property="og:title" content="METI 그룹 초대">
-  <meta property="og:description" content="METI 그룹에 초대되었습니다.">
+  <meta property="og:title" content="ELID 그룹 초대">
+  <meta property="og:description" content="ELID 그룹에 초대되었습니다.">
+  <meta property="og:image" content="https://the-meti.pages.dev/static/brand/elid-appicon-navy-512.png">
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">
   <div id="container" class="w-full max-w-sm">
-    <!-- METI 로고 -->
+    <!-- ELID 로고 -->
     <div class="text-center mb-6">
-      <p class="text-sm text-gray-500 font-semibold tracking-widest">METI</p>
+      <p class="text-sm text-gray-500 font-semibold tracking-widest">EL<span style="color:#C9A86A">I</span>D</p>
     </div>
 
     <!-- 로딩 -->
@@ -408,7 +418,7 @@ function invitePageHtml(token: string): string {
     <div id="invite-error" class="hidden bg-white rounded-3xl shadow-2xl p-8 text-center">
       <i class="fas fa-exclamation-circle text-red-400 text-3xl mb-3"></i>
       <p id="invite-error-msg" class="text-gray-600">유효하지 않은 초대 링크입니다.</p>
-      <a href="https://meti.io" class="mt-4 inline-block text-blue-600 text-sm hover:underline">METI 홈으로 이동</a>
+      <a href="https://meti.io" class="mt-4 inline-block text-blue-600 text-sm hover:underline">ELID 홈으로 이동</a>
     </div>
   </div>
 
@@ -465,12 +475,12 @@ function invitePageHtml(token: string): string {
             <i class="fas fa-sign-in-alt mr-2"></i>로그인 후 웹에서 참여
           </a>
           <p class="text-center text-sm text-gray-400">앱이 없으신가요?
-            <a href="https://meti.io" class="text-blue-600 hover:underline">METI 다운로드</a>
+            <a href="https://meti.io" class="text-blue-600 hover:underline">ELID 다운로드</a>
           </p>
         \`;
 
         document.getElementById('invite-content').classList.remove('hidden');
-        document.title = (inv.group_name || '그룹') + ' - METI 그룹 초대';
+        document.title = (inv.group_name || '그룹') + ' - ELID 그룹 초대';
 
       } catch (e) {
         document.getElementById('invite-loading').classList.add('hidden');

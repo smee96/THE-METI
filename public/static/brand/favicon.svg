@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="ELID favicon">
+  <defs>
+    <radialGradient id="fbg" cx="0.78" cy="-0.10" r="1.30">
+      <stop offset="0" stop-color="#1C3D72"></stop>
+      <stop offset="0.42" stop-color="#0B1E40"></stop>
+      <stop offset="1" stop-color="#06122A"></stop>
+    </radialGradient>
+  </defs>
+  <rect x="0" y="0" width="64" height="64" rx="15" fill="url(#fbg)"></rect>
+  <rect x="2" y="2" width="60" height="60" rx="13" fill="none" stroke="#C9A86A" stroke-opacity="0.5" stroke-width="1.4"></rect>
+  <text x="32" y="46" text-anchor="middle" font-family="Pretendard, -apple-system, system-ui, sans-serif" font-weight="800" font-size="42" letter-spacing="-1" fill="#FFFFFF">e<tspan fill="#C9A86A">.</tspan></text>
+</svg>

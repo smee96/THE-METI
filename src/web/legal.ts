@@ -1,8 +1,8 @@
 // 개인정보처리방침 · 이용약관 HTML
 // 보호자 항목은 미성년 가입 차단 정책 확정 시 제거 예정
 
-const COMPANY = '주식회사 모빈'
-const SERVICE = 'METI'
+const COMPANY = '주식회사 메티'
+const SERVICE = 'ELID'
 const CONTACT_EMAIL = 'privacy@mobin-inc.com'
 const EFFECTIVE_DATE = '2026년 6월 7일'
 

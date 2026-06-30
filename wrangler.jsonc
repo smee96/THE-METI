@@ -22,7 +22,7 @@
   ],
 
   "vars": {
-    "APP_NAME": "METI",
+    "APP_NAME": "ELID",
     "APP_ENV": "production",
     "JWT_EXPIRES_IN": "7d",
     "REFRESH_TOKEN_EXPIRES_IN": "30d"
@@ -47,7 +47,7 @@
         }
       ],
       "vars": {
-        "APP_NAME": "METI",
+        "APP_NAME": "ELID",
         "APP_ENV": "staging",
         "JWT_EXPIRES_IN": "7d",
         "REFRESH_TOKEN_EXPIRES_IN": "30d"

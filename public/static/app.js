@@ -1,5 +1,5 @@
 // ============================================================
-// METI App Web SPA - v1.0
+// ELID App Web SPA - v1.0
 // 사용자 + 그룹관리자 통합 웹
 // ============================================================
 
@@ -266,7 +266,7 @@ function showSection(name) {
     'group-lessons':     '레슨 관리',
     'group-invites':     '초대링크',
   };
-  document.getElementById('page-title').textContent = titles[name] || 'METI';
+  document.getElementById('page-title').textContent = titles[name] || 'ELID';
 
   // 활성 nav 표시
   document.querySelectorAll('.nav-item').forEach(el => {

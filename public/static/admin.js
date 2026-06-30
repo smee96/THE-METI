@@ -1,4 +1,4 @@
-// METI Admin Web SPA — v3.0 (METI Design System)
+// ELID Admin Web SPA — v3.0 (ELID Design System)
 // ============================================================
 
 const API = '/api/v1';
@@ -56,7 +56,7 @@ function renderApp() {
           style="border-bottom:1px solid rgba(255,255,255,0.08)">
           <div>
             <span style="font-size:18px;font-weight:800;letter-spacing:0.18em;color:#fff;">
-              MET<span style="color:#C2974E">I</span>
+              EL<span style="color:#C2974E">I</span>D
             </span>
             <span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.28);letter-spacing:0.12em;display:block;margin-top:2px;text-transform:uppercase;">Admin</span>
           </div>

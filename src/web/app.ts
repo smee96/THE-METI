@@ -6,7 +6,11 @@ export function appLoginHtml(): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>로그인 — METI</title>
+  <title>로그인 — ELID</title>
+  <link rel="icon" type="image/svg+xml" href="/static/brand/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/brand/favicon-16.png">
+  <link rel="apple-touch-icon" href="/static/brand/favicon-180.png">
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
   <style>
     :root {
@@ -128,7 +132,7 @@ export function appLoginHtml(): string {
           <path d="M5.5 8.5c-1 1.6-1 5.4 0 7M8.7 6.6c-1.8 2.5-1.8 8.3 0 10.8M18.5 8.5c1 1.6 1 5.4 0 7M15.3 6.6c1.8 2.5 1.8 8.3 0 10.8M12 9.5a2.5 2.5 0 0 0 0 5" stroke="#C9A86A" stroke-width="1.6" stroke-linecap="round"/>
         </svg>
       </span>
-      <span class="wm-text">MET<span class="i">I</span></span>
+      <span class="wm-text">EL<span class="i">I</span>D</span>
     </div>
 
     <div class="card">
@@ -157,7 +161,7 @@ export function appLoginHtml(): string {
     </div>
   </div>
 
-  <div class="foot">© 2026 주식회사 모빈</div>
+  <div class="foot">© 2026 METI</div>
 
   <script>
     (function() {
@@ -212,7 +216,11 @@ export function appRegisterHtml(): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>회원가입 — METI</title>
+  <title>회원가입 — ELID</title>
+  <link rel="icon" type="image/svg+xml" href="/static/brand/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/brand/favicon-16.png">
+  <link rel="apple-touch-icon" href="/static/brand/favicon-180.png">
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
   <style>
     :root {
@@ -302,7 +310,7 @@ export function appRegisterHtml(): string {
           <path d="M5.5 8.5c-1 1.6-1 5.4 0 7M8.7 6.6c-1.8 2.5-1.8 8.3 0 10.8M18.5 8.5c1 1.6 1 5.4 0 7M15.3 6.6c1.8 2.5 1.8 8.3 0 10.8M12 9.5a2.5 2.5 0 0 0 0 5" stroke="#C9A86A" stroke-width="1.6" stroke-linecap="round"/>
         </svg>
       </span>
-      <span class="wm-text">MET<span class="i">I</span></span>
+      <span class="wm-text">EL<span class="i">I</span>D</span>
     </div>
 
     <div class="card">
@@ -353,7 +361,7 @@ export function appRegisterHtml(): string {
     </div>
   </div>
 
-  <div class="foot">© 2026 주식회사 모빈</div>
+  <div class="foot">© 2026 METI</div>
 
   <script>
     function toggleAll(el) {
@@ -434,7 +442,14 @@ export function appLandingHtml(): string {
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>METI — 명함을 넘어, 관계로</title>
+<title>ELID — 명함을 넘어, 관계로</title>
+<meta property="og:title" content="ELID — 명함을 넘어, 관계로" />
+<meta property="og:description" content="디지털 명함 기반 종합 네트워킹 플랫폼" />
+<meta property="og:image" content="https://the-meti.pages.dev/static/brand/elid-appicon-navy-512.png" />
+<link rel="icon" type="image/svg+xml" href="/static/brand/favicon.svg" />
+<link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="/static/brand/favicon-16.png" />
+<link rel="apple-touch-icon" href="/static/brand/favicon-180.png" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
 <style>
   :root{
@@ -604,7 +619,7 @@ export function appLandingHtml(): string {
       <span class="nfcmark" style="width:36px;height:36px;">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5.5 8.5c-1 1.6-1 5.4 0 7M8.7 6.6c-1.8 2.5-1.8 8.3 0 10.8M18.5 8.5c1 1.6 1 5.4 0 7M15.3 6.6c1.8 2.5 1.8 8.3 0 10.8M12 9.5a2.5 2.5 0 0 0 0 5" stroke="#C9A86A" stroke-width="1.6" stroke-linecap="round"/></svg>
       </span>
-      <span class="word" style="font-size:19px;color:var(--navy);">MET<span class="i">I</span></span>
+      <span class="word" style="font-size:19px;color:var(--navy);">EL<span class="i">I</span>D</span>
     </a>
     <nav class="links">
       <a href="#features">기능</a>
@@ -646,7 +661,7 @@ export function appLandingHtml(): string {
         <div class="foil"></div><div class="tex"></div>
         <div class="pad">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-            <span class="word" style="font-size:15px;">MET<span class="i">I</span></span><span class="nf">NFC</span>
+            <span class="word" style="font-size:15px;">EL<span class="i">I</span>D</span><span class="nf">NFC</span>
           </div>
           <div>
             <div style="font-size:25px;font-weight:700;letter-spacing:-.02em;">강민서</div>
@@ -798,7 +813,8 @@ export function appLandingHtml(): string {
       <div style="max-width:260px;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
           <span class="nfcmark" style="width:32px;height:32px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5.5 8.5c-1 1.6-1 5.4 0 7M8.7 6.6c-1.8 2.5-1.8 8.3 0 10.8M18.5 8.5c1 1.6 1 5.4 0 7M15.3 6.6c1.8 2.5 1.8 8.3 0 10.8M12 9.5a2.5 2.5 0 0 0 0 5" stroke="#C9A86A" stroke-width="1.6" stroke-linecap="round"/></svg></span>
-          <span class="word" style="font-size:18px;color:#fff;">MET<span class="i">I</span></span>
+          <span class="word" style="font-size:18px;color:#fff;">EL<span class="i">I</span>D</span>
+          <span style="font-size:11px;color:rgba(255,255,255,.42);font-weight:600;letter-spacing:.04em;">by METI</span>
         </div>
         <p style="font-size:13.5px;line-height:1.6;color:rgba(255,255,255,.5);margin:0;">디지털 명함 기반 종합 네트워킹 플랫폼. 명함을 넘어, 관계로.</p>
       </div>
@@ -808,7 +824,7 @@ export function appLandingHtml(): string {
         <div><h4>지원</h4><a href="#">도움말</a><a href="mailto:hello@meti.io">문의하기</a><a href="/terms">이용약관</a><a href="/privacy">개인정보처리방침</a></div>
       </div>
     </div>
-    <div class="copy">© 2026 METI. All rights reserved.</div>
+    <div class="copy">ELID by METI · © 2026 METI. All rights reserved.</div>
   </div>
 </footer>
 
@@ -833,19 +849,23 @@ export function appLandingHtml(): string {
 </html>`
 }
 
-export function appShellHtml(pageTitle: string = 'METI'): string {
+export function appShellHtml(pageTitle: string = 'ELID'): string {
   return `<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${pageTitle}</title>
+  <link rel="icon" type="image/svg+xml" href="/static/brand/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/brand/favicon-16.png">
+  <link rel="apple-touch-icon" href="/static/brand/favicon-180.png">
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>tailwind.config = { theme: { extend: { fontSize: { 'xs':'11px','sm':'12px','base':'13px','lg':'14px','xl':'15px','2xl':'16px','3xl':'18px' } } } }</script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
   <style>
-    /* ── METI Design Tokens ─────────────────────────── */
+    /* ── ELID Design Tokens ─────────────────────────── */
     :root {
       --navy:#0B1E40; --navy-deep:#06122A; --navy-glow:#1C3D72;
       --gold:#C9A86A; --gold-deep:#9A7333; --gold-soft:rgba(201,168,106,0.16);
@@ -895,7 +915,7 @@ export function appShellHtml(pageTitle: string = 'METI'): string {
     .stat-card { background:var(--surface); border-radius:var(--r-lg); padding:1.25rem 1.5rem; box-shadow:var(--shadow-card); border:1px solid var(--line-2); }
     .item-card  { background:var(--surface); border-radius:var(--r-md); padding:1rem 1.25rem; box-shadow:0 1px 3px rgba(14,23,38,.05); margin-bottom:0.75rem; border:1px solid var(--line-2); }
 
-    /* ── 콘텐츠 내 파란색 → METI 네이비 오버라이드 ── */
+    /* ── 콘텐츠 내 파란색 → ELID 네이비 오버라이드 ── */
     .bg-blue-600  { background-color:var(--navy)      !important; }
     .bg-blue-500  { background-color:var(--navy)      !important; }
     .hover\\:bg-blue-700:hover { background-color:var(--navy-deep) !important; }
