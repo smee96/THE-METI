@@ -201,7 +201,7 @@ partner.get('/user-balance', partnerAuth, async (c) => {
 // ══════════════════════════════════════════════════════════════
 partner.get('/services', authMiddleware, async (c) => {
   const rows = await c.env.DB.prepare(`
-    SELECT id, name, description, webview_url
+    SELECT id, name, description, webview_url, open_mode
     FROM partner_services
     WHERE status = 'active'
       AND webview_url IS NOT NULL

@@ -27,6 +27,7 @@ partnerAdmin.post(
     name:        z.string().min(1).max(100),
     description: z.string().max(500).optional(),
     webview_url: z.string().url().optional(),   // WebView로 열 게임/서비스 URL
+    open_mode:   z.enum(['webview', 'external']).optional(),  // webview=인앱 / external=외부 브라우저
     webhook_url: z.string().url().optional(),
   })),
   async (c) => {
@@ -37,13 +38,14 @@ partnerAdmin.post(
     const apiKey = Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('')
 
     const result = await c.env.DB.prepare(`
-      INSERT INTO partner_services (name, description, api_key, webview_url, webhook_url, status)
-      VALUES (?, ?, ?, ?, ?, 'active')
+      INSERT INTO partner_services (name, description, api_key, webview_url, open_mode, webhook_url, status)
+      VALUES (?, ?, ?, ?, ?, ?, 'active')
     `).bind(
       body.name,
       body.description ?? null,
       apiKey,
       body.webview_url ?? null,
+      body.open_mode ?? 'webview',
       body.webhook_url ?? null
     ).run()
 
@@ -87,6 +89,7 @@ partnerAdmin.patch(
     name:        z.string().min(1).max(100).optional(),
     description: z.string().max(500).optional(),
     webview_url: z.string().url().nullable().optional(),
+    open_mode:   z.enum(['webview', 'external']).optional(),
     webhook_url: z.string().url().nullable().optional(),
     status:      z.enum(['active', 'inactive', 'suspended']).optional(),
   })),
@@ -102,6 +105,7 @@ partnerAdmin.patch(
     if (body.name        !== undefined) { fields.push('name = ?');        vals.push(body.name) }
     if (body.description !== undefined) { fields.push('description = ?'); vals.push(body.description) }
     if (body.webview_url !== undefined) { fields.push('webview_url = ?'); vals.push(body.webview_url) }
+    if (body.open_mode   !== undefined) { fields.push('open_mode = ?');   vals.push(body.open_mode) }
     if (body.webhook_url !== undefined) { fields.push('webhook_url = ?'); vals.push(body.webhook_url) }
     if (body.status      !== undefined) { fields.push('status = ?');      vals.push(body.status) }
 

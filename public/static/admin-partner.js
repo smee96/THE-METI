@@ -134,6 +134,16 @@ function showCreatePartnerModal() {
         </div>
 
         <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">여는 방식</label>
+          <select id="partner-openmode"
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+            <option value="webview">인앱 WebView (앱 내 구동)</option>
+            <option value="external">외부 브라우저 (완전 이동)</option>
+          </select>
+          <p class="text-xs text-gray-400 mt-1">유료 재화 게임 등 심사 리스크가 있으면 외부 브라우저 권장</p>
+        </div>
+
+        <div>
           <label class="block text-sm font-semibold text-gray-700 mb-1">Webhook URL</label>
           <input id="partner-webhook" type="url" placeholder="https://partner-server.com/webhook (선택)"
             class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
@@ -161,6 +171,7 @@ async function submitCreatePartner() {
   const name    = document.getElementById('partner-name')?.value.trim();
   const desc    = document.getElementById('partner-desc')?.value.trim();
   const webview = document.getElementById('partner-webview')?.value.trim();
+  const openmode = document.getElementById('partner-openmode')?.value;
   const webhook = document.getElementById('partner-webhook')?.value.trim();
   const errEl   = document.getElementById('partner-create-error');
 
@@ -171,6 +182,7 @@ async function submitCreatePartner() {
     const body = { name };
     if (desc)    body.description = desc;
     if (webview) body.webview_url = webview;
+    if (openmode) body.open_mode = openmode;
     if (webhook) body.webhook_url = webhook;
 
     const { data } = await axios.post('/admin/partners', body);
@@ -288,6 +300,14 @@ async function showPartnerDetail(partnerId) {
             class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
         </div>
         <div>
+          <label class="block text-xs font-semibold text-gray-500 mb-1">여는 방식</label>
+          <select id="edit-partner-openmode"
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+            <option value="webview"  ${(partner.open_mode||'webview')==='webview'  ? 'selected':''}>인앱 WebView (앱 내 구동)</option>
+            <option value="external" ${partner.open_mode==='external' ? 'selected':''}>외부 브라우저 (완전 이동)</option>
+          </select>
+        </div>
+        <div>
           <label class="block text-xs font-semibold text-gray-500 mb-1">Webhook URL</label>
           <input id="edit-partner-webhook" type="url" value="${partner.webhook_url || ''}"
             placeholder="https://partner.com/webhook"
@@ -351,6 +371,7 @@ async function submitEditPartner(partnerId) {
     name:        document.getElementById('edit-partner-name')?.value.trim(),
     description: document.getElementById('edit-partner-desc')?.value.trim(),
     webview_url: document.getElementById('edit-partner-webview')?.value.trim() || null,
+    open_mode:   document.getElementById('edit-partner-openmode')?.value,
     webhook_url: document.getElementById('edit-partner-webhook')?.value.trim() || null,
     status:      document.getElementById('edit-partner-status')?.value,
   };
