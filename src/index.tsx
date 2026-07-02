@@ -13,7 +13,6 @@ import partnerRoutes from './routes/partner'
 import adminRoutes    from './routes/admin'
 import lessonsRoutes         from './routes/lessons'
 import lessonSchedulesRoutes from './routes/lesson-schedules'
-import guardianRoutes        from './routes/guardians'
 import productsRoutes        from './routes/products'
 import pointsRoutes   from './routes/points'
 import staticRouter   from './static-serve'
@@ -289,7 +288,6 @@ app.route('/api/v1/partner',  partnerRoutes)
 app.route('/api/v1/admin',    adminRoutes)
 app.route('/api/v1/lessons',   lessonsRoutes)
 app.route('/api/v1/lessons',   lessonSchedulesRoutes)  // schedules / students 하위 경로
-app.route('/api/v1/guardians', guardianRoutes)
 app.route('/api/v1/points',   pointsRoutes)
 app.route('/api/v1',          productsRoutes)  // /groups/:id/products, /orders, /payments
 

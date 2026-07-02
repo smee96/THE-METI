@@ -268,10 +268,6 @@ schedules.get('/:groupId/students', authMiddleware, async (c) => {
     `SELECT
        u.id, u.name, u.email, u.user_type, u.birth_date, u.avatar_url,
        gm.role AS member_role, gm.guardian_user_id, gm.guardian_approved_at,
-       ug.id AS guardian_link_id, ug.relation AS guardian_relation,
-       ug.status AS guardian_link_status,
-       guu.id AS guardian_id, guu.name AS guardian_name,
-       guu.email AS guardian_email, guu.avatar_url AS guardian_avatar,
        -- 출석률: 전체 완료 일정 중 present/late 개수
        (SELECT COUNT(*) FROM lesson_attendances la
         JOIN lesson_schedules ls ON ls.id = la.schedule_id
@@ -282,8 +278,6 @@ schedules.get('/:groupId/students', authMiddleware, async (c) => {
         WHERE ls.group_id = ? AND ls.status = 'completed' AND ls.is_deleted = 0) AS total_lessons
      FROM group_members gm
      JOIN users u ON u.id = gm.user_id
-     LEFT JOIN user_guardians ug ON ug.user_id = u.id AND ug.status = 'active'
-     LEFT JOIN users guu ON guu.id = ug.guardian_user_id
      WHERE gm.group_id = ? AND gm.status = 'active'
        AND gm.role NOT IN ('admin', 'sub_admin', 'instructor')
      ORDER BY u.name ASC`

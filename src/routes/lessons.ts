@@ -4,6 +4,7 @@ import { z } from 'zod'
 import type { Bindings, Variables } from '../types'
 import { authMiddleware } from '../middleware/auth'
 import { ok, fail, paginate, parsePagination } from '../middleware/response'
+import { debitWallet } from '../lib/wallet'
 
 const lessons = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -92,13 +93,13 @@ lessons.post(
       return c.json(fail('강사는 그룹의 instructor / admin / sub_admin 역할이어야 합니다.'), 400)
     }
 
-    // 그룹 포인트 확인 및 차감
+    // 그룹 포인트 잔액 사전 확인 (point_wallets 단일 원장)
     if (body.point_cost > 0) {
-      const groupPoint = await c.env.DB.prepare(
-        `SELECT balance FROM group_points WHERE group_id = ?`
+      const gWallet = await c.env.DB.prepare(
+        `SELECT balance FROM point_wallets WHERE owner_type = 'group' AND owner_id = ?`
       ).bind(groupId).first<{ balance: number }>()
 
-      const balance = groupPoint?.balance ?? 0
+      const balance = gWallet?.balance ?? 0
       if (balance < body.point_cost) {
         return c.json(fail('그룹 포인트가 부족합니다.', {
           error_code: 'insufficient_group_points',
@@ -107,19 +108,9 @@ lessons.post(
           shortage  : body.point_cost - balance
         }), 402)
       }
-
-      await c.env.DB.batch([
-        c.env.DB.prepare(
-          `UPDATE group_points SET balance = balance - ?, updated_at = datetime('now') WHERE group_id = ?`
-        ).bind(body.point_cost, groupId),
-        c.env.DB.prepare(`
-          INSERT INTO point_transactions
-            (owner_type, owner_id, type, amount, description, created_by)
-          VALUES ('group', ?, 'lesson_open_cost', ?, '레슨 개설 비용', ?)
-        `).bind(groupId, -body.point_cost, userId)
-      ])
     }
 
+    // 레슨 생성
     const result = await c.env.DB.prepare(`
       INSERT INTO lessons
         (group_id, instructor_id, title, description, schedule_type,
@@ -130,8 +121,28 @@ lessons.post(
       body.schedule_type, body.scheduled_at, body.duration_minutes,
       body.capacity ?? null, body.location ?? null, body.point_cost
     ).run()
+    const lessonId = result.meta.last_row_id as number
 
-    return c.json(ok({ lesson_id: result.meta.last_row_id }, '레슨이 생성되었습니다.'), 201)
+    // 그룹 포인트 차감 (개설 비용) — 실패 시 레슨 롤백
+    if (body.point_cost > 0) {
+      const debit = await debitWallet(c.env.DB, 'group', groupId, body.point_cost, {
+        type: 'use_lesson_create',
+        refType: 'lesson',
+        refId: lessonId,
+        description: '레슨 개설 비용',
+      })
+      if (!debit.ok) {
+        await c.env.DB.prepare(`DELETE FROM lessons WHERE id = ?`).bind(lessonId).run()
+        return c.json(fail('그룹 포인트가 부족합니다.', {
+          error_code: 'insufficient_group_points',
+          required  : body.point_cost,
+          current   : debit.balance,
+          shortage  : body.point_cost - debit.balance
+        }), 402)
+      }
+    }
+
+    return c.json(ok({ lesson_id: lessonId }, '레슨이 생성되었습니다.'), 201)
   }
 )
 

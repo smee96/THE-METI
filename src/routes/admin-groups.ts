@@ -521,15 +521,15 @@ groupDetail.post(
     // 거래 기록
     await c.env.DB.prepare(`
       INSERT INTO point_transactions
-        (wallet_id, type, amount, balance_after, description, actor_id, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+        (wallet_id, type, point_type, amount, balance_after, ref_type, ref_id, description, created_at)
+      VALUES (?, ?, 'reward', ?, ?, 'admin', ?, ?, datetime('now'))
     `).bind(
       wallet.id,
       amount > 0 ? 'admin_grant' : 'admin_deduct',
       amount,
       wallet.balance + amount,
-      description,
       adminId,
+      description,
     ).run()
 
     const action = amount > 0 ? '지급' : '차감'
