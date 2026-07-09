@@ -1860,11 +1860,11 @@ async function loadGroupInvites(groupId) {
                 ${lk.is_active ? '활성' : '비활성'}
               </span>
             </div>
-            <p class="text-xs text-gray-400 mt-1 break-all">${escHtml(lk.url || '')}</p>
+            <p class="text-xs text-gray-400 mt-1 break-all">${escHtml(lk.invite_url || '')}</p>
             <p class="text-xs text-gray-400 mt-0.5">사용 ${lk.used_count}회 / ${lk.max_uses ? lk.max_uses + '회' : '무제한'}</p>
           </div>
           <div class="flex gap-1 flex-shrink-0">
-            <button onclick="copyLink('${escHtml(lk.url || '')}')"
+            <button onclick="copyLink('${escHtml(lk.invite_url || '')}')"
               class="px-2 py-1 border border-gray-200 rounded text-xs text-gray-500 hover:text-blue-600 hover:border-blue-300">
               복사
             </button>
@@ -1892,13 +1892,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const errEl = document.getElementById('invite-form-error');
     errEl.classList.add('hidden');
     try {
+      const expDate = document.getElementById('invite-expires').value;
+      let expires_days = null;
+      if (expDate) {
+        const days = Math.ceil((new Date(expDate + 'T23:59:59') - Date.now()) / 86400000);
+        expires_days = Math.min(365, Math.max(1, days));  // API 허용 범위 1~365
+      }
       const res = await axios.post(`/groups/${currentCtx.id}/invite-links`, {
         label:     document.getElementById('invite-label').value.trim() || null,
         max_uses:  parseInt(document.getElementById('invite-max-uses').value) || null,
-        expires_at:document.getElementById('invite-expires').value || null,
+        expires_days,
       });
       if (res.data.success) {
-        document.getElementById('invite-url').value = res.data.data.url || '';
+        document.getElementById('invite-url').value = res.data.data.invite_url || '';
         document.getElementById('invite-result').classList.remove('hidden');
         loadGroupInvites(currentCtx.id);
       } else {

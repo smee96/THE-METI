@@ -224,16 +224,16 @@ export function adminAppHtml(): string {
     </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
-  <script src="/static/admin.js?v=20260614"></script>
-  <script src="/static/admin-users.js?v=20260614"></script>
-  <script src="/static/admin-events.js?v=20260614"></script>
-  <script src="/static/admin-plans.js?v=20260614"></script>
-  <script src="/static/admin-lessons.js?v=20260614"></script>
-  <script src="/static/admin-nfc.js?v=20260614"></script>
-  <script src="/static/admin-reports.js?v=20260614"></script>
-  <script src="/static/admin-groups.js?v=20260614"></script>
-  <script src="/static/admin-orders.js?v=20260614"></script>
-  <script src="/static/admin-partner.js?v=20260614"></script>
+  <script src="/static/admin.js?v=20260709"></script>
+  <script src="/static/admin-users.js?v=20260709"></script>
+  <script src="/static/admin-events.js?v=20260709"></script>
+  <script src="/static/admin-plans.js?v=20260709"></script>
+  <script src="/static/admin-lessons.js?v=20260709"></script>
+  <script src="/static/admin-nfc.js?v=20260709"></script>
+  <script src="/static/admin-reports.js?v=20260709"></script>
+  <script src="/static/admin-groups.js?v=20260709"></script>
+  <script src="/static/admin-orders.js?v=20260709"></script>
+  <script src="/static/admin-partner.js?v=20260709"></script>
 </body>
 </html>`
 }
