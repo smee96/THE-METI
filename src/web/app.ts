@@ -953,7 +953,7 @@ export function appShellHtml(pageTitle: string = 'ELID'): string {
           <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
         </svg>
       </div>
-      <span class="font-bold text-lg tracking-widest" style="letter-spacing:0.18em">MET<span style="color:var(--gold)">I</span></span>
+      <span class="font-bold text-lg tracking-widest" style="letter-spacing:0.18em">EL<span style="color:var(--gold)">I</span>D</span>
     </div>
 
     <!-- 컨텍스트 선택 (개인 ↔ 그룹) -->
