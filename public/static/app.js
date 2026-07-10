@@ -1848,7 +1848,7 @@ async function loadGroupInvites(groupId) {
   el.innerHTML = loadingHtml();
   try {
     const res = await axios.get(`/groups/${groupId}/invite-links`);
-    const links = res.data.data?.links || [];
+    const links = res.data.data || [];
     if (links.length === 0) { el.innerHTML = emptyHtml('초대링크가 없습니다.'); return; }
     el.innerHTML = links.map(lk => `
       <div class="item-card">
