@@ -8,25 +8,26 @@ const __dirname  = path.dirname(__filename)
 const authFile = path.join(__dirname, '.auth/user.json')
 
 setup('user login', async ({ page }) => {
-  await page.goto('/app/login')
+  await page.goto('/login')
 
   await page.evaluate(() => {
     localStorage.removeItem('meti_token')
     localStorage.removeItem('meti_user')
+    localStorage.removeItem('meti_refresh_token')
   })
   await page.reload()
 
   await expect(page.locator('#email')).toBeVisible({ timeout: 15000 })
 
-  await page.fill('#email',    process.env.TEST_USER_EMAIL    || 'test@meti.dev')
-  await page.fill('#password', process.env.TEST_USER_PASSWORD || 'MetiTest1234!')
+  await page.fill('#email', process.env.TEST_USER_EMAIL    || 'test@meti.dev')
+  await page.fill('#pw',    process.env.TEST_USER_PASSWORD || 'MetiTest1234!')
 
   await Promise.all([
     page.waitForResponse(
       resp => resp.url().includes('/api/v1/auth/login') && resp.status() === 200,
       { timeout: 30000 }
     ),
-    page.click('button[type="submit"]'),
+    page.click('#btn'),
   ])
 
   // 로그인 후 SPA shell 로드 확인 (대시보드로 이동)

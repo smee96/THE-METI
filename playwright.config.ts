@@ -58,7 +58,18 @@ export default defineConfig({
         storageState: 'tests/.auth/user.json',
       },
       dependencies: ['user-setup'],
-      testMatch: ['**/app-cards.spec.ts', '**/app-groups.spec.ts'],
+      testMatch: [
+        '**/app-cards.spec.ts',
+        '**/app-groups.spec.ts',
+        '**/app-card-share.spec.ts',
+        '**/app-group-invites.spec.ts',
+      ],
+    },
+
+    // ── API 계약/쓰기 테스트 (브라우저 불필요, 자체 로그인)
+    {
+      name: 'api',
+      testMatch: ['**/api-contract.spec.ts', '**/api-events-lessons.spec.ts'],
     },
 
     // ── Pro 유저: 로그인 셋업
