@@ -219,24 +219,26 @@ function cardPublicHtml(cardId: string): string {
         const skills     = tags.filter(t => t.tag_type === 'skill' || t.tag_type === 'keyword');
         const others     = tags.filter(t => !['career','education','skill','keyword'].includes(t.tag_type));
 
+        // 경력/학력 공통 행 (tag_period 분리 저장분은 기간을 오른쪽에 표시)
+        const resumeRow = (t, dotColor) =>
+          '<div class="flex items-start gap-2 py-1 border-b border-gray-50 last:border-0">'
+          + '<i class="fas fa-circle ' + dotColor + ' text-[5px] mt-2 flex-shrink-0"></i>'
+          + '<p class="text-sm text-gray-700 flex-1">' + esc(t.tag_value) + '</p>'
+          + (t.tag_period ? '<span class="text-xs text-gray-400 flex-shrink-0 mt-0.5">' + esc(t.tag_period) + '</span>' : '')
+          + '</div>';
+
         // 경력
         if (careers.length > 0) {
           document.getElementById('career-section').classList.remove('hidden');
-          document.getElementById('career-list').innerHTML = careers.map(t =>
-            '<div class="flex items-start gap-2 py-1 border-b border-gray-50 last:border-0">'
-            + '<i class="fas fa-circle text-orange-400 text-[5px] mt-2 flex-shrink-0"></i>'
-            + '<p class="text-sm text-gray-700">' + esc(t.tag_value) + '</p></div>'
-          ).join('');
+          document.getElementById('career-list').innerHTML =
+            careers.map(t => resumeRow(t, 'text-orange-400')).join('');
         }
 
         // 학력
         if (educations.length > 0) {
           document.getElementById('education-section').classList.remove('hidden');
-          document.getElementById('education-list').innerHTML = educations.map(t =>
-            '<div class="flex items-start gap-2 py-1 border-b border-gray-50 last:border-0">'
-            + '<i class="fas fa-circle text-purple-400 text-[5px] mt-2 flex-shrink-0"></i>'
-            + '<p class="text-sm text-gray-700">' + esc(t.tag_value) + '</p></div>'
-          ).join('');
+          document.getElementById('education-list').innerHTML =
+            educations.map(t => resumeRow(t, 'text-purple-400')).join('');
         }
 
         // 스킬 + 기타

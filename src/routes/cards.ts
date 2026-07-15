@@ -8,6 +8,11 @@ import { debitWallet } from '../lib/wallet'
 
 const cards = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
+// 공개 명함 공유 URL — 도메인 미확정이므로 앱/웹은 하드코딩 대신 이 값을 사용
+// (커스텀 도메인 연결 시 서버만 바뀌고 클라이언트는 무변경)
+const shareUrl = (reqUrl: string, cardId: number | string) =>
+  `${new URL(reqUrl).origin}/card/${cardId}`
+
 // ── 명함 목록 조회 (내 명함) ──────────────────────────
 cards.get('/', authMiddleware, async (c) => {
   const userId = c.get('userId')
@@ -29,7 +34,8 @@ cards.get('/', authMiddleware, async (c) => {
     ).bind(userId).first<{ total: number }>()
   ])
 
-  return c.json(paginate(rows.results, countRow?.total ?? 0, page, limit))
+  const withShare = rows.results.map((r: any) => ({ ...r, share_url: shareUrl(c.req.url, r.id) }))
+  return c.json(paginate(withShare, countRow?.total ?? 0, page, limit))
 })
 
 // ── 명함 생성 ─────────────────────────────────────────
@@ -55,7 +61,8 @@ cards.post(
     })).optional(),
     tags: z.array(z.object({
       tag_type: z.string(),
-      tag_value: z.string()
+      tag_value: z.string(),
+      tag_period: z.string().max(100).optional().nullable()   // 이력 기간 (예: "2020~2023")
     })).optional()
   })),
   async (c) => {
@@ -115,8 +122,8 @@ cards.post(
     if (body.tags?.length) {
       const stmts = body.tags.map(tag =>
         c.env.DB.prepare(
-          'INSERT INTO card_tags (card_id, tag_type, tag_value) VALUES (?, ?, ?)'
-        ).bind(cardId, tag.tag_type, tag.tag_value)
+          'INSERT INTO card_tags (card_id, tag_type, tag_value, tag_period) VALUES (?, ?, ?, ?)'
+        ).bind(cardId, tag.tag_type, tag.tag_value, tag.tag_period ?? null)
       )
       await c.env.DB.batch(stmts)
     }
@@ -125,7 +132,7 @@ cards.post(
       'SELECT * FROM cards WHERE id = ?'
     ).bind(cardId).first()
 
-    return c.json(ok(card, '명함이 생성되었습니다.'), 201)
+    return c.json(ok({ ...card, share_url: shareUrl(c.req.url, cardId) }, '명함이 생성되었습니다.'), 201)
   }
 )
 
@@ -149,7 +156,7 @@ cards.get('/public/:id', async (c) => {
     c.env.DB.prepare('SELECT * FROM card_tags WHERE card_id = ?').bind(cardId).all()
   ])
 
-  return c.json(ok({ ...card, sns_links: snsLinks.results, tags: tags.results }))
+  return c.json(ok({ ...card, sns_links: snsLinks.results, tags: tags.results, share_url: shareUrl(c.req.url, cardId) }))
 })
 
 // ── 명함 상세 조회 (인증 필요) ────────────────────────
@@ -170,7 +177,7 @@ cards.get('/:id', authMiddleware, async (c) => {
     c.env.DB.prepare('SELECT * FROM card_tags WHERE card_id = ?').bind(cardId).all()
   ])
 
-  return c.json(ok({ ...card, sns_links: snsLinks.results, tags: tags.results }))
+  return c.json(ok({ ...card, sns_links: snsLinks.results, tags: tags.results, share_url: shareUrl(c.req.url, cardId) }))
 })
 
 // ── 명함 수정 ─────────────────────────────────────────
@@ -197,7 +204,8 @@ cards.patch(
     })).optional().nullable(),
     tags: z.array(z.object({
       tag_type: z.string().max(50),   // skill | career | education | etc
-      tag_value: z.string().max(200)
+      tag_value: z.string().max(200),
+      tag_period: z.string().max(100).optional().nullable()   // 이력 기간 (예: "2020~2023")
     })).optional().nullable(),
   })),
   async (c) => {
@@ -251,8 +259,8 @@ cards.patch(
       if (body.tags.length > 0) {
         const stmts = body.tags.map(tag =>
           c.env.DB.prepare(
-            'INSERT INTO card_tags (card_id, tag_type, tag_value) VALUES (?, ?, ?)'
-          ).bind(cardId, tag.tag_type, tag.tag_value)
+            'INSERT INTO card_tags (card_id, tag_type, tag_value, tag_period) VALUES (?, ?, ?, ?)'
+          ).bind(cardId, tag.tag_type, tag.tag_value, tag.tag_period ?? null)
         )
         await c.env.DB.batch(stmts)
       }
