@@ -4,6 +4,7 @@ import { z } from 'zod'
 import type { Bindings, Variables } from '../types'
 import { authMiddleware } from '../middleware/auth'
 import { ok, fail, paginate, parsePagination } from '../middleware/response'
+import { creditWallet } from '../lib/wallet'
 
 const points = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -135,6 +136,185 @@ points.post(
       user_balance:  userBalAfter,
       group_balance: groupBalAfter
     }, `${amount.toLocaleString()}P 이전 완료`))
+  }
+)
+
+// ══════════════════════════════════════════════════════════
+// 포인트 충전 (토스페이먼츠 웹 결제)
+//
+// 주문생성(pending) → 프론트가 토스 결제창 → 리다이렉트 페이지가
+// confirm 호출 → 토스 승인 API 검증 → paid + creditWallet 지급
+// ══════════════════════════════════════════════════════════
+
+// ── GET /api/v1/points/charge/config — 결제 가능 여부 + 클라이언트 키 ──
+points.get('/charge/config', authMiddleware, async (c) => {
+  const enabled = Boolean(c.env.TOSS_CLIENT_KEY && c.env.TOSS_SECRET_KEY)
+  return c.json(ok({
+    enabled,
+    pg: 'toss',
+    client_key: enabled ? c.env.TOSS_CLIENT_KEY : null,
+  }))
+})
+
+// ── POST /api/v1/points/charge/orders — 충전 주문 생성 ─────
+points.post(
+  '/charge/orders',
+  authMiddleware,
+  zValidator('json', z.object({
+    charge_product_id: z.number().int().positive(),
+    custom_amount:     z.number().int().positive().optional(),  // is_custom 상품일 때
+    owner_type:        z.enum(['user', 'group']).default('user'),
+    group_id:          z.number().int().positive().optional(),  // owner_type=group일 때
+  })),
+  async (c) => {
+    const userId = c.get('userId')
+    const body   = c.req.valid('json')
+
+    if (!c.env.TOSS_CLIENT_KEY || !c.env.TOSS_SECRET_KEY) {
+      return c.json(fail('결제 기능 준비 중입니다.'), 503)
+    }
+
+    const product = await c.env.DB.prepare(`
+      SELECT id, title, amount_krw, points, is_custom, min_amount
+      FROM point_charge_products
+      WHERE id = ? AND is_active = 1
+    `).bind(body.charge_product_id).first<{
+      id: number; title: string; amount_krw: number; points: number;
+      is_custom: number; min_amount: number | null
+    }>()
+    if (!product) return c.json(fail('충전 상품을 찾을 수 없습니다.'), 404)
+
+    // 금액/포인트 확정 (직접입력은 1P = 1원)
+    let amountKrw = product.amount_krw
+    let pointsAmt = product.points
+    if (product.is_custom) {
+      const min = product.min_amount ?? 10000
+      if (!body.custom_amount) return c.json(fail('충전 금액을 입력해주세요.'), 400)
+      if (body.custom_amount < min) {
+        return c.json(fail(`최소 충전 금액은 ${min.toLocaleString()}원입니다.`), 400)
+      }
+      if (body.custom_amount > 10000000) {
+        return c.json(fail('1회 최대 충전 금액은 10,000,000원입니다.'), 400)
+      }
+      amountKrw = body.custom_amount
+      pointsAmt = body.custom_amount
+    }
+
+    // 지급 대상 지갑 확인 (그룹이면 admin/sub_admin만)
+    let ownerId = userId
+    if (body.owner_type === 'group') {
+      if (!body.group_id) return c.json(fail('group_id가 필요합니다.'), 400)
+      const member = await c.env.DB.prepare(`
+        SELECT role FROM group_members
+        WHERE group_id = ? AND user_id = ? AND status = 'active'
+      `).bind(body.group_id, userId).first<{ role: string }>()
+      if (!member || !['admin', 'sub_admin'].includes(member.role)) {
+        return c.json(fail('그룹 관리자만 그룹 포인트를 충전할 수 있습니다.'), 403)
+      }
+      ownerId = body.group_id
+    }
+
+    const orderUid = `CHG-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`
+    await c.env.DB.prepare(`
+      INSERT INTO point_charge_orders
+        (order_uid, user_id, owner_type, owner_id, charge_product_id, amount_krw, points)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind(orderUid, userId, body.owner_type, ownerId, product.id, amountKrw, pointsAmt).run()
+
+    return c.json(ok({
+      order_uid:  orderUid,
+      order_name: product.is_custom ? `ELID 포인트 ${pointsAmt.toLocaleString()}P` : product.title,
+      amount_krw: amountKrw,
+      points:     pointsAmt,
+    }, '충전 주문이 생성되었습니다.'), 201)
+  }
+)
+
+// ── POST /api/v1/points/charge/orders/confirm — 토스 승인 + 포인트 지급 ──
+points.post(
+  '/charge/orders/confirm',
+  authMiddleware,
+  zValidator('json', z.object({
+    order_uid:   z.string().min(1),
+    payment_key: z.string().min(1),
+    amount:      z.number().int().positive(),
+  })),
+  async (c) => {
+    const userId = c.get('userId')
+    const body   = c.req.valid('json')
+
+    if (!c.env.TOSS_SECRET_KEY) return c.json(fail('결제 기능 준비 중입니다.'), 503)
+
+    const order = await c.env.DB.prepare(`
+      SELECT id, order_uid, user_id, owner_type, owner_id, amount_krw, points, status
+      FROM point_charge_orders
+      WHERE order_uid = ? AND user_id = ?
+    `).bind(body.order_uid, userId).first<{
+      id: number; order_uid: string; user_id: number;
+      owner_type: 'user' | 'group'; owner_id: number;
+      amount_krw: number; points: number; status: string
+    }>()
+    if (!order) return c.json(fail('충전 주문을 찾을 수 없습니다.'), 404)
+
+    // 멱등: 이미 지급된 주문은 재승인 없이 성공 응답
+    if (order.status === 'paid') {
+      return c.json(ok({ order_uid: order.order_uid, points: order.points, duplicate: true }))
+    }
+    if (order.status !== 'pending') {
+      return c.json(fail('이미 처리된 주문입니다.'), 409)
+    }
+    if (order.amount_krw !== body.amount) {
+      return c.json(fail('결제 금액이 주문 금액과 다릅니다.'), 400)
+    }
+
+    // 토스 결제 승인 (서버사이드 검증)
+    const tossRes = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${btoa(`${c.env.TOSS_SECRET_KEY}:`)}`,
+        'Content-Type':  'application/json',
+      },
+      body: JSON.stringify({
+        paymentKey: body.payment_key,
+        orderId:    body.order_uid,
+        amount:     body.amount,
+      }),
+    })
+
+    if (!tossRes.ok) {
+      const err = await tossRes.json().catch(() => ({})) as { code?: string; message?: string }
+      await c.env.DB.prepare(`
+        UPDATE point_charge_orders
+        SET status = 'failed', fail_reason = ?, updated_at = datetime('now')
+        WHERE id = ? AND status = 'pending'
+      `).bind(`${err.code ?? tossRes.status}: ${err.message ?? '승인 실패'}`, order.id).run()
+      return c.json(fail(err.message ?? '결제 승인에 실패했습니다.'), 400)
+    }
+
+    // pending → paid 선점 (동시 confirm 이중지급 방지)
+    const mark = await c.env.DB.prepare(`
+      UPDATE point_charge_orders
+      SET status = 'paid', payment_key = ?, approved_at = datetime('now'), updated_at = datetime('now')
+      WHERE id = ? AND status = 'pending'
+    `).bind(body.payment_key, order.id).run()
+    if (!mark.meta.changes) {
+      return c.json(ok({ order_uid: order.order_uid, points: order.points, duplicate: true }))
+    }
+
+    const credit = await creditWallet(c.env.DB, order.owner_type, order.owner_id, order.points, {
+      type:        'charge_web',
+      pointType:   'charged',
+      refType:     'charge_order',
+      refId:       order.id,
+      description: `포인트 충전 (토스, ${order.amount_krw.toLocaleString()}원)`,
+    })
+
+    return c.json(ok({
+      order_uid:     order.order_uid,
+      points:        order.points,
+      balance_after: credit.balanceAfter,
+      owner_type:    order.owner_type,
+    }, `${order.points.toLocaleString()}P 충전이 완료되었습니다.`))
   }
 )
 

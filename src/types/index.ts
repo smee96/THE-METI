@@ -11,6 +11,8 @@ export type Bindings = {
   JWT_EXPIRES_IN: string
   REFRESH_TOKEN_EXPIRES_IN: string
   PARTNER_WEBHOOK_SECRET: string
+  TOSS_CLIENT_KEY?: string   // 미설정 환경에서는 충전 결제 비활성
+  TOSS_SECRET_KEY?: string
 }
 
 export type Variables = {

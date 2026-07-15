@@ -21,6 +21,7 @@ import staticRouter   from './static-serve'
 import { adminLoginHtml, adminAppHtml }                from './web/admin'
 import { appLandingHtml, appLoginHtml, appRegisterHtml, appShellHtml } from './web/app'
 import { privacyPolicyHtml, termsOfServiceHtml }       from './web/legal'
+import { paymentChargeSuccessHtml, paymentChargeFailHtml } from './web/payment'
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -332,6 +333,10 @@ app.get('/app',          (c) => c.redirect('/'))
 
 // 나머지 /app/* 전체 → SPA shell (JS가 라우팅 처리)
 app.get('/app/*', (c) => c.html(appShellHtml('ELID')))
+
+// ── 포인트 충전 결제 리다이렉트 (토스 successUrl/failUrl) ──
+app.get('/payment/charge/success', (c) => c.html(paymentChargeSuccessHtml()))
+app.get('/payment/charge/fail',    (c) => c.html(paymentChargeFailHtml()))
 
 // ════════════════════════════════════════════════════════════
 // ── 명함 공개 페이지 (앱 미설치자용)

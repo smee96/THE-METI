@@ -1460,14 +1460,179 @@ async function leaveGroupConfirm(groupId) {
 // ── [개인] 포인트
 // ════════════════════════════════════════════════════════
 async function loadPoints() {
-  // Phase 1 완료 후 /api/v1/points/me 연동 예정
-  document.getElementById('points-balance').textContent = '-';
-  document.getElementById('points-history').innerHTML =
-    '<p class="text-sm text-gray-400 text-center py-6">포인트 시스템 준비 중입니다.</p>';
+  const balEl  = document.getElementById('points-balance');
+  const histEl = document.getElementById('points-history');
+  histEl.innerHTML = loadingHtml();
+  try {
+    const [balRes, histRes] = await Promise.all([
+      axios.get('/points/balance'),
+      axios.get('/points/history?limit=20'),
+    ]);
+    balEl.textContent = Number(balRes.data.data.balance).toLocaleString();
+    histEl.innerHTML = renderPointHistory(histRes.data.data || []);
+  } catch (e) {
+    balEl.textContent = '-';
+    histEl.innerHTML = errorHtml('포인트 정보를 불러오지 못했습니다.');
+  }
 }
 
-function openChargeModal() {
-  alert('포인트 충전은 결제 시스템 연동 후 이용 가능합니다.');
+const POINT_TYPE_LABELS = {
+  charge_web:         '포인트 충전',
+  charge_partner:     '파트너 적립',
+  charge_admin:       '관리자 지급',
+  charge_transfer_in: '포인트 이전 받음',
+  charge_event_entry: '행사 참가비 수입',
+  charge_event_refund:'행사 참가비 환불',
+  use_transfer_out:   '그룹으로 이전',
+  use_event_entry:    '행사 참가비',
+  use_event_create:   '행사 개설',
+  use_lesson_create:  '레슨 개설',
+  use_admin:          '관리자 차감',
+};
+
+function renderPointHistory(rows) {
+  if (!rows.length) return emptyHtml('포인트 이력이 없습니다.');
+  return rows.map(tx => {
+    const plus  = tx.amount > 0;
+    const label = tx.description || POINT_TYPE_LABELS[tx.type] || tx.type;
+    return `
+      <div class="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+        <div class="min-w-0">
+          <p class="text-sm text-gray-700 truncate">${escHtml(label)}</p>
+          <p class="text-xs text-gray-400 mt-0.5">${formatDate(tx.created_at)}</p>
+        </div>
+        <div class="text-right ml-3 flex-shrink-0">
+          <p class="text-sm font-semibold ${plus ? 'text-blue-600' : 'text-red-500'}">
+            ${plus ? '+' : ''}${Number(tx.amount).toLocaleString()} P
+          </p>
+          <p class="text-xs text-gray-400 mt-0.5">잔액 ${Number(tx.balance_after).toLocaleString()} P</p>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── 포인트 충전 (토스페이먼츠) ──────────────────────────
+let _tossSdkPromise = null;
+function loadTossSdk() {
+  if (window.TossPayments) return Promise.resolve();
+  if (_tossSdkPromise) return _tossSdkPromise;
+  _tossSdkPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://js.tosspayments.com/v2/standard';
+    s.onload  = resolve;
+    s.onerror = () => { _tossSdkPromise = null; reject(new Error('SDK 로드 실패')); };
+    document.head.appendChild(s);
+  });
+  return _tossSdkPromise;
+}
+
+function ensureChargeModal() {
+  if (document.getElementById('modal-charge')) return;
+  const div = document.createElement('div');
+  div.id = 'modal-charge';
+  div.className = 'hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4';
+  div.innerHTML = `
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm flex flex-col" style="max-height:90vh">
+      <div class="flex items-center justify-between p-5 border-b flex-shrink-0">
+        <h3 id="charge-modal-title" class="text-lg font-bold">포인트 충전</h3>
+        <button onclick="closeModal('modal-charge')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="overflow-y-auto flex-1 p-5">
+        <div id="charge-products" class="space-y-2"></div>
+        <div id="charge-custom-row" class="hidden mt-3">
+          <label class="text-xs text-gray-500">충전 금액 (원) — 1P = 1원</label>
+          <input id="charge-custom-amount" type="number" min="0" step="1000" placeholder="10,000원 이상"
+            class="w-full mt-1 px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500">
+        </div>
+        <p id="charge-error" class="hidden mt-3 text-xs text-red-500"></p>
+        <button id="charge-submit" onclick="submitCharge()"
+          class="w-full mt-4 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition">
+          <i class="fas fa-credit-card mr-2"></i>토스로 결제하기
+        </button>
+        <p class="mt-3 text-[11px] text-gray-400 text-center">테스트 결제 환경입니다. 실제 결제되지 않습니다.</p>
+      </div>
+    </div>`;
+  document.body.appendChild(div);
+}
+
+let _chargeCtx = { ownerType: 'user', groupId: null, products: [], selectedId: null };
+
+async function openChargeModal(ownerType = 'user', groupId = null) {
+  try {
+    const cfg = (await axios.get('/points/charge/config')).data.data;
+    if (!cfg.enabled) { showToast('결제 시스템 준비 중입니다.', 'info'); return; }
+    _chargeCtx = { ownerType, groupId, products: [], selectedId: null, clientKey: cfg.client_key };
+
+    ensureChargeModal();
+    document.getElementById('charge-modal-title').textContent =
+      ownerType === 'group' ? '그룹 포인트 충전' : '포인트 충전';
+    document.getElementById('charge-error').classList.add('hidden');
+    document.getElementById('charge-custom-amount').value = '';
+    document.getElementById('charge-products').innerHTML = loadingHtml();
+    document.getElementById('modal-charge').classList.remove('hidden');
+
+    const products = (await axios.get('/point-charge-products')).data.data || [];
+    _chargeCtx.products = products;
+    document.getElementById('charge-products').innerHTML = products.map(p => `
+      <button onclick="selectChargeProduct(${p.id})" id="charge-opt-${p.id}"
+        class="charge-opt w-full flex items-center justify-between px-4 py-3 border border-gray-200 rounded-xl text-sm hover:border-blue-400 transition">
+        <span class="font-medium text-gray-700">${escHtml(p.title)}</span>
+        <span class="text-gray-400">${p.is_custom ? '금액 입력' : Number(p.amount_krw).toLocaleString() + '원'}</span>
+      </button>`).join('') || emptyHtml('충전 상품이 없습니다.');
+  } catch (e) {
+    showToast(e.response?.data?.error || '충전 정보를 불러오지 못했습니다.', 'error');
+  }
+}
+
+function selectChargeProduct(id) {
+  _chargeCtx.selectedId = id;
+  document.querySelectorAll('.charge-opt').forEach(el =>
+    el.classList.remove('border-blue-500', 'bg-blue-50'));
+  document.getElementById(`charge-opt-${id}`).classList.add('border-blue-500', 'bg-blue-50');
+  const p = _chargeCtx.products.find(x => x.id === id);
+  document.getElementById('charge-custom-row').classList.toggle('hidden', !p?.is_custom);
+}
+
+async function submitCharge() {
+  const errEl = document.getElementById('charge-error');
+  errEl.classList.add('hidden');
+  const p = _chargeCtx.products.find(x => x.id === _chargeCtx.selectedId);
+  if (!p) { errEl.textContent = '충전 금액을 선택해주세요.'; errEl.classList.remove('hidden'); return; }
+
+  const payload = { charge_product_id: p.id, owner_type: _chargeCtx.ownerType };
+  if (_chargeCtx.ownerType === 'group') payload.group_id = _chargeCtx.groupId;
+  if (p.is_custom) {
+    const v = parseInt(document.getElementById('charge-custom-amount').value, 10);
+    if (!v || v <= 0) { errEl.textContent = '충전 금액을 입력해주세요.'; errEl.classList.remove('hidden'); return; }
+    payload.custom_amount = v;
+  }
+
+  const btn = document.getElementById('charge-submit');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>결제창 여는 중...';
+  try {
+    const order = (await axios.post('/points/charge/orders', payload)).data.data;
+    await loadTossSdk();
+    const payment = TossPayments(_chargeCtx.clientKey).payment({ customerKey: TossPayments.ANONYMOUS });
+    await payment.requestPayment({
+      method:     'CARD',
+      amount:     { currency: 'KRW', value: order.amount_krw },
+      orderId:    order.order_uid,
+      orderName:  order.order_name,
+      successUrl: location.origin + '/payment/charge/success',
+      failUrl:    location.origin + '/payment/charge/fail',
+      customerEmail: currentUser.email,
+      customerName:  currentUser.name,
+    });
+  } catch (e) {
+    if (e?.code !== 'USER_CANCEL') {
+      errEl.textContent = e.response?.data?.error || e.message || '결제 요청에 실패했습니다.';
+      errEl.classList.remove('hidden');
+    }
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-credit-card mr-2"></i>토스로 결제하기';
+  }
 }
 
 // ════════════════════════════════════════════════════════
@@ -1710,12 +1875,23 @@ document.addEventListener('DOMContentLoaded', () => {
 // ════════════════════════════════════════════════════════
 async function loadGroupPoints(groupId) {
   if (!groupId) return;
-  document.getElementById('group-points-balance').textContent = '-';
-  document.getElementById('group-points-history').innerHTML =
-    '<p class="text-sm text-gray-400 text-center py-6">포인트 시스템 준비 중입니다.</p>';
+  const balEl  = document.getElementById('group-points-balance');
+  const histEl = document.getElementById('group-points-history');
+  histEl.innerHTML = loadingHtml();
+  try {
+    const [balRes, histRes] = await Promise.all([
+      axios.get(`/points/groups/${groupId}/balance`),
+      axios.get(`/points/groups/${groupId}/history?limit=20`),
+    ]);
+    balEl.textContent = Number(balRes.data.data.balance).toLocaleString();
+    histEl.innerHTML = renderPointHistory(histRes.data.data || []);
+  } catch (e) {
+    balEl.textContent = '-';
+    histEl.innerHTML = errorHtml('그룹 포인트 정보를 불러오지 못했습니다.');
+  }
 }
 
-function openGroupChargeModal() { alert('그룹 포인트 충전은 결제 시스템 연동 후 이용 가능합니다.'); }
+function openGroupChargeModal() { openChargeModal('group', currentCtx.id); }
 function openTransferModal()    { alert('개인→그룹 포인트 이전은 포인트 시스템 연동 후 이용 가능합니다.'); }
 
 // ════════════════════════════════════════════════════════
