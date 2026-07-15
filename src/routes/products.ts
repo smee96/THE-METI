@@ -238,6 +238,8 @@ products.get('/orders', authMiddleware, async (c) => {
 // POST /api/v1/payments/verify-web
 // 웹 결제 검증 및 주문 확정
 // PG사 결제 검증 완료 후 호출
+// ⛔ PG 미계약 — 서버사이드 검증 없이 주문을 paid 처리하는 경로라
+//    PG 연동 전까지 차단. 재개 시 아래 가드 제거 + TODO 검증 구현.
 // ══════════════════════════════════════════════════════════════
 products.post(
   '/payments/verify-web',
@@ -249,6 +251,8 @@ products.post(
     amount           : z.number().int().positive(),
   })),
   async (c) => {
+    return c.json(fail('결제 기능 준비 중입니다. (PG 연동 전)'), 503)
+
     const userId = c.get('userId')
     const body   = c.req.valid('json')
 
