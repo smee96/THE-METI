@@ -4,6 +4,7 @@ import { z } from 'zod'
 import type { Bindings, Variables } from '../types'
 import { authMiddleware } from '../middleware/auth'
 import { ok, fail, paginate, parsePagination } from '../middleware/response'
+import { debitWallet } from '../lib/wallet'
 
 const cards = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -442,5 +443,116 @@ cards.get('/contacts/list', authMiddleware, async (c) => {
 
   return c.json(paginate(rows.results, countRow?.total ?? 0, page, limit))
 })
+
+// ══════════════════════════════════════════════════════════
+// NFC 실물카드 신청 (포인트 차감)
+//
+// 실물 상품이므로 IAP 비대상 — 포인트로 결제하고 어드민이
+// pending → approved → issued(배송) 플로우로 처리 (admin-nfc.ts)
+// ══════════════════════════════════════════════════════════
+
+const NFC_ACTIVE_STATUSES = ['pending', 'approved', 'issued']
+
+// ── GET /api/v1/cards/nfc/config — 신청 가격 ───────────────
+cards.get('/nfc/config', authMiddleware, async (c) => {
+  const row = await c.env.DB.prepare(
+    `SELECT config_val FROM plan_configs WHERE config_key = 'nfc_card_price_basic'`
+  ).first<{ config_val: string }>()
+  return c.json(ok({ price: parseInt(row?.config_val ?? '10000', 10), design_type: 'basic' }))
+})
+
+// ── GET /api/v1/cards/nfc/applications — 내 신청 목록 ──────
+cards.get('/nfc/applications', authMiddleware, async (c) => {
+  const userId = c.get('userId')
+  const rows = await c.env.DB.prepare(`
+    SELECT n.id, n.card_id, n.design_type, n.status, n.amount, n.payment_status,
+           n.tracking_no, n.carrier, n.applied_at, n.issued_at, n.shipped_at,
+           c.name AS card_name
+    FROM nfc_physical_cards n
+    LEFT JOIN cards c ON c.id = n.card_id
+    WHERE n.user_id = ?
+    ORDER BY n.applied_at DESC
+  `).bind(userId).all()
+  return c.json(ok(rows.results))
+})
+
+// ── POST /api/v1/cards/nfc/apply — 실물카드 신청 + 포인트 차감 ──
+cards.post(
+  '/nfc/apply',
+  authMiddleware,
+  zValidator('json', z.object({
+    card_id:          z.number().int().positive(),
+    design_type:      z.enum(['basic']).default('basic'),
+    shipping_name:    z.string().min(1).max(50),
+    shipping_phone:   z.string().min(1).max(20),
+    shipping_zipcode: z.string().min(1).max(10),
+    shipping_address: z.string().min(1).max(200),
+    shipping_detail:  z.string().max(200).optional(),
+    shipping_memo:    z.string().max(200).optional(),
+  })),
+  async (c) => {
+    const userId = c.get('userId')
+    const body   = c.req.valid('json')
+
+    // 명함 소유 확인
+    const card = await c.env.DB.prepare(
+      `SELECT id FROM cards WHERE id = ? AND user_id = ? AND is_deleted = 0`
+    ).bind(body.card_id, userId).first()
+    if (!card) return c.json(fail('명함을 찾을 수 없습니다.'), 404)
+
+    // 같은 명함의 진행 중 신청 중복 방지
+    const dup = await c.env.DB.prepare(`
+      SELECT id, status FROM nfc_physical_cards
+      WHERE card_id = ? AND user_id = ? AND status IN (${NFC_ACTIVE_STATUSES.map(() => '?').join(',')})
+    `).bind(body.card_id, userId, ...NFC_ACTIVE_STATUSES).first<{ id: number; status: string }>()
+    if (dup) return c.json(fail('이미 진행 중인 실물카드 신청이 있습니다.', { status: dup.status }), 409)
+
+    // 가격 조회 (어드민 설정, 기본 10,000P)
+    const priceRow = await c.env.DB.prepare(
+      `SELECT config_val FROM plan_configs WHERE config_key = 'nfc_card_price_basic'`
+    ).first<{ config_val: string }>()
+    const price = parseInt(priceRow?.config_val ?? '10000', 10)
+
+    // 신청 생성 → 포인트 차감 (실패 시 신청 롤백 — lessons 패턴)
+    const insert = await c.env.DB.prepare(`
+      INSERT INTO nfc_physical_cards
+        (user_id, card_id, order_type, design_type, status,
+         shipping_name, shipping_phone, shipping_zipcode, shipping_address,
+         shipping_detail, shipping_memo, amount, payment_status)
+      VALUES (?, ?, 'individual', ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      userId, body.card_id, body.design_type,
+      body.shipping_name, body.shipping_phone, body.shipping_zipcode, body.shipping_address,
+      body.shipping_detail ?? null, body.shipping_memo ?? null,
+      price, price > 0 ? 'paid' : 'unpaid'
+    ).run()
+    const applicationId = insert.meta.last_row_id as number
+
+    if (price > 0) {
+      const debit = await debitWallet(c.env.DB, 'user', userId, price, {
+        type:        'use_nfc_card',
+        refType:     'nfc_card',
+        refId:       applicationId,
+        description: `NFC 실물카드 신청 (${body.design_type})`,
+      })
+      if (!debit.ok) {
+        await c.env.DB.prepare(`DELETE FROM nfc_physical_cards WHERE id = ?`).bind(applicationId).run()
+        return c.json(fail('포인트가 부족합니다.', {
+          error_code: 'insufficient_points',
+          required:   price,
+          balance:    debit.balance,
+          shortage:   price - debit.balance,
+        }), 400)
+      }
+      return c.json(ok({
+        application_id: applicationId,
+        amount:         price,
+        balance_after:  debit.balanceAfter,
+      }, '실물카드 신청이 완료되었습니다.'), 201)
+    }
+
+    return c.json(ok({ application_id: applicationId, amount: 0 }, '실물카드 신청이 완료되었습니다.'), 201)
+  }
+)
 
 export default cards

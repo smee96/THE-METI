@@ -5,9 +5,10 @@ export const ok = <T>(data: T, message?: string) => ({
   data
 })
 
-export const fail = (error: string, status?: number) => ({
+export const fail = (error: string, data?: Record<string, unknown>) => ({
   success: false,
-  error
+  error,
+  ...(data && { data })
 })
 
 export const paginate = <T>(

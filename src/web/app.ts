@@ -1679,7 +1679,7 @@ export function appShellHtml(pageTitle: string = 'ELID'): string {
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
-<script src="/static/app.js?v=20260715"></script>
+<script src="/static/app.js?v=20260715b"></script>
 </body>
 </html>`
 }

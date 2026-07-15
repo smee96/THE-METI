@@ -362,14 +362,29 @@ async function loadDashboard() {
 // ════════════════════════════════════════════════════════
 // ── [개인] 내 명함
 // ════════════════════════════════════════════════════════
+const NFC_STATUS_BADGES = {
+  pending:  ['신청됨',   'bg-yellow-100 text-yellow-700'],
+  approved: ['제작 중',  'bg-blue-100 text-blue-700'],
+  issued:   ['발급 완료', 'bg-green-100 text-green-700'],
+};
+
 async function loadCards() {
   const el = document.getElementById('cards-list');
   el.innerHTML = loadingHtml();
   try {
-    const res = await axios.get('/cards');
+    const [res, nfcRes] = await Promise.all([
+      axios.get('/cards'),
+      axios.get('/cards/nfc/applications').catch(() => null),
+    ]);
     if (!res.data.success) { el.innerHTML = emptyHtml('명함이 없습니다.'); return; }
     const cards = Array.isArray(res.data.data) ? res.data.data : (res.data.data?.cards || []);
     if (cards.length === 0) { el.innerHTML = emptyHtml('명함이 없습니다. 첫 명함을 만들어보세요!'); return; }
+
+    // 명함별 진행 중 NFC 신청 (최신순 응답이므로 첫 항목 유지)
+    window._nfcApps = {};
+    for (const a of (nfcRes?.data?.data || [])) {
+      if (NFC_STATUS_BADGES[a.status] && !window._nfcApps[a.card_id]) window._nfcApps[a.card_id] = a;
+    }
 
     el.innerHTML = cards.map(c => `
       <div class="item-card flex items-center gap-3 cursor-pointer hover:bg-blue-50 transition" onclick="openCardPreview(${c.id})">
@@ -386,11 +401,18 @@ async function loadCards() {
             <span class="text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${c.is_public ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}">
               ${c.is_public ? '공개' : '비공개'}
             </span>
+            ${window._nfcApps[c.id] ? `<span class="text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${NFC_STATUS_BADGES[window._nfcApps[c.id].status][1]}">
+              <i class="fas fa-sim-card mr-0.5"></i>${NFC_STATUS_BADGES[window._nfcApps[c.id].status][0]}
+            </span>` : ''}
           </div>
           <p class="text-sm text-gray-500 truncate">${escHtml([c.title, c.company].filter(Boolean).join(' · '))}</p>
           <p class="text-xs text-gray-400 mt-0.5">${escHtml(c.email || '')}</p>
         </div>
         <div class="flex gap-1.5 flex-shrink-0" onclick="event.stopPropagation()">
+          ${!window._nfcApps[c.id] ? `<button onclick="openNfcApplyModal(${c.id})" title="실물카드 신청"
+            class="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:border-indigo-300 transition">
+            <i class="fas fa-sim-card text-xs"></i>
+          </button>` : ''}
           <button onclick="openEditCardModal(${c.id})" title="수정"
             class="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:border-blue-300 transition">
             <i class="fas fa-edit text-xs"></i>
@@ -407,6 +429,141 @@ async function loadCards() {
       </div>`).join('');
   } catch (e) {
     el.innerHTML = errorHtml('명함을 불러오지 못했습니다.');
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// ── NFC 실물카드 신청 (포인트 차감)
+// ════════════════════════════════════════════════════════
+function ensureNfcModal() {
+  if (document.getElementById('modal-nfc-apply')) return;
+  const div = document.createElement('div');
+  div.id = 'modal-nfc-apply';
+  div.className = 'hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4';
+  div.innerHTML = `
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col" style="max-height:90vh">
+      <div class="flex items-center justify-between p-5 border-b flex-shrink-0">
+        <h3 class="text-lg font-bold">NFC 실물카드 신청</h3>
+        <button onclick="closeModal('modal-nfc-apply')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="overflow-y-auto flex-1 p-5">
+        <div class="flex items-center justify-between px-4 py-3 bg-blue-50 rounded-xl mb-4">
+          <div>
+            <p class="text-xs text-gray-500">신청 가격</p>
+            <p class="text-lg font-bold text-blue-600"><span id="nfc-price">-</span> P</p>
+          </div>
+          <div class="text-right">
+            <p class="text-xs text-gray-500">내 포인트</p>
+            <p class="text-lg font-bold text-gray-700"><span id="nfc-balance">-</span> P</p>
+          </div>
+        </div>
+        <div class="space-y-3">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs text-gray-500">수령인 *</label>
+              <input id="nfc-ship-name" class="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500">
+            </div>
+            <div>
+              <label class="text-xs text-gray-500">연락처 *</label>
+              <input id="nfc-ship-phone" placeholder="010-0000-0000" class="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500">
+            </div>
+          </div>
+          <div class="grid grid-cols-3 gap-3">
+            <div>
+              <label class="text-xs text-gray-500">우편번호 *</label>
+              <input id="nfc-ship-zipcode" class="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500">
+            </div>
+            <div class="col-span-2">
+              <label class="text-xs text-gray-500">주소 *</label>
+              <input id="nfc-ship-address" class="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500">
+            </div>
+          </div>
+          <div>
+            <label class="text-xs text-gray-500">상세 주소</label>
+            <input id="nfc-ship-detail" class="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500">
+          </div>
+          <div>
+            <label class="text-xs text-gray-500">배송 메모</label>
+            <input id="nfc-ship-memo" placeholder="예: 부재 시 경비실에 맡겨주세요" class="w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500">
+          </div>
+        </div>
+        <p id="nfc-error" class="hidden mt-3 text-xs text-red-500"></p>
+        <button id="nfc-charge-cta" onclick="closeModal('modal-nfc-apply'); navClick('points', '/app/points'); setTimeout(() => openChargeModal(), 300);"
+          class="hidden w-full mt-3 py-3 border border-blue-600 text-blue-600 rounded-xl font-medium hover:bg-blue-50 transition">
+          <i class="fas fa-plus mr-2"></i>포인트 충전하러 가기
+        </button>
+        <button id="nfc-submit" onclick="submitNfcApply()"
+          class="w-full mt-4 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition">
+          <i class="fas fa-sim-card mr-2"></i>포인트로 신청하기
+        </button>
+        <p class="mt-3 text-[11px] text-gray-400 text-center">신청 후 관리자 승인을 거쳐 제작·배송됩니다.</p>
+      </div>
+    </div>`;
+  document.body.appendChild(div);
+}
+
+let _nfcCtx = { cardId: null, price: null };
+
+async function openNfcApplyModal(cardId) {
+  ensureNfcModal();
+  _nfcCtx = { cardId, price: null };
+  document.getElementById('nfc-error').classList.add('hidden');
+  document.getElementById('nfc-charge-cta').classList.add('hidden');
+  document.getElementById('nfc-ship-name').value = currentUser.name || '';
+  document.getElementById('modal-nfc-apply').classList.remove('hidden');
+  try {
+    const [cfgRes, balRes] = await Promise.all([
+      axios.get('/cards/nfc/config'),
+      axios.get('/points/balance'),
+    ]);
+    _nfcCtx.price = cfgRes.data.data.price;
+    document.getElementById('nfc-price').textContent   = Number(_nfcCtx.price).toLocaleString();
+    document.getElementById('nfc-balance').textContent = Number(balRes.data.data.balance).toLocaleString();
+  } catch (e) {
+    document.getElementById('nfc-price').textContent = '-';
+  }
+}
+
+async function submitNfcApply() {
+  const errEl = document.getElementById('nfc-error');
+  errEl.classList.add('hidden');
+  document.getElementById('nfc-charge-cta').classList.add('hidden');
+
+  const val = id => document.getElementById(id).value.trim();
+  const payload = {
+    card_id:          _nfcCtx.cardId,
+    shipping_name:    val('nfc-ship-name'),
+    shipping_phone:   val('nfc-ship-phone'),
+    shipping_zipcode: val('nfc-ship-zipcode'),
+    shipping_address: val('nfc-ship-address'),
+    shipping_detail:  val('nfc-ship-detail') || undefined,
+    shipping_memo:    val('nfc-ship-memo') || undefined,
+  };
+  if (!payload.shipping_name || !payload.shipping_phone || !payload.shipping_zipcode || !payload.shipping_address) {
+    errEl.textContent = '수령인, 연락처, 우편번호, 주소를 모두 입력해주세요.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+
+  const btn = document.getElementById('nfc-submit');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>신청 중...';
+  try {
+    const res = await axios.post('/cards/nfc/apply', payload);
+    showToast(res.data.message || '실물카드 신청이 완료되었습니다.');
+    closeModal('modal-nfc-apply');
+    loadCards();
+  } catch (e) {
+    const data = e.response?.data;
+    errEl.textContent = data?.error || '신청에 실패했습니다.';
+    errEl.classList.remove('hidden');
+    if (data?.data?.error_code === 'insufficient_points') {
+      errEl.textContent = `포인트가 ${Number(data.data.shortage).toLocaleString()}P 부족합니다. (잔액 ${Number(data.data.balance).toLocaleString()}P)`;
+      document.getElementById('nfc-charge-cta').classList.remove('hidden');
+    }
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-sim-card mr-2"></i>포인트로 신청하기';
   }
 }
 
