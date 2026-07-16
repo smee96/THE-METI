@@ -15,6 +15,8 @@ import lessonsRoutes         from './routes/lessons'
 import lessonSchedulesRoutes from './routes/lesson-schedules'
 import productsRoutes        from './routes/products'
 import pointsRoutes   from './routes/points'
+import usersRoutes    from './routes/users'
+import notificationsRoutes from './routes/notifications'
 import staticRouter   from './static-serve'
 
 // Web UI HTML 템플릿
@@ -69,17 +71,17 @@ function cardPublicHtml(cardId: string): string {
     <!-- 명함 본체 -->
     <div id="card-content" class="hidden space-y-3">
 
-      <!-- ① 헤더 카드 -->
-      <div class="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl shadow-xl p-6 text-white text-center">
-        <div id="avatar-wrap" class="hidden w-20 h-20 rounded-full mx-auto mb-3 border-4 border-white/30 overflow-hidden">
+      <!-- ① 헤더 카드 (배경·색상은 template_id 팔레트로 JS에서 적용) -->
+      <div id="card-header" class="rounded-3xl shadow-xl p-6 text-center">
+        <div id="avatar-wrap" class="hidden w-20 h-20 rounded-full mx-auto mb-3 overflow-hidden" style="border:4px solid rgba(255,255,255,.3)">
           <img id="avatar-img" class="w-20 h-20 object-cover">
         </div>
-        <div id="avatar-placeholder" class="w-16 h-16 rounded-full mx-auto mb-3 bg-white/20 flex items-center justify-center">
-          <i class="fas fa-user text-white text-2xl"></i>
+        <div id="avatar-placeholder" class="w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center">
+          <i id="avatar-icon" class="fas fa-user text-2xl"></i>
         </div>
         <h1 id="card-name"    class="text-2xl font-bold"></h1>
-        <p  id="card-title"   class="text-blue-200 text-sm mt-0.5"></p>
-        <p  id="card-company" class="text-blue-100 text-sm font-medium mt-0.5"></p>
+        <p  id="card-title"   class="text-sm mt-0.5"></p>
+        <p  id="card-company" class="text-sm font-medium mt-0.5"></p>
       </div>
 
       <!-- ② 연락처 -->
@@ -160,6 +162,41 @@ function cardPublicHtml(cardId: string): string {
       return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
+    // ── 명함 템플릿 팔레트 (앱 회신 ELID_App_Reply_Template_Spec_2026-07-16.md) ──
+    // 배경 = 선형 그라데이션 topLeft→bottomRight, accent = 포인트 컬러
+    // 알 수 없는 template_id는 default(엘리드) 폴백 (앱과 동일 정책)
+    const TEMPLATES = {
+      default:       { start:'#1C3D72', end:'#06122A', accent:'#C9A86A', light:false }, // 엘리드
+      dark:          { start:'#2A2E38', end:'#070809', accent:'#C9A86A', light:false }, // 미드나잇
+      ocean_coral:   { start:'#0C5163', end:'#021C23', accent:'#E58773', light:false }, // 틸 코랄
+      forest_gold:   { start:'#1C3D72', end:'#06122A', accent:'#6ABE9F', light:false }, // 민트
+      violet_amber:  { start:'#1C3D72', end:'#06122A', accent:'#9283DC', light:false }, // 바이올렛
+      minimal:       { start:'#FFFFFF', end:'#E2E8F0', accent:'#0B1E40', light:true  }, // 미니멀
+      ivory_navy:    { start:'#FDF6EC', end:'#F0E6D2', accent:'#0B1E40', light:true  }, // 아이보리
+      burgundy_rose: { start:'#4C0519', end:'#9F1239', accent:'#FDA4AF', light:false }, // 버건디
+      modern_blue:   { start:'#1E3A8A', end:'#3B82F6', accent:'#93C5FD', light:false }, // 모던 블루
+      classic:       { start:'#1A1A2E', end:'#16213E', accent:'#E2B04A', light:false }, // 클래식
+    };
+
+    function applyTemplate(templateId) {
+      const t = TEMPLATES[templateId] || TEMPLATES.default;
+      const mainColor = t.light ? '#0F172A' : '#FFFFFF';
+      const subColor  = t.light ? '#64748B' : 'rgba(255,255,255,0.75)';
+
+      const header = document.getElementById('card-header');
+      header.style.background = 'linear-gradient(135deg, ' + t.start + ', ' + t.end + ')';
+
+      document.getElementById('card-name').style.color    = mainColor;
+      document.getElementById('card-title').style.color   = subColor;
+      document.getElementById('card-company').style.color = subColor;
+
+      // 아바타 테두리·아이콘 = accent
+      document.getElementById('avatar-wrap').style.border = '4px solid ' + t.accent;
+      const ph = document.getElementById('avatar-placeholder');
+      ph.style.background = t.light ? 'rgba(15,23,42,0.06)' : 'rgba(255,255,255,0.12)';
+      document.getElementById('avatar-icon').style.color = t.accent;
+    }
+
     fetch('/api/v1/cards/public/${cardId}')
       .then(r => r.json())
       .then(data => {
@@ -169,6 +206,9 @@ function cardPublicHtml(cardId: string): string {
 
         document.getElementById('card-content').classList.remove('hidden');
         document.title = (card.name || 'ELID') + ' - 디지털 명함';
+
+        // 템플릿 팔레트 적용
+        applyTemplate(card.template_id);
 
         // ① 헤더
         document.getElementById('card-name').textContent    = card.name    || '';
@@ -292,6 +332,8 @@ app.route('/api/v1/admin',    adminRoutes)
 app.route('/api/v1/lessons',   lessonsRoutes)
 app.route('/api/v1/lessons',   lessonSchedulesRoutes)  // schedules / students 하위 경로
 app.route('/api/v1/points',   pointsRoutes)
+app.route('/api/v1/users',    usersRoutes)          // 디바이스 토큰(FCM)
+app.route('/api/v1/notifications', notificationsRoutes)
 app.route('/api/v1',          productsRoutes)  // /groups/:id/products, /orders, /payments
 
 // ── 헬스체크 ──────────────────────────────────────────────

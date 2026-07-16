@@ -31,13 +31,41 @@ axios.interceptors.response.use(
 );
 
 // ── 초기화 ───────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await consumeOneTimeToken();   // 앱 → 외부 브라우저 자동 로그인 (?ott=)
   if (!authToken || !currentUser) {
     window.location.href = '/';
     return;
   }
   initApp();
 });
+
+// 앱이 외부 브라우저로 /app/points?ott={token} 을 열면 원타임 토큰을 세션으로 교환
+// axios 인터셉터(401→refresh→logout)를 타지 않도록 fetch 사용
+async function consumeOneTimeToken() {
+  const params = new URLSearchParams(location.search);
+  const ott = params.get('ott');
+  if (!ott) return;
+  try {
+    const res = await fetch(API + '/auth/web-session-exchange', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: ott })
+    });
+    const data = await res.json();
+    if (data.success) {
+      authToken   = data.data.access_token;
+      currentUser = data.data.user;
+      localStorage.setItem('meti_token', authToken);
+      localStorage.setItem('meti_refresh_token', data.data.refresh_token);
+      localStorage.setItem('meti_user', JSON.stringify(currentUser));
+    }
+  } catch (e) { /* 토큰이 무효하면 기존 세션 또는 로그인 플로우로 진행 */ }
+  // URL에서 ott 제거 (새로고침·공유 시 재사용 방지)
+  params.delete('ott');
+  const qs = params.toString();
+  history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '') + location.hash);
+}
 
 async function initApp() {
   // 사용자 정보 최신화

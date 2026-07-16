@@ -5,6 +5,7 @@ import type { Bindings, Variables } from '../types'
 import { ok, fail } from '../middleware/response'
 import { authMiddleware } from '../middleware/auth'
 import { creditWallet } from '../lib/wallet'
+import { sendPushToUsers } from '../lib/push'
 
 const partner = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -158,6 +159,17 @@ partner.post(
       `).bind(partnerId, billingPeriod, currency, gross, settlement))
     }
     await c.env.DB.batch(ops)
+
+    // 푸시 발송 (앱 회신 §D-2 트리거④, 응답 비차단)
+    c.executionCtx.waitUntil(sendPushToUsers(c.env, [userId], {
+      title: '리워드 지급',
+      body: `${partnerName} 파트너 혜택으로 ${body.points}P가 지급되었습니다.`,
+      data: {
+        type: 'partner_reward',
+        point_amount: String(body.points),
+        partner_name: partnerName
+      }
+    }))
 
     return c.json(ok({
       user_id: userId,

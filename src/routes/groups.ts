@@ -4,6 +4,7 @@ import { z } from 'zod'
 import type { Bindings, Variables } from '../types'
 import { authMiddleware } from '../middleware/auth'
 import { ok, fail, paginate, parsePagination } from '../middleware/response'
+import { sendPushToUsers } from '../lib/push'
 
 const groups = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -371,6 +372,28 @@ groups.patch(
           updated_at = datetime('now')
       WHERE group_id = ? AND user_id = ?
     `).bind(newStatus, groupId, targetUserId).run()
+
+    // 가입 승인 알림 + 푸시 (앱 회신 §D-2 트리거②, 응답 비차단)
+    if (action === 'approve') {
+      const group = await c.env.DB.prepare(
+        'SELECT name FROM groups WHERE id = ?'
+      ).bind(groupId).first<{ name: string }>()
+      const groupName = group?.name ?? '그룹'
+      const title = '그룹 가입 승인'
+      const body = `'${groupName}' 그룹 가입이 승인되었습니다.`
+
+      c.executionCtx.waitUntil((async () => {
+        await c.env.DB.prepare(`
+          INSERT INTO notifications (user_id, type, title, body, data)
+          VALUES (?, 'group_approved', ?, ?, ?)
+        `).bind(targetUserId, title, body,
+          JSON.stringify({ group_id: groupId, group_name: groupName })).run()
+        await sendPushToUsers(c.env, [targetUserId], {
+          title, body,
+          data: { type: 'group_approved', group_id: String(groupId), group_name: groupName }
+        })
+      })())
+    }
 
     const messages = { approve: '승인', reject: '거절', kick: '강제 탈퇴' }
     return c.json(ok(null, `멤버를 ${messages[action]}했습니다.`))

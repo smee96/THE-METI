@@ -12,6 +12,7 @@ import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import type { Bindings, Variables } from '../types'
 import { ok, fail, paginate, parsePagination } from '../middleware/response'
+import { sendPushToUsers } from '../lib/push'
 
 const nfc = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -116,8 +117,8 @@ nfc.patch(
 
     // 현재 상태 확인
     const current = await c.env.DB.prepare(
-      'SELECT status FROM nfc_physical_cards WHERE id = ?'
-    ).bind(id).first<{ status: string }>()
+      'SELECT status, user_id, card_id FROM nfc_physical_cards WHERE id = ?'
+    ).bind(id).first<{ status: string; user_id: number; card_id: number }>()
 
     if (!current) return c.json(fail('존재하지 않는 NFC 카드 주문입니다.'), 404)
 
@@ -169,6 +170,29 @@ nfc.patch(
     await c.env.DB.prepare(
       `UPDATE nfc_physical_cards SET ${setClauses.join(', ')} WHERE id = ?`
     ).bind(...values).run()
+
+    // 신청자 알림 + 푸시 (앱 회신 §D-2 트리거③: approved/issued만, 응답 비차단)
+    if ((action === 'approve' || action === 'issue') && current.user_id) {
+      const newStatus = statusMap[action]  // approved | issued
+      const title = action === 'approve' ? 'NFC 카드 신청 승인' : 'NFC 카드 발송'
+      const body = action === 'approve'
+        ? 'NFC 실물카드 신청이 승인되었습니다. 제작 후 발송됩니다.'
+        : 'NFC 실물카드가 발송되었습니다. 배송 정보를 확인해주세요.'
+      const data = {
+        type: 'nfc_status',
+        application_id: String(id),
+        status: newStatus,
+        card_id: String(current.card_id ?? '')
+      }
+
+      c.executionCtx.waitUntil((async () => {
+        await c.env.DB.prepare(`
+          INSERT INTO notifications (user_id, type, title, body, data)
+          VALUES (?, 'nfc_status', ?, ?, ?)
+        `).bind(current.user_id, title, body, JSON.stringify(data)).run()
+        await sendPushToUsers(c.env, [current.user_id], { title, body, data })
+      })())
+    }
 
     const messages: Record<string, string> = {
       approve:    '승인되었습니다.',

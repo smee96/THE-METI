@@ -4,8 +4,45 @@ import { z } from 'zod'
 import type { Bindings, Variables } from '../types'
 import { authMiddleware } from '../middleware/auth'
 import { ok, fail, paginate, parsePagination } from '../middleware/response'
+import { sendPushToUsers } from '../lib/push'
 
 const chat = new Hono<{ Bindings: Bindings; Variables: Variables }>()
+
+// 플랜별 채팅 보관기간 (plan_configs 기반, 0 = 무제한)
+async function getChatRetentionDays(db: D1Database, plan: string | undefined): Promise<number> {
+  const key = `chat_retention_${plan ?? 'free'}`
+  const row = await db.prepare(
+    `SELECT config_val FROM plan_configs WHERE config_key = ?`
+  ).bind(key).first<{ config_val: string }>()
+  return row ? parseInt(row.config_val) : ((plan ?? 'free') === 'free' ? 1 : 0)
+}
+
+// 보관기간(일) → 메시지 만료시각 (0이면 무제한 = null)
+function retentionToExpiresAt(retentionDays: number): string | null {
+  if (retentionDays <= 0) return null
+  const expiry = new Date()
+  expiry.setDate(expiry.getDate() + retentionDays)
+  expiry.setHours(0, 0, 0, 0)
+  return expiry.toISOString()
+}
+
+// 채팅 푸시 발송 — 방의 상대 멤버(나 제외, 나간/차단 제외, 나를 차단한 유저 제외)
+// 앱이 보고 있는 방 여부는 클라이언트가 판단하므로 서버는 항상 발송 (앱 회신 §D-2)
+async function notifyChatMessage(
+  env: Bindings, roomId: number, senderId: number, senderName: string, preview: string
+): Promise<void> {
+  const recipients = await env.DB.prepare(`
+    SELECT user_id FROM chat_room_members
+    WHERE room_id = ? AND user_id != ? AND left_at IS NULL AND is_blocked = 0
+      AND user_id NOT IN (SELECT blocker_id FROM user_blocks WHERE blocked_id = ?)
+  `).bind(roomId, senderId, senderId).all<{ user_id: number }>()
+
+  await sendPushToUsers(env, recipients.results.map(r => r.user_id), {
+    title: senderName,
+    body: preview,
+    data: { type: 'chat_message', room_id: String(roomId), sender_name: senderName }
+  })
+}
 
 // ── 채팅방 목록 ───────────────────────────────────────
 chat.get('/', authMiddleware, async (c) => {
@@ -50,7 +87,10 @@ chat.get('/', authMiddleware, async (c) => {
     for (const r of roomList) r.members = byRoom.get(r.id) ?? []
   }
 
-  return c.json(ok(roomList))
+  // 앱 안내문구용 보관기간 노출 (앱 회신 §C-1) — 0 = 무제한
+  const retentionDays = await getChatRetentionDays(c.env.DB, c.get('userPlan'))
+
+  return c.json({ ...ok(roomList), chat_retention_days: retentionDays })
 })
 
 // ── 1:1 채팅방 시작 / 조회 ───────────────────────────
@@ -169,19 +209,8 @@ chat.post(
     }
 
     // 플랜별 메시지 만료 시간 설정 (plan_configs 기반, 0=무제한)
-    let expiresAt: string | null = null
-    const retentionKey = `chat_retention_${userPlan ?? 'free'}`
-    const retentionRow = await c.env.DB.prepare(
-      `SELECT config_val FROM plan_configs WHERE config_key = ?`
-    ).bind(retentionKey).first<{ config_val: string }>()
-    const retentionDays = retentionRow ? parseInt(retentionRow.config_val) : (userPlan === 'free' ? 1 : 0)
-
-    if (retentionDays > 0) {
-      const expiry = new Date()
-      expiry.setDate(expiry.getDate() + retentionDays)
-      expiry.setHours(0, 0, 0, 0)
-      expiresAt = expiry.toISOString()
-    }
+    const retentionDays = await getChatRetentionDays(c.env.DB, userPlan)
+    const expiresAt = retentionToExpiresAt(retentionDays)
 
     const result = await c.env.DB.prepare(`
       INSERT INTO chat_messages (room_id, sender_id, message_type, content, file_url, card_id, expires_at)
@@ -195,6 +224,18 @@ chat.post(
     await c.env.DB.prepare(`UPDATE chat_rooms SET updated_at = datetime('now') WHERE id = ?`).bind(roomId).run()
 
     const message = await c.env.DB.prepare('SELECT * FROM chat_messages WHERE id = ?').bind(result.meta.last_row_id).first()
+
+    // 푸시 발송 (응답 비차단)
+    const sender = await c.env.DB.prepare('SELECT name FROM users WHERE id = ?').bind(userId).first<{ name: string }>()
+    const preview = body.message_type === 'text'
+      ? (body.content ?? '').slice(0, 100)
+      : body.message_type === 'image' ? '사진을 보냈습니다.'
+      : body.message_type === 'card' ? '명함을 공유했습니다.'
+      : '파일을 보냈습니다.'
+    c.executionCtx.waitUntil(
+      notifyChatMessage(c.env, roomId, userId, sender?.name ?? '알 수 없음', preview)
+    )
+
     return c.json(ok(message), 201)
   }
 )
@@ -308,21 +349,8 @@ chat.post('/:roomId/upload', authMiddleware, async (c) => {
 
   // 플랜별 메시지 만료 시간 설정 (기존 전송 로직과 동일)
   const userPlan = c.get('userPlan')
-  let expiresAt: string | null = null
-  const retentionKey = `chat_retention_${userPlan ?? 'free'}`
-  const retentionRow = await c.env.DB.prepare(
-    `SELECT config_val FROM plan_configs WHERE config_key = ?`
-  ).bind(retentionKey).first<{ config_val: string }>()
-  const retentionDays = retentionRow
-    ? parseInt(retentionRow.config_val)
-    : (userPlan === 'free' ? 1 : 0)
-
-  if (retentionDays > 0) {
-    const expiry = new Date()
-    expiry.setDate(expiry.getDate() + retentionDays)
-    expiry.setHours(0, 0, 0, 0)
-    expiresAt = expiry.toISOString()
-  }
+  const retentionDays = await getChatRetentionDays(c.env.DB, userPlan)
+  const expiresAt = retentionToExpiresAt(retentionDays)
 
   // chat_messages에 자동 저장
   const result = await c.env.DB.prepare(`
@@ -343,6 +371,13 @@ chat.post('/:roomId/upload', authMiddleware, async (c) => {
   const message = await c.env.DB.prepare(
     'SELECT * FROM chat_messages WHERE id = ?'
   ).bind(result.meta.last_row_id).first()
+
+  // 푸시 발송 (응답 비차단)
+  const sender = await c.env.DB.prepare('SELECT name FROM users WHERE id = ?').bind(userId).first<{ name: string }>()
+  c.executionCtx.waitUntil(
+    notifyChatMessage(c.env, roomId, userId, sender?.name ?? '알 수 없음',
+      isImage ? '사진을 보냈습니다.' : '파일을 보냈습니다.')
+  )
 
   return c.json(ok({
     message,

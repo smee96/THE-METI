@@ -272,6 +272,82 @@ auth.post('/logout', authMiddleware, async (c) => {
   return c.json(ok(null, '로그아웃되었습니다.'))
 })
 
+// ── POST /api/v1/auth/web-session-token ───────────────
+// 앱 → 외부 브라우저 자동 로그인용 원타임 토큰 발급 (앱 회신 2026-07-16 §C-2)
+// 앱이 https://.../app/points?ott={token} 으로 브라우저를 열면
+// 웹(app.js)이 /auth/web-session-exchange 로 교환해 세션 생성
+const WEB_OTT_EXPIRES_IN = 300  // 5분
+
+auth.post('/web-session-token', authMiddleware, async (c) => {
+  const userId = c.get('userId')
+  const token = (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, '')
+
+  // 만료시각은 SQL에서 생성 — datetime('now') 비교와 포맷 일치 보장
+  await c.env.DB.prepare(`
+    INSERT INTO web_session_tokens (user_id, token, expires_at)
+    VALUES (?, ?, datetime('now', '+${WEB_OTT_EXPIRES_IN} seconds'))
+  `).bind(userId, token).run()
+
+  return c.json(ok({ token, expires_in: WEB_OTT_EXPIRES_IN }), 201)
+})
+
+// ── POST /api/v1/auth/web-session-exchange ────────────
+// 원타임 토큰 → 액세스/리프레시 토큰 교환 (1회용, 웹 전용)
+auth.post(
+  '/web-session-exchange',
+  zValidator('json', z.object({
+    token: z.string().min(16).max(128)
+  })),
+  async (c) => {
+    const { token } = c.req.valid('json')
+
+    const record = await c.env.DB.prepare(`
+      SELECT wst.user_id, u.email, u.name, u.plan, u.account_type, u.role, u.is_active
+      FROM web_session_tokens wst
+      JOIN users u ON u.id = wst.user_id AND u.is_deleted = 0
+      WHERE wst.token = ? AND wst.used_at IS NULL AND wst.expires_at > datetime('now')
+    `).bind(token).first<{
+      user_id: number; email: string; name: string; plan: string;
+      account_type: string; role: string; is_active: number
+    }>()
+
+    if (!record || !record.is_active) {
+      return c.json(fail('유효하지 않거나 만료된 토큰입니다.'), 401)
+    }
+
+    // 사용 처리를 먼저 — 동시 요청 경합에도 1회용 보장
+    const used = await c.env.DB.prepare(
+      `UPDATE web_session_tokens SET used_at = datetime('now') WHERE token = ? AND used_at IS NULL`
+    ).bind(token).run()
+    if (!used.meta.changes) {
+      return c.json(fail('이미 사용된 토큰입니다.'), 401)
+    }
+
+    const { accessToken, refreshToken } = await generateTokens(
+      record.user_id, record.email, record.plan, record.account_type, c.env.JWT_SECRET
+    )
+
+    const rtExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+    await c.env.DB.prepare(
+      'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, ?)'
+    ).bind(record.user_id, refreshToken, rtExpiresAt).run()
+
+    return c.json(ok({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      token_type: 'Bearer',
+      user: {
+        id: record.user_id,
+        email: record.email,
+        name: record.name,
+        account_type: record.account_type,
+        plan: record.plan,
+        role: record.role ?? 'user'
+      }
+    }, '세션이 생성되었습니다.'))
+  }
+)
+
 // ── POST /api/v1/auth/forgot-password ─────────────────
 auth.post(
   '/forgot-password',

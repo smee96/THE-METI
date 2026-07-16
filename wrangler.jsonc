@@ -67,4 +67,5 @@
   // Secrets (wrangler secret put 으로 설정):
   // JWT_SECRET
   // PARTNER_WEBHOOK_SECRET
+  // FCM_SERVICE_ACCOUNT  — Firebase 서비스 계정 키 JSON 원문 (앱팀이 프로젝트 생성 후 전달, 미설정 시 푸시 자동 비활성)
 }

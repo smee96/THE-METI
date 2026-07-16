@@ -13,6 +13,7 @@ export type Bindings = {
   PARTNER_WEBHOOK_SECRET: string
   TOSS_CLIENT_KEY?: string   // 미설정 환경에서는 충전 결제 비활성
   TOSS_SECRET_KEY?: string
+  FCM_SERVICE_ACCOUNT?: string  // Firebase 서비스 계정 키 JSON — 미설정 시 푸시 비활성
 }
 
 export type Variables = {
