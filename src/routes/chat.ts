@@ -187,7 +187,8 @@ chat.post(
   '/:roomId/messages',
   authMiddleware,
   zValidator('json', z.object({
-    message_type: z.enum(['text', 'image', 'file', 'card']).default('text'),
+    // ★제품결정(2026-07-18): 파일첨부 제외 — 'file' 타입 미허용
+    message_type: z.enum(['text', 'image', 'card']).default('text'),
     content: z.string().max(5000).optional(),
     file_url: z.string().url().optional(),
     card_id: z.number().int().positive().optional()
@@ -229,9 +230,8 @@ chat.post(
     const sender = await c.env.DB.prepare('SELECT name FROM users WHERE id = ?').bind(userId).first<{ name: string }>()
     const preview = body.message_type === 'text'
       ? (body.content ?? '').slice(0, 100)
-      : body.message_type === 'image' ? '사진을 보냈습니다.'
       : body.message_type === 'card' ? '명함을 공유했습니다.'
-      : '파일을 보냈습니다.'
+      : '사진을 보냈습니다.'
     c.executionCtx.waitUntil(
       notifyChatMessage(c.env, roomId, userId, sender?.name ?? '알 수 없음', preview)
     )
@@ -277,12 +277,12 @@ chat.post(
   }
 )
 
-// ── 채팅 파일 업로드 (이미지/파일 → R2) ─────────────
+// ── 채팅 이미지 업로드 (→ R2) ────────────────────────
 // POST /api/v1/chat/:roomId/upload
 // Content-Type: multipart/form-data
 // form fields:
-//   file     : 이미지 또는 파일 (필수)
-//   file_type : 'image' | 'file' (선택, 기본 자동 감지)
+//   file : 이미지 (필수, JPG·PNG·WEBP·GIF ≤5MB)
+// ★제품결정(2026-07-18): 채팅 첨부는 이미지만 — 문서류 파일 미지원
 chat.post('/:roomId/upload', authMiddleware, async (c) => {
   const userId = c.get('userId')
   const roomId = parseInt(c.req.param('roomId'))
@@ -308,27 +308,16 @@ chat.post('/:roomId/upload', authMiddleware, async (c) => {
   }
 
   // 허용 타입 및 크기 정책
+  // ★제품결정(2026-07-18): 채팅 첨부는 이미지만 — 문서류 파일첨부 제외
+  //   (공개 r2.dev URL로 서빙되므로 임의 파일 호스팅 악용 표면 차단 목적 포함)
   const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-  const FILE_TYPES  = [
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'text/plain',
-  ]
-  const ALLOWED_TYPES = [...IMAGE_TYPES, ...FILE_TYPES]
-  const MAX_IMAGE_SIZE = 5  * 1024 * 1024  // 5MB
-  const MAX_FILE_SIZE  = 20 * 1024 * 1024  // 20MB
+  const MAX_IMAGE_SIZE = 5 * 1024 * 1024  // 5MB
 
-  if (!ALLOWED_TYPES.includes(file.type)) {
-    return c.json(fail('지원하지 않는 파일 형식입니다. (이미지: JPG·PNG·WEBP·GIF / 파일: PDF·Word·Excel·TXT)'), 400)
+  if (!IMAGE_TYPES.includes(file.type)) {
+    return c.json(fail('이미지 파일만 첨부할 수 있습니다. (JPG·PNG·WEBP·GIF)'), 400)
   }
-
-  const isImage = IMAGE_TYPES.includes(file.type)
-  const maxSize = isImage ? MAX_IMAGE_SIZE : MAX_FILE_SIZE
-  if (file.size > maxSize) {
-    return c.json(fail(`파일 크기는 ${isImage ? '5MB' : '20MB'} 이하여야 합니다.`), 400)
+  if (file.size > MAX_IMAGE_SIZE) {
+    return c.json(fail('이미지 크기는 5MB 이하여야 합니다.'), 400)
   }
 
   // R2 키 생성
@@ -345,7 +334,7 @@ chat.post('/:roomId/upload', authMiddleware, async (c) => {
   })
 
   const fileUrl  = `https://pub-9e92c640989d47f69f8e3f749c4de9c0.r2.dev/${key}`
-  const msgType  = isImage ? 'image' : 'file'
+  const msgType  = 'image'
 
   // 플랜별 메시지 만료 시간 설정 (기존 전송 로직과 동일)
   const userPlan = c.get('userPlan')
@@ -375,8 +364,7 @@ chat.post('/:roomId/upload', authMiddleware, async (c) => {
   // 푸시 발송 (응답 비차단)
   const sender = await c.env.DB.prepare('SELECT name FROM users WHERE id = ?').bind(userId).first<{ name: string }>()
   c.executionCtx.waitUntil(
-    notifyChatMessage(c.env, roomId, userId, sender?.name ?? '알 수 없음',
-      isImage ? '사진을 보냈습니다.' : '파일을 보냈습니다.')
+    notifyChatMessage(c.env, roomId, userId, sender?.name ?? '알 수 없음', '사진을 보냈습니다.')
   )
 
   return c.json(ok({
