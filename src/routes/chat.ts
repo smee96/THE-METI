@@ -53,7 +53,10 @@ chat.get('/', authMiddleware, async (c) => {
       (SELECT COUNT(*) FROM chat_messages cm
        WHERE cm.room_id = cr.id AND cm.is_deleted = 0
        AND (crm.last_read_at IS NULL OR cm.created_at > crm.last_read_at)) as unread_count,
-      (SELECT cm2.content FROM chat_messages cm2
+      (SELECT CASE WHEN cm2.message_type = 'card'
+              THEN COALESCE(cm2.content, '명함을 보냈습니다.')
+              ELSE cm2.content END
+       FROM chat_messages cm2
        WHERE cm2.room_id = cr.id AND cm2.is_deleted = 0
        ORDER BY cm2.created_at DESC LIMIT 1) as last_message,
       (SELECT cm3.created_at FROM chat_messages cm3
@@ -163,9 +166,11 @@ chat.get('/:roomId/messages', authMiddleware, async (c) => {
 
   const [rows, countRow] = await Promise.all([
     c.env.DB.prepare(`
-      SELECT cm.*, u.name as sender_name, u.avatar_url as sender_avatar
+      SELECT cm.*, u.name as sender_name, u.avatar_url as sender_avatar,
+             cd.name as card_name
       FROM chat_messages cm
       JOIN users u ON u.id = cm.sender_id
+      LEFT JOIN cards cd ON cd.id = cm.card_id
       WHERE cm.room_id = ? AND cm.is_deleted = 0
         AND (cm.expires_at IS NULL OR cm.expires_at > datetime('now'))
       ORDER BY cm.created_at DESC
