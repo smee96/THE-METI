@@ -8,6 +8,13 @@ import { ok, fail } from '../middleware/response'
 const auth = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
 // ── 유틸리티 ──────────────────────────────────────────
+// 이메일 정규화: 소문자 + 앞뒤 공백 제거.
+// users.email은 COLLATE NOCASE가 아니라 대소문자 구분이므로, 모바일 키보드 자동 대문자화
+// (예: 'Smee96@naver.com')로 인해 계정을 못 찾는 문제를 방지한다. 등록/로그인/조회 공통 적용.
+function normEmail(email: string): string {
+  return String(email || '').trim().toLowerCase()
+}
+
 async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder()
   const data = encoder.encode(password)
@@ -74,7 +81,8 @@ auth.post(
     account_type: z.enum(['personal']).default('personal').optional()
   })),
   async (c) => {
-    const { email, password, name, birth_date } = c.req.valid('json')
+    const { password, name, birth_date } = c.req.valid('json')
+    const email = normEmail(c.req.valid('json').email)
 
     // 만 19세 미만 가입 차단 (클라이언트 우회 방지 — 서버 측 강제)
     const [by, bm, bd] = birth_date.split('-').map(Number)
@@ -163,7 +171,8 @@ auth.post(
     password: z.string()
   })),
   async (c) => {
-    const { email, password } = c.req.valid('json')
+    const { password } = c.req.valid('json')
+    const email = normEmail(c.req.valid('json').email)
 
     const user = await c.env.DB.prepare(`
       SELECT id, email, password_hash, name, account_type, plan, is_verified, is_active, role
@@ -355,7 +364,7 @@ auth.post(
     email: z.string().email()
   })),
   async (c) => {
-    const { email } = c.req.valid('json')
+    const email = normEmail(c.req.valid('json').email)
 
     const user = await c.env.DB.prepare(
       'SELECT id FROM users WHERE email = ? AND is_deleted = 0'
