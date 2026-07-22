@@ -1,0 +1,436 @@
+{
+  "version": 1,
+  "updated": "2026-07-22",
+  "default": "deepblue__classic",
+  "layouts": [
+    "solid",
+    "classic",
+    "split",
+    "serif",
+    "band",
+    "mono",
+    "edge"
+  ],
+  "designs": [
+    {
+      "template_id": "green__solid",
+      "palette": "green",
+      "layout": "solid",
+      "name_ko": "그린",
+      "name_en": "Green",
+      "thumbnail": "/static/card-designs/green__solid.png",
+      "bg_primary": "#12855A",
+      "bg_secondary": "#12855A",
+      "swatch": [
+        "#12855A",
+        "#11855A",
+        "#1B8A61",
+        "#6EB49A",
+        "#13855B"
+      ]
+    },
+    {
+      "template_id": "navy__split",
+      "palette": "navy",
+      "layout": "split",
+      "name_ko": "네이비스플릿",
+      "name_en": "Navy Split",
+      "thumbnail": "/static/card-designs/navy__split.png",
+      "bg_primary": "#1C2B46",
+      "bg_secondary": "#F5F1E9",
+      "swatch": [
+        "#F5F1E9",
+        "#354258",
+        "#F4F1E9",
+        "#FAF5ED",
+        "#F6F1E9"
+      ]
+    },
+    {
+      "template_id": "deepblue__classic",
+      "palette": "deepblue",
+      "layout": "classic",
+      "name_ko": "딥블루",
+      "name_en": "Deep Blue",
+      "thumbnail": "/static/card-designs/deepblue__classic.png",
+      "bg_primary": "#0F2A4A",
+      "bg_secondary": "#0F2A4A",
+      "swatch": [
+        "#0F2A4A",
+        "#0F2A4B",
+        "#2A4360",
+        "#0F2A49",
+        "#0C2645"
+      ]
+    },
+    {
+      "template_id": "paper__mono",
+      "palette": "paper",
+      "layout": "mono",
+      "name_ko": "모노그리드",
+      "name_en": "Paper Mono",
+      "thumbnail": "/static/card-designs/paper__mono.png",
+      "bg_primary": "#FBFBFA",
+      "bg_secondary": "#FBFBFA",
+      "swatch": [
+        "#FBFBFA",
+        "#F9F9F7",
+        "#C0C0BF",
+        "#F7F7F6",
+        "#FDFDFD"
+      ]
+    },
+    {
+      "template_id": "onyx__mono",
+      "palette": "onyx",
+      "layout": "mono",
+      "name_ko": "모노다크",
+      "name_en": "Onyx Mono",
+      "thumbnail": "/static/card-designs/onyx__mono.png",
+      "bg_primary": "#17171A",
+      "bg_secondary": "#17171A",
+      "swatch": [
+        "#17171A",
+        "#19191C",
+        "#262629",
+        "#707072",
+        "#131316"
+      ]
+    },
+    {
+      "template_id": "burgundy__classic",
+      "palette": "burgundy",
+      "layout": "classic",
+      "name_ko": "버건디",
+      "name_en": "Burgundy",
+      "thumbnail": "/static/card-designs/burgundy__classic.png",
+      "bg_primary": "#3A0F1E",
+      "bg_secondary": "#3A0F1E",
+      "swatch": [
+        "#3A0F1E",
+        "#3D1321",
+        "#67424F",
+        "#390F1D",
+        "#350C1A"
+      ]
+    },
+    {
+      "template_id": "linen__edge",
+      "palette": "linen",
+      "layout": "edge",
+      "name_ko": "버건디엣지",
+      "name_en": "Linen Edge",
+      "thumbnail": "/static/card-designs/linen__edge.png",
+      "bg_primary": "#F5F1EF",
+      "bg_secondary": "#F5F1EF",
+      "swatch": [
+        "#F5F1EF",
+        "#E6DADA",
+        "#F7F4F1",
+        "#6B2230",
+        "#C0A8AB"
+      ]
+    },
+    {
+      "template_id": "blue__solid",
+      "palette": "blue",
+      "layout": "solid",
+      "name_ko": "블루",
+      "name_en": "Blue",
+      "thumbnail": "/static/card-designs/blue__solid.png",
+      "bg_primary": "#2A4FC4",
+      "bg_secondary": "#2A4FC4",
+      "swatch": [
+        "#2A4FC4",
+        "#294FC4",
+        "#5976D1",
+        "#2B4FC4",
+        "#2549B7"
+      ]
+    },
+    {
+      "template_id": "sage__serif",
+      "palette": "sage",
+      "layout": "serif",
+      "name_ko": "세이지세리프",
+      "name_en": "Sage Serif",
+      "thumbnail": "/static/card-designs/sage__serif.png",
+      "bg_primary": "#E9EDE3",
+      "bg_secondary": "#E9EDE3",
+      "swatch": [
+        "#E9EDE3",
+        "#DFE4D9",
+        "#EAEDE4",
+        "#EBEFE5",
+        "#B5BBB0"
+      ]
+    },
+    {
+      "template_id": "slate__split",
+      "palette": "slate",
+      "layout": "split",
+      "name_ko": "슬레이트민트",
+      "name_en": "Slate Mint",
+      "thumbnail": "/static/card-designs/slate__split.png",
+      "bg_primary": "#2F3B3A",
+      "bg_secondary": "#EEF3F0",
+      "swatch": [
+        "#EEF3F0",
+        "#293433",
+        "#EDF3EF",
+        "#F2F7F4",
+        "#465250"
+      ]
+    },
+    {
+      "template_id": "ivory__serif",
+      "palette": "ivory",
+      "layout": "serif",
+      "name_ko": "아이보리세리프",
+      "name_en": "Ivory Serif",
+      "thumbnail": "/static/card-designs/ivory__serif.png",
+      "bg_primary": "#F3EFE6",
+      "bg_secondary": "#F3EFE6",
+      "swatch": [
+        "#F3EFE6",
+        "#EAE5DC",
+        "#F3EFE7",
+        "#C3BFB5",
+        "#F5F1E8"
+      ]
+    },
+    {
+      "template_id": "yellow__solid",
+      "palette": "yellow",
+      "layout": "solid",
+      "name_ko": "옐로",
+      "name_en": "Yellow",
+      "thumbnail": "/static/card-designs/yellow__solid.png",
+      "bg_primary": "#9A7A12",
+      "bg_secondary": "#9A7A12",
+      "swatch": [
+        "#9A7A12",
+        "#9A7A11",
+        "#9E7F1B",
+        "#C1AD6D",
+        "#8F710F"
+      ]
+    },
+    {
+      "template_id": "orange__solid",
+      "palette": "orange",
+      "layout": "solid",
+      "name_ko": "오렌지",
+      "name_en": "Orange",
+      "thumbnail": "/static/card-designs/orange__solid.png",
+      "bg_primary": "#C4610E",
+      "bg_secondary": "#C4610E",
+      "swatch": [
+        "#C4610E",
+        "#C4610D",
+        "#D18342",
+        "#C4610F",
+        "#B7590B"
+      ]
+    },
+    {
+      "template_id": "warmink__mono",
+      "palette": "warmink",
+      "layout": "mono",
+      "name_ko": "웜잉크",
+      "name_en": "Warm Ink",
+      "thumbnail": "/static/card-designs/warmink__mono.png",
+      "bg_primary": "#F4F0EA",
+      "bg_secondary": "#F4F0EA",
+      "swatch": [
+        "#F4F0EA",
+        "#F2EEE7",
+        "#BEBAB4",
+        "#F7F3ED",
+        "#F4F0EB"
+      ]
+    },
+    {
+      "template_id": "ink__band",
+      "palette": "ink",
+      "layout": "band",
+      "name_ko": "잉크밴드",
+      "name_en": "Ink Band",
+      "thumbnail": "/static/card-designs/ink__band.png",
+      "bg_primary": "#1A1F3A",
+      "bg_secondary": "#E4E2E8",
+      "swatch": [
+        "#E4E2E8",
+        "#1A1F3A",
+        "#252A43",
+        "#171C36",
+        "#ABABB7"
+      ]
+    },
+    {
+      "template_id": "charcoal__band",
+      "palette": "charcoal",
+      "layout": "band",
+      "name_ko": "차콜밴드",
+      "name_en": "Charcoal Band",
+      "thumbnail": "/static/card-designs/charcoal__band.png",
+      "bg_primary": "#26262A",
+      "bg_secondary": "#E7E2D8",
+      "swatch": [
+        "#26262A",
+        "#E7E2D8",
+        "#E9E4DA",
+        "#313134",
+        "#222326"
+      ]
+    },
+    {
+      "template_id": "coral__solid",
+      "palette": "coral",
+      "layout": "solid",
+      "name_ko": "코랄",
+      "name_en": "Coral",
+      "thumbnail": "/static/card-designs/coral__solid.png",
+      "bg_primary": "#D63C28",
+      "bg_secondary": "#D63C28",
+      "swatch": [
+        "#D63C28",
+        "#D63C27",
+        "#DF6859",
+        "#D63C29",
+        "#C93724"
+      ]
+    },
+    {
+      "template_id": "teal__solid",
+      "palette": "teal",
+      "layout": "solid",
+      "name_ko": "틸",
+      "name_en": "Teal",
+      "thumbnail": "/static/card-designs/teal__solid.png",
+      "bg_primary": "#0E7C88",
+      "bg_secondary": "#0E7C88",
+      "swatch": [
+        "#0E7C88",
+        "#0D7C88",
+        "#17818D",
+        "#6BAFB6",
+        "#0B727E"
+      ]
+    },
+    {
+      "template_id": "teal__band",
+      "palette": "teal",
+      "layout": "band",
+      "name_ko": "틸밴드",
+      "name_en": "Teal Band",
+      "thumbnail": "/static/card-designs/teal__band.png",
+      "bg_primary": "#10403F",
+      "bg_secondary": "#E6E0D4",
+      "swatch": [
+        "#E6E0D4",
+        "#10403F",
+        "#1D4948",
+        "#0D3C3B",
+        "#ABB3AB"
+      ]
+    },
+    {
+      "template_id": "purple__solid",
+      "palette": "purple",
+      "layout": "solid",
+      "name_ko": "퍼플",
+      "name_en": "Purple",
+      "thumbnail": "/static/card-designs/purple__solid.png",
+      "bg_primary": "#7C3AED",
+      "bg_secondary": "#7C3AED",
+      "swatch": [
+        "#7C3AED",
+        "#7B39ED",
+        "#8244EE",
+        "#B18AF4",
+        "#7D3AEF"
+      ]
+    },
+    {
+      "template_id": "forest__edge",
+      "palette": "forest",
+      "layout": "edge",
+      "name_ko": "포레스트",
+      "name_en": "Forest",
+      "thumbnail": "/static/card-designs/forest__edge.png",
+      "bg_primary": "#F3F4F0",
+      "bg_secondary": "#F3F4F0",
+      "swatch": [
+        "#F3F4F0",
+        "#DDE2DD",
+        "#6A8578",
+        "#F6F6F2",
+        "#EDEFEB"
+      ]
+    },
+    {
+      "template_id": "pine__classic",
+      "palette": "pine",
+      "layout": "classic",
+      "name_ko": "포레스트트러스트",
+      "name_en": "Pine Classic",
+      "thumbnail": "/static/card-designs/pine__classic.png",
+      "bg_primary": "#12352A",
+      "bg_secondary": "#12352A",
+      "swatch": [
+        "#12352A",
+        "#14382C",
+        "#3F5E54",
+        "#11352A",
+        "#0F3026"
+      ]
+    },
+    {
+      "template_id": "plum__split",
+      "palette": "plum",
+      "layout": "split",
+      "name_ko": "플럼스플릿",
+      "name_en": "Plum Split",
+      "thumbnail": "/static/card-designs/plum__split.png",
+      "bg_primary": "#5B2A4A",
+      "bg_secondary": "#F7EDF2",
+      "swatch": [
+        "#F7EDF2",
+        "#5B2A4A",
+        "#C3ADBB",
+        "#FAF1F5",
+        "#5C2A4A"
+      ]
+    },
+    {
+      "template_id": "pink__solid",
+      "palette": "pink",
+      "layout": "solid",
+      "name_ko": "핑크",
+      "name_en": "Pink",
+      "thumbnail": "/static/card-designs/pink__solid.png",
+      "bg_primary": "#C4185F",
+      "bg_secondary": "#C4185F",
+      "swatch": [
+        "#C4185F",
+        "#C4165E",
+        "#C72367",
+        "#DC759F",
+        "#C51860"
+      ]
+    }
+  ],
+  "legacy_alias": {
+    "default": "deepblue__classic",
+    "dark": "onyx__mono",
+    "ocean_coral": "teal__solid",
+    "forest_gold": "forest__edge",
+    "violet_amber": "purple__solid",
+    "minimal": "paper__mono",
+    "ivory_navy": "ivory__serif",
+    "burgundy_rose": "burgundy__classic",
+    "modern_blue": "blue__solid",
+    "classic": "deepblue__classic"
+  }
+}
