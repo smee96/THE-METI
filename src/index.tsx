@@ -71,18 +71,8 @@ function cardPublicHtml(cardId: string): string {
     <!-- 명함 본체 -->
     <div id="card-content" class="hidden space-y-3">
 
-      <!-- ① 헤더 카드 (배경·색상은 template_id 팔레트로 JS에서 적용) -->
-      <div id="card-header" class="rounded-3xl shadow-xl p-6 text-center">
-        <div id="avatar-wrap" class="hidden w-20 h-20 rounded-full mx-auto mb-3 overflow-hidden" style="border:4px solid rgba(255,255,255,.3)">
-          <img id="avatar-img" class="w-20 h-20 object-cover">
-        </div>
-        <div id="avatar-placeholder" class="w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center">
-          <i id="avatar-icon" class="fas fa-user text-2xl"></i>
-        </div>
-        <h1 id="card-name"    class="text-2xl font-bold"></h1>
-        <p  id="card-title"   class="text-sm mt-0.5"></p>
-        <p  id="card-company" class="text-sm font-medium mt-0.5"></p>
-      </div>
+      <!-- ① 명함 페이스 (선택한 디자인 레이아웃으로 JS 렌더 — 카탈로그 기반) -->
+      <div id="card-face" style="position:relative;width:100%;aspect-ratio:1.62/1;min-height:212px;border-radius:22px;overflow:hidden;box-shadow:0 10px 30px rgba(14,23,38,.18);font-family:-apple-system,'Pretendard',system-ui,sans-serif;"></div>
 
       <!-- ② 연락처 -->
       <div id="contact-section" class="hidden bg-white rounded-2xl shadow p-4 space-y-2.5">
@@ -162,47 +152,119 @@ function cardPublicHtml(cardId: string): string {
       return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
-    // ── 명함 템플릿 팔레트 (앱 회신 ELID_App_Reply_Template_Spec_2026-07-16.md) ──
-    // 배경 = 선형 그라데이션 topLeft→bottomRight, accent = 포인트 컬러
-    // 알 수 없는 template_id는 default(엘리드) 폴백 (앱과 동일 정책)
-    const TEMPLATES = {
-      default:       { start:'#1C3D72', end:'#06122A', accent:'#C9A86A', light:false }, // 엘리드
-      dark:          { start:'#2A2E38', end:'#070809', accent:'#C9A86A', light:false }, // 미드나잇
-      ocean_coral:   { start:'#0C5163', end:'#021C23', accent:'#E58773', light:false }, // 틸 코랄
-      forest_gold:   { start:'#1C3D72', end:'#06122A', accent:'#6ABE9F', light:false }, // 민트
-      violet_amber:  { start:'#1C3D72', end:'#06122A', accent:'#9283DC', light:false }, // 바이올렛
-      minimal:       { start:'#FFFFFF', end:'#E2E8F0', accent:'#0B1E40', light:true  }, // 미니멀
-      ivory_navy:    { start:'#FDF6EC', end:'#F0E6D2', accent:'#0B1E40', light:true  }, // 아이보리
-      burgundy_rose: { start:'#4C0519', end:'#9F1239', accent:'#FDA4AF', light:false }, // 버건디
-      modern_blue:   { start:'#1E3A8A', end:'#3B82F6', accent:'#93C5FD', light:false }, // 모던 블루
-      classic:       { start:'#1A1A2E', end:'#16213E', accent:'#E2B04A', light:false }, // 클래식
-    };
+    // ── 명함 디자인 카탈로그 기반 렌더 (7 레이아웃) ──
+    // 카탈로그: /static/card-designs/catalog.json — 앱과 동일 소스 (핸드오프 2026-07-22)
+    // 레이아웃: solid / classic / split / serif / band / mono / edge
+    var CATALOG = null, BYID = {}, ALIAS = {};
+    function resolveDesign(tid) {
+      var id = tid || '';
+      if (!BYID[id] && ALIAS[id]) id = ALIAS[id];        // 구 template_id → 신규 자동매핑
+      if (BYID[id]) return BYID[id];
+      var def = (CATALOG && CATALOG.default) || 'deepblue__classic';
+      return BYID[def] || null;
+    }
+    function isLight(hex) {
+      var h = String(hex||'').replace('#','');
+      if (h.length < 6) return false;
+      var r=parseInt(h.substr(0,2),16), g=parseInt(h.substr(2,2),16), b=parseInt(h.substr(4,2),16);
+      return (0.2126*r + 0.7152*g + 0.0722*b) > 140;
+    }
+    function cr(lbl, val, lc, vc) {   // 연락처 라벨행 (classic/edge)
+      if (!val) return '';
+      return '<div style="display:flex;gap:9px;font-size:11px;margin-top:4px;line-height:1.5;">'
+        + '<span style="color:'+lc+';width:11px;flex-shrink:0;font-weight:700;">'+lbl+'</span>'
+        + '<span style="color:'+vc+';word-break:break-all;">'+val+'</span></div>';
+    }
+    function lines(items) {
+      return items.filter(function(x){return !!x;}).map(function(x){return '<div>'+x+'</div>';}).join('');
+    }
+    function cardFace(card, d) {
+      var name = esc(card.name||''), title = esc(card.title||''), company = esc(card.company||'ELID');
+      var email = esc(card.email||''), phone = esc(card.phone||''), web = esc(card.website||'');
+      var mono = ((card.company||card.name||'M').trim().charAt(0) || 'M').toUpperCase();
+      var bg1=d.bg_primary, onP=d.on_primary, subP=d.sub_primary;
+      var bg2=d.bg_secondary, onS=d.on_secondary, subS=d.sub_secondary, acc=d.accent||onP;
+      var lead = email || phone || web;
 
-    function applyTemplate(templateId) {
-      // 신규 형식 '{팔레트}__{디자인}'(예: ocean_coral__leftbar) → 팔레트만 취함.
-      // 기존 형식(default, dark 등)은 '__' 없어 그대로 매칭 (앱 회신 2026-07-20 §3)
-      const paletteId = String(templateId || '').split('__')[0];
-      const t = TEMPLATES[paletteId] || TEMPLATES.default;
-      const mainColor = t.light ? '#0F172A' : '#FFFFFF';
-      const subColor  = t.light ? '#64748B' : 'rgba(255,255,255,0.75)';
-
-      const header = document.getElementById('card-header');
-      header.style.background = 'linear-gradient(135deg, ' + t.start + ', ' + t.end + ')';
-
-      document.getElementById('card-name').style.color    = mainColor;
-      document.getElementById('card-title').style.color   = subColor;
-      document.getElementById('card-company').style.color = subColor;
-
-      // 아바타 테두리·아이콘 = accent
-      document.getElementById('avatar-wrap').style.border = '4px solid ' + t.accent;
-      const ph = document.getElementById('avatar-placeholder');
-      ph.style.background = t.light ? 'rgba(15,23,42,0.06)' : 'rgba(255,255,255,0.12)';
-      document.getElementById('avatar-icon').style.color = t.accent;
+      if (d.layout === 'split') {
+        var roleC = isLight(bg2) ? acc : subS;
+        return '<div style="position:absolute;inset:0;display:flex;">'
+          + '<div style="width:42%;background:'+bg1+';color:'+onP+';padding:8% 7%;display:flex;flex-direction:column;justify-content:space-between;">'
+          +   '<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;line-height:1.35;">'+company+'</div>'
+          +   '<div style="width:24px;height:3px;border-radius:2px;background:'+(isLight(bg1)?acc:onP)+';"></div></div>'
+          + '<div style="flex:1;background:'+bg2+';color:'+onS+';padding:8% 7%;display:flex;flex-direction:column;justify-content:center;">'
+          +   '<div style="font-size:22px;font-weight:800;line-height:1.1;">'+name+'</div>'
+          +   (title?'<div style="font-size:12px;font-weight:600;color:'+roleC+';margin-top:3px;">'+title+'</div>':'')
+          +   '<div style="margin-top:14px;color:'+subS+';font-size:11px;line-height:1.6;">'+lines([phone,email,web])+'</div>'
+          + '</div></div>';
+      }
+      if (d.layout === 'band') {
+        return '<div style="position:absolute;inset:0;display:flex;flex-direction:column;">'
+          + '<div style="height:56%;background:'+bg1+';color:'+onP+';padding:7% 8% 5%;display:flex;flex-direction:column;justify-content:space-between;">'
+          +   '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'
+          +     '<span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;line-height:1.35;max-width:62%;">'+company+'</span>'
+          +     '<span style="font-size:10px;letter-spacing:.18em;color:'+subP+';">STUDIO</span></div>'
+          +   '<div style="font-size:23px;font-weight:800;">'+name+'</div></div>'
+          + '<div style="flex:1;background:'+bg2+';color:'+onS+';padding:0 8%;display:flex;align-items:center;justify-content:space-between;gap:10px;">'
+          +   '<span style="font-size:12px;color:'+subS+';">'+title+'</span>'
+          +   '<div style="text-align:right;font-size:11px;color:'+subS+';line-height:1.6;">'+lines([phone,email])+'</div>'
+          + '</div></div>';
+      }
+      if (d.layout === 'serif') {
+        return '<div style="position:absolute;inset:0;background:'+bg1+';color:'+onP+';padding:9% 8%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-family:Georgia,serif;">'
+          + '<div style="font-size:19px;font-weight:700;letter-spacing:.02em;">'+company+'</div>'
+          + '<div style="width:26px;height:1px;background:'+subP+';margin:9px 0;"></div>'
+          + '<div style="font-size:27px;font-weight:700;line-height:1.1;">'+name+'</div>'
+          + (title?'<div style="font-size:12px;color:'+subP+';margin-top:6px;">'+title+'</div>':'')
+          + (lead?'<div style="font-size:11px;color:'+subP+';margin-top:13px;">'+[phone,email].filter(function(x){return !!x;}).join('  ·  ')+'</div>':'')
+          + '</div>';
+      }
+      if (d.layout === 'mono') {
+        var rule = (acc && acc !== onP) ? acc : subP;
+        return '<div style="position:absolute;inset:0;background:'+bg1+';color:'+onP+';">'
+          + '<div style="position:absolute;top:8%;left:8%;right:8%;display:flex;justify-content:space-between;align-items:flex-start;">'
+          +   '<div><div style="font-size:17px;font-weight:800;letter-spacing:.02em;">'+company+'</div>'
+          +   '<div style="font-size:9px;letter-spacing:.2em;color:'+subP+';margin-top:3px;text-transform:uppercase;">Digital Business Card</div></div>'
+          +   '<div style="width:2px;height:32px;background:'+rule+';"></div></div>'
+          + '<div style="position:absolute;left:8%;bottom:8%;font-size:23px;font-weight:800;">'+name
+          +   (title?'<div style="font-size:12px;font-weight:500;color:'+subP+';margin-top:2px;">'+title+'</div>':'')+'</div>'
+          + '<div style="position:absolute;right:8%;bottom:8%;text-align:right;font-size:11px;color:'+subP+';line-height:1.6;">'+lines([phone,email])+'</div>'
+          + '</div>';
+      }
+      if (d.layout === 'classic') {
+        return '<div style="position:absolute;inset:0;background:'+bg1+';color:'+onP+';padding:8%;display:flex;flex-direction:column;justify-content:space-between;">'
+          + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'
+          +   '<div style="font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;line-height:1.3;border-bottom:1px solid '+subP+';padding-bottom:7px;">'+company+'</div>'
+          +   '<span style="font-size:9px;letter-spacing:.18em;color:'+subP+';white-space:nowrap;">DIGITAL CARD</span></div>'
+          + '<div><div style="font-size:24px;font-weight:800;">'+name+'</div>'
+          +   (title?'<div style="font-size:12px;color:'+subP+';margin-top:3px;">'+title+'</div>':'')
+          +   '<div style="margin-top:12px;">'+cr('T',phone,subP,onP)+cr('E',email,subP,onP)+cr('W',web,subP,onP)+'</div></div></div>';
+      }
+      if (d.layout === 'edge') {
+        return '<div style="position:absolute;inset:0;background:'+bg1+';color:'+onP+';padding:8%;display:flex;flex-direction:column;justify-content:space-between;">'
+          + '<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
+          +   '<div style="font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;">'+company+'</div>'
+          +   '<div style="width:30px;height:30px;border:1.5px solid '+acc+';border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:'+acc+';">'+mono+'</div></div>'
+          + '<div><div style="font-size:24px;font-weight:800;">'+name+'</div>'
+          +   (title?'<div style="font-size:12px;color:'+subP+';margin-top:2px;">'+title+'</div>':'')
+          +   '<div style="margin-top:12px;">'+cr('T',phone,subP,onP)+cr('E',email,subP,onP)+'</div></div></div>';
+      }
+      // solid (기본)
+      return '<div style="position:absolute;inset:0;background:'+bg1+';color:'+onP+';padding:9% 8%;display:flex;flex-direction:column;justify-content:space-between;">'
+        + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'
+        +   '<div style="font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;line-height:1.35;max-width:62%;">'+company+'</div>'
+        +   '<div style="width:32px;height:32px;border:1.5px solid '+onP+';border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;opacity:.92;">'+mono+'</div></div>'
+        + '<div><div style="font-size:26px;font-weight:800;letter-spacing:-.01em;">'+name+'</div>'
+        +   (title?'<div style="font-size:13px;color:'+subP+';margin-top:2px;">'+title+'</div>':'')
+        +   (lead?'<div style="display:flex;align-items:center;gap:7px;font-size:12px;color:'+subP+';margin-top:10px;"><span style="width:5px;height:5px;border-radius:50%;background:'+onP+';display:inline-block;flex-shrink:0;"></span>'+lead+'</div>':'')
+        + '</div></div>';
     }
 
-    fetch('/api/v1/cards/public/${cardId}')
-      .then(r => r.json())
-      .then(data => {
+    Promise.all([
+      fetch('/static/card-designs/catalog.json').then(r => r.json()).catch(() => null),
+      fetch('/api/v1/cards/public/${cardId}').then(r => r.json())
+    ])
+      .then(([cat, data]) => {
         document.getElementById('card-loading').classList.add('hidden');
         if (!data.success) { document.getElementById('card-error').classList.remove('hidden'); return; }
         const card = data.data;
@@ -210,20 +272,10 @@ function cardPublicHtml(cardId: string): string {
         document.getElementById('card-content').classList.remove('hidden');
         document.title = (card.name || 'ELID') + ' - 디지털 명함';
 
-        // 템플릿 팔레트 적용
-        applyTemplate(card.template_id);
-
-        // ① 헤더
-        document.getElementById('card-name').textContent    = card.name    || '';
-        document.getElementById('card-title').textContent   = card.title   || '';
-        document.getElementById('card-company').textContent = card.company || '';
-        if (card.avatar_url) {
-          const img = document.getElementById('avatar-img');
-          img.src = card.avatar_url;
-          img.onerror = () => {};
-          document.getElementById('avatar-wrap').classList.remove('hidden');
-          document.getElementById('avatar-placeholder').classList.add('hidden');
-        }
+        // ① 명함 페이스 — 선택한 디자인 레이아웃으로 렌더 (구 template_id는 legacy_alias로 자동매핑)
+        if (cat) { CATALOG = cat; (cat.designs||[]).forEach(function(d){ BYID[d.template_id] = d; }); ALIAS = cat.legacy_alias || {}; }
+        const design = resolveDesign(card.template_id);
+        document.getElementById('card-face').innerHTML = design ? cardFace(card, design) : '';
 
         // ② 연락처
         let hasContact = false;

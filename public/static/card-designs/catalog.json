@@ -27,7 +27,12 @@
         "#1B8A61",
         "#6EB49A",
         "#13855B"
-      ]
+      ],
+      "on_primary": "#FFFFFF",
+      "sub_primary": "rgba(255,255,255,0.72)",
+      "on_secondary": "#FFFFFF",
+      "sub_secondary": "rgba(255,255,255,0.72)",
+      "accent": "#11855A"
     },
     {
       "template_id": "navy__split",
@@ -44,7 +49,12 @@
         "#F4F1E9",
         "#FAF5ED",
         "#F6F1E9"
-      ]
+      ],
+      "on_primary": "#FFFFFF",
+      "sub_primary": "rgba(255,255,255,0.72)",
+      "on_secondary": "#0E1726",
+      "sub_secondary": "#5B6577",
+      "accent": "#354258"
     },
     {
       "template_id": "deepblue__classic",
@@ -61,7 +71,12 @@
         "#2A4360",
         "#0F2A49",
         "#0C2645"
-      ]
+      ],
+      "on_primary": "#FFFFFF",
+      "sub_primary": "rgba(255,255,255,0.72)",
+      "on_secondary": "#FFFFFF",
+      "sub_secondary": "rgba(255,255,255,0.72)",
+      "accent": "#0C2645"
     },
     {
       "template_id": "paper__mono",
@@ -78,7 +93,12 @@
         "#C0C0BF",
         "#F7F7F6",
         "#FDFDFD"
-      ]
+      ],
+      "on_primary": "#0E1726",
+      "sub_primary": "#5B6577",
+      "on_secondary": "#0E1726",
+      "sub_secondary": "#5B6577",
+      "accent": "#0E1726"
     },
     {
       "template_id": "onyx__mono",
@@ -95,7 +115,12 @@
         "#262629",
         "#707072",
         "#131316"
-      ]
+      ],
+      "on_primary": "#FFFFFF",
+      "sub_primary": "rgba(255,255,255,0.72)",
+      "on_secondary": "#FFFFFF",
+      "sub_secondary": "rgba(255,255,255,0.72)",
+      "accent": "#FFFFFF"
     },
     {
       "template_id": "burgundy__classic",
@@ -112,7 +137,12 @@
         "#67424F",
         "#390F1D",
         "#350C1A"
-      ]
+      ],
+      "on_primary": "#FFFFFF",
+      "sub_primary": "rgba(255,255,255,0.72)",
+      "on_secondary": "#FFFFFF",
+      "sub_secondary": "rgba(255,255,255,0.72)",
+      "accent": "#350C1A"
     },
     {
       "template_id": "linen__edge",
@@ -129,7 +159,12 @@
         "#F7F4F1",
         "#6B2230",
         "#C0A8AB"
-      ]
+      ],
+      "on_primary": "#0E1726",
+      "sub_primary": "#5B6577",
+      "on_secondary": "#0E1726",
+      "sub_secondary": "#5B6577",
+      "accent": "#6B2230"
     },
     {
       "template_id": "blue__solid",
@@ -146,7 +181,12 @@
         "#5976D1",
         "#2B4FC4",
         "#2549B7"
-      ]
+      ],
+      "on_primary": "#FFFFFF",
+      "sub_primary": "rgba(255,255,255,0.72)",
+      "on_secondary": "#FFFFFF",
+      "sub_secondary": "rgba(255,255,255,0.72)",
+      "accent": "#2549B7"
     },
     {
       "template_id": "sage__serif",
@@ -163,7 +203,12 @@
         "#EAEDE4",
         "#EBEFE5",
         "#B5BBB0"
-      ]
+      ],
+      "on_primary": "#0E1726",
+      "sub_primary": "#5B6577",
+      "on_secondary": "#0E1726",
+      "sub_secondary": "#5B6577",
+      "accent": "#0E1726"
     },
     {
       "template_id": "slate__split",
@@ -180,7 +225,12 @@
         "#EDF3EF",
         "#F2F7F4",
         "#465250"
-      ]
+      ],
+      "on_primary": "#FFFFFF",
+      "sub_primary": "rgba(255,255,255,0.72)",
+      "on_secondary": "#0E1726",
+      "sub_secondary": "#5B6577",
+      "accent": "#293433"
     },
     {
       "template_id": "ivory__serif",
@@ -197,7 +247,12 @@
         "#F3EFE7",
         "#C3BFB5",
         "#F5F1E8"
-      ]
+      ],
+      "on_primary": "#0E1726",
+      "sub_primary": "#5B6577",
+      "on_secondary": "#0E1726",
+      "sub_secondary": "#5B6577",
+      "accent": "#0E1726"
     },
     {
       "template_id": "yellow__solid",
@@ -214,7 +269,12 @@
         "#9E7F1B",
         "#C1AD6D",
         "#8F710F"
-      ]
+      ],
+      "on_primary": "#FFFFFF",
+      "sub_primary": "rgba(255,255,255,0.72)",
+      "on_secondary": "#FFFFFF",
+      "sub_secondary": "rgba(255,255,255,0.72)",
+      "accent": "#8F710F"
     },
     {
       "template_id": "orange__solid",
@@ -231,7 +291,12 @@
         "#D18342",
         "#C4610F",
         "#B7590B"
-      ]
+      ],
+      "on_primary": "#FFFFFF",
+      "sub_primary": "rgba(255,255,255,0.72)",
+      "on_secondary": "#FFFFFF",
+      "sub_secondary": "rgba(255,255,255,0.72)",
+      "accent": "#B7590B"
     },
     {
       "template_id": "warmink__mono",
@@ -248,7 +313,12 @@
         "#BEBAB4",
         "#F7F3ED",
         "#F4F0EB"
-      ]
+      ],
+      "on_primary": "#0E1726",
+      "sub_primary": "#5B6577",
+      "on_secondary": "#0E1726",
+      "sub_secondary": "#5B6577",
+      "accent": "#0E1726"
     },
     {
       "template_id": "ink__band",
@@ -265,7 +335,12 @@
         "#252A43",
         "#171C36",
         "#ABABB7"
-      ]
+      ],
+      "on_primary": "#FFFFFF",
+      "sub_primary": "rgba(255,255,255,0.72)",
+      "on_secondary": "#0E1726",
+      "sub_secondary": "#5B6577",
+      "accent": "#171C36"
     },
     {
       "template_id": "charcoal__band",
@@ -282,7 +357,12 @@
         "#E9E4DA",
         "#313134",
         "#222326"
-      ]
+      ],
+      "on_primary": "#FFFFFF",
+      "sub_primary": "rgba(255,255,255,0.72)",
+      "on_secondary": "#0E1726",
+      "sub_secondary": "#5B6577",
+      "accent": "#FFFFFF"
     },
     {
       "template_id": "coral__solid",
@@ -299,7 +379,12 @@
         "#DF6859",
         "#D63C29",
         "#C93724"
-      ]
+      ],
+      "on_primary": "#FFFFFF",
+      "sub_primary": "rgba(255,255,255,0.72)",
+      "on_secondary": "#FFFFFF",
+      "sub_secondary": "rgba(255,255,255,0.72)",
+      "accent": "#C93724"
     },
     {
       "template_id": "teal__solid",
@@ -316,7 +401,12 @@
         "#17818D",
         "#6BAFB6",
         "#0B727E"
-      ]
+      ],
+      "on_primary": "#FFFFFF",
+      "sub_primary": "rgba(255,255,255,0.72)",
+      "on_secondary": "#FFFFFF",
+      "sub_secondary": "rgba(255,255,255,0.72)",
+      "accent": "#0B727E"
     },
     {
       "template_id": "teal__band",
@@ -333,7 +423,12 @@
         "#1D4948",
         "#0D3C3B",
         "#ABB3AB"
-      ]
+      ],
+      "on_primary": "#FFFFFF",
+      "sub_primary": "rgba(255,255,255,0.72)",
+      "on_secondary": "#0E1726",
+      "sub_secondary": "#5B6577",
+      "accent": "#0D3C3B"
     },
     {
       "template_id": "purple__solid",
@@ -350,7 +445,12 @@
         "#8244EE",
         "#B18AF4",
         "#7D3AEF"
-      ]
+      ],
+      "on_primary": "#FFFFFF",
+      "sub_primary": "rgba(255,255,255,0.72)",
+      "on_secondary": "#FFFFFF",
+      "sub_secondary": "rgba(255,255,255,0.72)",
+      "accent": "#7D3AEF"
     },
     {
       "template_id": "forest__edge",
@@ -367,7 +467,12 @@
         "#6A8578",
         "#F6F6F2",
         "#EDEFEB"
-      ]
+      ],
+      "on_primary": "#0E1726",
+      "sub_primary": "#5B6577",
+      "on_secondary": "#0E1726",
+      "sub_secondary": "#5B6577",
+      "accent": "#6A8578"
     },
     {
       "template_id": "pine__classic",
@@ -384,7 +489,12 @@
         "#3F5E54",
         "#11352A",
         "#0F3026"
-      ]
+      ],
+      "on_primary": "#FFFFFF",
+      "sub_primary": "rgba(255,255,255,0.72)",
+      "on_secondary": "#FFFFFF",
+      "sub_secondary": "rgba(255,255,255,0.72)",
+      "accent": "#0F3026"
     },
     {
       "template_id": "plum__split",
@@ -401,7 +511,12 @@
         "#C3ADBB",
         "#FAF1F5",
         "#5C2A4A"
-      ]
+      ],
+      "on_primary": "#FFFFFF",
+      "sub_primary": "rgba(255,255,255,0.72)",
+      "on_secondary": "#0E1726",
+      "sub_secondary": "#5B6577",
+      "accent": "#5C2A4A"
     },
     {
       "template_id": "pink__solid",
@@ -418,7 +533,12 @@
         "#C72367",
         "#DC759F",
         "#C51860"
-      ]
+      ],
+      "on_primary": "#FFFFFF",
+      "sub_primary": "rgba(255,255,255,0.72)",
+      "on_secondary": "#FFFFFF",
+      "sub_secondary": "rgba(255,255,255,0.72)",
+      "accent": "#C4165E"
     }
   ],
   "legacy_alias": {
