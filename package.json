@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "vite",
     "dev:sandbox": "wrangler pages dev dist --d1=meti-production --local --ip 0.0.0.0 --port 3000",
-    "build": "vite build",
+    "css": "tailwindcss -c tailwind.config.js -i src/tailwind-input.css -o public/static/tailwind.css --minify",
+    "build": "npm run css && vite build",
     "preview": "wrangler pages dev dist --d1=meti-production --local",
     "deploy": "npm run build && wrangler pages deploy dist --project-name the-meti --branch=main",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
@@ -41,6 +42,7 @@
     "@hono/vite-dev-server": "^0.18.2",
     "@playwright/test": "^1.59.1",
     "@types/bcryptjs": "^2.4.6",
+    "tailwindcss": "^3.4.19",
     "typescript": "^5.7.3",
     "vite": "^6.3.5",
     "wrangler": "^4.4.0"

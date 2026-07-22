@@ -5,7 +5,12 @@
 
 const API = '/api/v1';
 let authToken    = localStorage.getItem('meti_token');
-let currentUser  = JSON.parse(localStorage.getItem('meti_user') || 'null');
+// 손상된 값('undefined' 문자열·잘못된 JSON)이 있으면 JSON.parse가 던져 SPA 전체가 죽고
+// 정적 셸(안녕하세요, -님)만 남는다. 안전 파싱으로 방어.
+let currentUser  = (() => {
+  try { return JSON.parse(localStorage.getItem('meti_user') || 'null'); }
+  catch { localStorage.removeItem('meti_user'); return null; }
+})();
 
 // 현재 컨텍스트: { type: 'user' } or { type: 'group', id, name, role }
 let currentCtx   = { type: 'user' };
@@ -34,7 +39,8 @@ axios.interceptors.response.use(
 document.addEventListener('DOMContentLoaded', async () => {
   await consumeOneTimeToken();   // 앱 → 외부 브라우저 자동 로그인 (?ott=)
   if (!authToken || !currentUser) {
-    window.location.href = '/';
+    // 세션 없음(ott 교환 실패·미로그인) → 빈 대시보드 노출 대신 로그인으로 (앱 요청 2026-07-20 §2-1)
+    window.location.replace('/login');
     return;
   }
   initApp();
@@ -68,14 +74,23 @@ async function consumeOneTimeToken() {
 }
 
 async function initApp() {
-  // 사용자 정보 최신화
+  // 사용자 정보 최신화 + 세션 유효성 검증
   try {
     const res = await axios.get('/auth/me');
     if (res.data.success) {
       currentUser = res.data.data;
       localStorage.setItem('meti_user', JSON.stringify(currentUser));
     }
-  } catch (e) { /* 네트워크 오류 시 캐시 사용 */ }
+  } catch (e) {
+    const st = e.response?.status;
+    if (st === 401 || st === 403) {
+      // 인터셉터가 401→refresh 성공 시 meti_token을 갱신함. 토큰이 사라졌으면 refresh까지 실패한
+      // 것이므로(인터셉터가 이미 logout 처리) 빈 셸을 그리지 말고 로그인으로. (앱 요청 §2-1)
+      if (!localStorage.getItem('meti_token')) { window.location.replace('/login'); return; }
+      // 토큰이 남아있음 = refresh 성공 → 캐시된 currentUser로 계속 진행
+    }
+    /* 그 외(네트워크 오류)는 캐시된 세션으로 진행 */
+  }
 
   // 사이드바 사용자 정보
   document.getElementById('sidebar-username').textContent = currentUser.name || '-';
@@ -2322,7 +2337,7 @@ function logout() {
   localStorage.removeItem('meti_token');
   localStorage.removeItem('meti_refresh_token');
   localStorage.removeItem('meti_user');
-  window.location.href = '/';
+  window.location.replace('/login');
 }
 
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }

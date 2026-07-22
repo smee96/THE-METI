@@ -9,7 +9,7 @@ const EFFECTIVE_DATE = '2026년 6월 7일'
 const baseStyle = `
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/tailwind.css">
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
     h2 { font-size: 1.1rem; font-weight: 700; margin-top: 2rem; margin-bottom: .5rem; color: #1e293b; }

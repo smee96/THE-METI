@@ -861,8 +861,12 @@ export function appShellHtml(pageTitle: string = 'ELID'): string {
   <link rel="icon" type="image/png" sizes="16x16" href="/static/brand/favicon-16.png">
   <link rel="apple-touch-icon" href="/static/brand/favicon-180.png">
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>tailwind.config = { theme: { extend: { fontSize: { 'xs':'11px','sm':'12px','base':'13px','lg':'14px','xl':'15px','2xl':'16px','3xl':'18px' } } } }</script>
+  <link rel="stylesheet" href="/static/tailwind.css">
+  <!-- 앱 셸 전용 타입 스케일 (기존 Play CDN tailwind.config와 동일 px값 유지 — 레이아웃 오버플로 방지) -->
+  <style>
+    .text-xs{font-size:11px}.text-sm{font-size:12px}.text-base{font-size:13px}
+    .text-lg{font-size:14px}.text-xl{font-size:15px}.text-2xl{font-size:16px}.text-3xl{font-size:18px}
+  </style>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
   <style>
     /* ── ELID Design Tokens ─────────────────────────── */
@@ -1679,7 +1683,7 @@ export function appShellHtml(pageTitle: string = 'ELID'): string {
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
-<script src="/static/app.js?v=20260715b"></script>
+<script src="/static/app.js?v=20260722a"></script>
 </body>
 </html>`
 }

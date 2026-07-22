@@ -14,7 +14,7 @@ function pageShell(body: string, script: string): string {
   <title>ELID 포인트 충전</title>
   <link rel="icon" type="image/svg+xml" href="/static/brand/favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon-32.png">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/tailwind.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">

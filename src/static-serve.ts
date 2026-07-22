@@ -19,6 +19,7 @@ import adminOrdersJs   from '../public/static/admin-orders.js?raw'
 import adminPartnerJs  from '../public/static/admin-partner.js?raw'
 import appJs           from '../public/static/app.js?raw'
 import styleCss        from '../public/static/style.css?raw'
+import tailwindCss     from '../public/static/tailwind.css?raw'  // 정적 빌드(Play CDN 대체)
 
 const staticRouter = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -37,5 +38,6 @@ staticRouter.get('/admin-orders.js',   (c) => c.body(adminOrdersJs,  200, JS_HEA
 staticRouter.get('/admin-partner.js',  (c) => c.body(adminPartnerJs, 200, JS_HEADERS))
 staticRouter.get('/app.js',            (c) => c.body(appJs,          200, JS_HEADERS))
 staticRouter.get('/style.css',         (c) => c.body(styleCss,       200, CSS_HEADERS))
+staticRouter.get('/tailwind.css',      (c) => c.body(tailwindCss,    200, CSS_HEADERS))
 
 export default staticRouter

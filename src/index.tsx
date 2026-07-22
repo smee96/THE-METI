@@ -41,7 +41,7 @@ function cardPublicHtml(cardId: string): string {
   <link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/static/brand/favicon-16.png">
   <link rel="apple-touch-icon" href="/static/brand/favicon-180.png">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/tailwind.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
   <meta property="og:title" content="ELID 디지털 명함">
   <meta property="og:image" content="https://the-meti.pages.dev/static/brand/elid-appicon-navy-512.png">
@@ -179,7 +179,10 @@ function cardPublicHtml(cardId: string): string {
     };
 
     function applyTemplate(templateId) {
-      const t = TEMPLATES[templateId] || TEMPLATES.default;
+      // 신규 형식 '{팔레트}__{디자인}'(예: ocean_coral__leftbar) → 팔레트만 취함.
+      // 기존 형식(default, dark 등)은 '__' 없어 그대로 매칭 (앱 회신 2026-07-20 §3)
+      const paletteId = String(templateId || '').split('__')[0];
+      const t = TEMPLATES[paletteId] || TEMPLATES.default;
       const mainColor = t.light ? '#0F172A' : '#FFFFFF';
       const subColor  = t.light ? '#64748B' : 'rgba(255,255,255,0.75)';
 
@@ -408,7 +411,7 @@ function invitePageHtml(token: string): string {
   <link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/static/brand/favicon-16.png">
   <link rel="apple-touch-icon" href="/static/brand/favicon-180.png">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/tailwind.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
   <meta property="og:title" content="ELID 그룹 초대">
   <meta property="og:description" content="ELID 그룹에 초대되었습니다.">
