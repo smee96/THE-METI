@@ -511,19 +511,13 @@ export function appLandingHtml(): string {
   .hero .meta .n{font-size:26px;font-weight:800;letter-spacing:-.02em;white-space:nowrap;}
   .hero .meta .l{font-size:13px;color:rgba(255,255,255,.55);font-weight:600;margin-top:2px;white-space:nowrap;}
 
-  /* cards cluster */
-  .cluster{position:relative;height:380px;}
-  .bizcard{position:absolute;width:330px;aspect-ratio:1.62/1;border-radius:20px;overflow:hidden;color:#fff;box-shadow:0 2px 6px rgba(6,18,42,.3),0 30px 60px -18px rgba(6,18,42,.75);}
-  .bizcard .foil{position:absolute;inset:0;border-radius:20px;border:1px solid var(--gold);opacity:.4;}
-  .bizcard .tex{position:absolute;inset:0;opacity:.5;background:repeating-linear-gradient(115deg,rgba(255,255,255,.05) 0 1px,transparent 1px 8px);}
-  .bizcard .pad{position:absolute;inset:0;padding:22px;display:flex;flex-direction:column;justify-content:space-between;}
-  .nf{width:27px;height:27px;border-radius:7px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:var(--gold);}
-  .c-b2{transform:rotate(-10deg) translate(2px,52px) scale(.9);opacity:.5;right:30px;top:0;background:radial-gradient(130% 130% at 78% -10%,#0C5163,#06303A 46%,#021C23);}
-  .c-b1{transform:rotate(-5deg) translate(-6px,26px) scale(.95);opacity:.78;right:30px;top:0;background:radial-gradient(130% 130% at 78% -10%,#2A2E38,#14161C 46%,#070809);}
-  .c-b1 .foil{border-color:var(--violet);opacity:.5;}
-  .c-f{right:30px;top:0;transform:rotate(3deg);animation:flt 6s ease-in-out infinite;background:radial-gradient(130% 130% at 78% -10%,var(--navy-glow),var(--navy) 44%,var(--navy-deep));}
-  @keyframes flt{0%,100%{transform:rotate(3deg) translateY(0);}50%{transform:rotate(3deg) translateY(-13px);}}
-  @media (prefers-reduced-motion:reduce){.c-f{animation:none;}}
+  /* hero photo */
+  .hero-photo{position:relative;animation:flt 7s ease-in-out infinite;}
+  .hero-photo img{width:100%;height:auto;display:block;border-radius:24px;
+    border:1px solid rgba(201,168,106,.32);
+    box-shadow:0 2px 6px rgba(6,18,42,.3),0 40px 80px -24px rgba(6,18,42,.85);}
+  @keyframes flt{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
+  @media (prefers-reduced-motion:reduce){.hero-photo{animation:none;}}
 
   /* ── Features ── */
   .pad-sec{padding:92px 0;}
@@ -587,8 +581,7 @@ export function appLandingHtml(): string {
   @media (max-width:920px){
     .nav .links{display:none;}
     .hero .inner{grid-template-columns:1fr;padding-top:56px;padding-bottom:64px;}
-    .cluster{height:300px;margin-top:12px;}
-    .bizcard{width:min(330px, calc(100% - 30px));}
+    .hero-photo{max-width:480px;margin:14px auto 0;}
     h1.hh{font-size:38px;}
     .feat-grid{grid-template-columns:1fr 1fr;}
     .recharge .inner{grid-template-columns:1fr;gap:36px;padding-top:64px;padding-bottom:64px;}
@@ -598,7 +591,6 @@ export function appLandingHtml(): string {
   @media (max-width:560px){
     .nav .btn-nav{display:none;}
     .wrap{padding:0 20px;}
-    .cluster{height:240px;}
     .feat-grid{grid-template-columns:1fr;}
     .hero .meta{gap:18px;}
     h1.hh{font-size:32px;}
@@ -654,25 +646,9 @@ export function appLandingHtml(): string {
         <div><div class="n">18</div><div class="l">연동 파트너</div></div>
       </div>
     </div>
-    <div class="cluster">
-      <div class="bizcard c-b2"><div class="foil"></div><div class="tex"></div></div>
-      <div class="bizcard c-b1"><div class="foil"></div><div class="tex"></div></div>
-      <div class="bizcard c-f">
-        <div class="foil"></div><div class="tex"></div>
-        <div class="pad">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-            <span class="word" style="font-size:15px;">EL<span class="i">I</span>D</span><span class="nf">NFC</span>
-          </div>
-          <div>
-            <div style="font-size:25px;font-weight:700;letter-spacing:-.02em;">강민서</div>
-            <div style="font-size:13px;color:rgba(255,255,255,.7);margin-top:5px;">Product Lead · Aurora Labs</div>
-            <div style="display:flex;align-items:center;gap:6px;margin-top:12px;">
-              <span style="width:5px;height:5px;border-radius:5px;background:var(--gold);"></span>
-              <span style="font-size:12px;color:var(--gold);font-weight:600;">minseo@aurora.io</span>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div class="hero-photo">
+      <img src="/static/brand/hero-people.jpg" width="820" height="990"
+           alt="ELID로 연결되는 비즈니스 미팅" loading="eager" decoding="async" />
     </div>
   </div>
 </section>
