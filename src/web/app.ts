@@ -1486,6 +1486,14 @@ export function appShellHtml(pageTitle: string = 'ELID'): string {
           <input type="checkbox" id="card-public" class="rounded" checked>
           <span class="text-sm text-gray-700">공개 명함 (QR 공유 가능)</span>
         </label>
+        <!-- 디자인 안내 (웹은 기본 디자인, 다양한 디자인은 앱) -->
+        <div class="flex items-start gap-2 mt-1 px-3 py-2.5 rounded-xl" style="background:var(--gold-soft)">
+          <i class="fas fa-palette text-xs mt-0.5" style="color:var(--gold-deep)"></i>
+          <p class="text-xs leading-relaxed" style="color:var(--sub)">
+            <b style="color:var(--ink)">다양한 디자인</b>의 명함은 <b style="color:var(--ink)">앱</b>에서 만들 수 있어요.
+            웹에서 만든 명함은 기본 디자인으로 생성됩니다.
+          </p>
+        </div>
       </div>
       <!-- ── 탭2: 이력 & SNS ── -->
       <div id="create-pane-resume" class="hidden space-y-5">
