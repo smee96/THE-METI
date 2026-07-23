@@ -9,11 +9,50 @@
 // ── 상태 전역 ─────────────────────────────────────────────
 let _nfcStatus = 'all';
 let _nfcPage   = 1;
+let _nfcDate   = '';   // 신청일 일별 필터(YYYY-MM-DD, KST). 빈 값 = 전체 기간
 
 // 일괄 배송 처리용 로컬 상태 (id → { carrier, tracking_no })
 let _nfcBulkRows = [];
 
-function loadNfcCardsPage(page) { loadNfcCards(page, _nfcStatus); }
+function loadNfcCardsPage(page) { loadNfcCards(page, _nfcStatus, _nfcDate); }
+
+// ── 일별 요약 패널 (어느 날에 주문이 몰렸는지 · 클릭하면 해당 일 필터) ──
+async function _toggleNfcDaily() {
+  const panel = document.getElementById('nfc-daily-panel');
+  if (!panel) return;
+  if (!panel.classList.contains('hidden')) { panel.classList.add('hidden'); return; }
+  panel.classList.remove('hidden');
+  panel.innerHTML = '<div class="bg-white rounded-xl border shadow-sm p-3 text-sm text-gray-400">불러오는 중...</div>';
+  try {
+    const { data } = await axios.get('/admin/nfc-cards/daily?days=30');
+    const days = data.data || [];
+    if (days.length === 0) {
+      panel.innerHTML = '<div class="bg-white rounded-xl border shadow-sm p-3 text-sm text-gray-400">최근 30일 신청 내역이 없습니다.</div>';
+      return;
+    }
+    panel.innerHTML = `
+      <div class="bg-white rounded-xl border shadow-sm p-3">
+        <p class="text-xs font-semibold text-gray-500 uppercase mb-2">최근 30일 일별 신청 · 클릭하면 해당 일만 필터</p>
+        <div class="flex flex-col gap-1 max-h-72 overflow-y-auto">
+          ${days.map(d => `
+            <button onclick="loadNfcCards(1, _nfcStatus, '${d.day}')"
+              class="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-blue-50 text-sm border ${_nfcDate === d.day ? 'border-blue-400 bg-blue-50' : 'border-gray-100'}">
+              <span class="font-medium text-gray-700">${d.day}</span>
+              <span class="flex items-center gap-1.5 text-xs">
+                <span class="text-gray-500">총 ${d.total}</span>
+                ${d.pending ? `<span class="px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 font-medium">대기 ${d.pending}</span>` : ''}
+                ${d.approved ? `<span class="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">승인 ${d.approved}</span>` : ''}
+                ${d.issued ? `<span class="px-1.5 py-0.5 rounded bg-green-100 text-green-700">발급 ${d.issued}</span>` : ''}
+              </span>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  } catch (e) {
+    panel.innerHTML = '<div class="bg-white rounded-xl border shadow-sm p-3 text-sm text-red-500">일별 요약을 불러오지 못했습니다.</div>';
+  }
+}
 
 // ── 배송 현황 요약 로드 ────────────────────────────────────
 async function _loadNfcStats() {
@@ -44,14 +83,16 @@ async function _loadNfcStats() {
 }
 
 // ── 메인 목록 로드 ────────────────────────────────────────
-async function loadNfcCards(page = 1, status = 'all') {
+async function loadNfcCards(page = 1, status = 'all', date = '') {
   _nfcStatus = status;
   _nfcPage   = page;
+  _nfcDate   = date || '';
   setContent(loadingSpinner());
 
   try {
     const statusParam = status === 'all' ? '' : `&status=${status}`;
-    const { data } = await axios.get(`/admin/nfc-cards?limit=20&page=${page}${statusParam}`);
+    const dateParam   = _nfcDate ? `&date=${_nfcDate}` : '';
+    const { data } = await axios.get(`/admin/nfc-cards?limit=20&page=${page}${statusParam}${dateParam}`);
     const rows       = data.data        || [];
     const pagination = data.pagination;
 
@@ -110,6 +151,22 @@ async function loadNfcCards(page = 1, status = 'all') {
             <i class="fas fa-truck"></i> 일괄 배송 처리
           </button>` : ''}
         </div>
+
+        <!-- 일별 필터 (어드민 일별 주문 처리) -->
+        <div class="flex items-center gap-2 flex-wrap text-sm bg-white rounded-xl border shadow-sm px-3 py-2">
+          <span class="text-gray-500"><i class="fas fa-calendar-day mr-1"></i>신청일</span>
+          <input type="date" id="nfc-date-filter" value="${_nfcDate}"
+            onchange="loadNfcCards(1, _nfcStatus, this.value)"
+            class="px-2 py-1.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-300">
+          ${_nfcDate
+            ? `<button onclick="loadNfcCards(1, _nfcStatus, '')" class="px-2 py-1 text-gray-500 hover:text-gray-700 text-xs"><i class="fas fa-times mr-0.5"></i>전체 기간</button>
+               <span class="text-blue-600 font-medium">${_nfcDate} 신청 ${pagination?.total ?? rows.length}건</span>`
+            : `<span class="text-gray-400 text-xs">특정 날짜의 신청만 모아보기</span>`}
+          <button onclick="_toggleNfcDaily()" class="ml-auto px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 font-medium">
+            <i class="fas fa-list-ol mr-1"></i>일별 요약
+          </button>
+        </div>
+        <div id="nfc-daily-panel" class="hidden"></div>
 
         <!-- 일괄 배송 처리 패널 (토글) -->
         <div id="bulk-shipping-panel" class="hidden"></div>

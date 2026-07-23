@@ -21,6 +21,7 @@ const nfc = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 nfc.get('/', async (c) => {
   const status  = c.req.query('status')  // all | pending | approved | issued | deactivated | rejected
   const q       = c.req.query('q')       // 사용자명·이메일 검색
+  const date    = c.req.query('date')    // YYYY-MM-DD, 신청일 일별(KST) — 어드민 일별 주문 처리용
   const { page, limit, offset } = parsePagination(
     c.req.query('page'),
     c.req.query('limit'),
@@ -37,6 +38,11 @@ nfc.get('/', async (c) => {
   if (q) {
     conditions.push('(u.name LIKE ? OR u.email LIKE ?)')
     bindings.push(`%${q}%`, `%${q}%`)
+  }
+  if (date) {
+    // applied_at은 UTC 저장 → KST(+9h) 기준 달력일로 필터
+    conditions.push("DATE(n.applied_at, '+9 hours') = ?")
+    bindings.push(date)
   }
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
@@ -73,6 +79,48 @@ nfc.get('/', async (c) => {
   ])
 
   return c.json(paginate(rows.results, countRow?.total ?? 0, page, limit))
+})
+
+// ── 통계 요약 ─────────────────────────────────────────────
+// ⚠️ 정적 경로(/stats, /daily)는 반드시 /:id 앞에 등록 — Hono가 등록순 매칭이라
+//    /:id 뒤에 두면 id='stats'로 잡혀 404가 난다(기존 버그 수정).
+// GET /admin/nfc-cards/stats
+nfc.get('/stats', async (c) => {
+  const rows = await c.env.DB.prepare(`
+    SELECT status, COUNT(*) AS cnt
+    FROM nfc_physical_cards
+    GROUP BY status
+  `).all<{ status: string; cnt: number }>()
+
+  const stats: Record<string, number> = {
+    pending: 0, approved: 0, issued: 0, deactivated: 0,
+  }
+  for (const r of rows.results) {
+    if (r.status in stats) stats[r.status] = r.cnt
+  }
+
+  return c.json(ok(stats))
+})
+
+// ── 일별 요약 ─────────────────────────────────────────────
+// GET /admin/nfc-cards/daily?days=30
+// 신청일(KST) 기준 일별 건수 — 어드민이 어느 날에 주문이 몰렸는지, 미처리(pending) 몇 건인지 파악
+nfc.get('/daily', async (c) => {
+  const days = Math.min(Math.max(parseInt(c.req.query('days') ?? '30', 10) || 30, 1), 180)
+  const rows = await c.env.DB.prepare(`
+    SELECT
+      DATE(applied_at, '+9 hours') AS day,
+      COUNT(*)                                             AS total,
+      SUM(CASE WHEN status = 'pending'  THEN 1 ELSE 0 END) AS pending,
+      SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) AS approved,
+      SUM(CASE WHEN status = 'issued'   THEN 1 ELSE 0 END) AS issued
+    FROM nfc_physical_cards
+    WHERE DATE(applied_at, '+9 hours') >= DATE('now', '+9 hours', '-' || ? || ' days')
+    GROUP BY day
+    ORDER BY day DESC
+  `).bind(days).all<{ day: string; total: number; pending: number; approved: number; issued: number }>()
+
+  return c.json(ok(rows.results))
 })
 
 // ── 상세 조회 ─────────────────────────────────────────────
@@ -298,24 +346,5 @@ nfc.post(
     ))
   }
 )
-
-// ── 통계 요약 ─────────────────────────────────────────────
-// GET /admin/nfc-cards/stats
-nfc.get('/stats', async (c) => {
-  const rows = await c.env.DB.prepare(`
-    SELECT status, COUNT(*) AS cnt
-    FROM nfc_physical_cards
-    GROUP BY status
-  `).all<{ status: string; cnt: number }>()
-
-  const stats: Record<string, number> = {
-    pending: 0, approved: 0, issued: 0, deactivated: 0,
-  }
-  for (const r of rows.results) {
-    if (r.status in stats) stats[r.status] = r.cnt
-  }
-
-  return c.json(ok(stats))
-})
 
 export default nfc

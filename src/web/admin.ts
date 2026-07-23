@@ -229,7 +229,7 @@ export function adminAppHtml(): string {
   <script src="/static/admin-events.js?v=20260709"></script>
   <script src="/static/admin-plans.js?v=20260709"></script>
   <script src="/static/admin-lessons.js?v=20260709"></script>
-  <script src="/static/admin-nfc.js?v=20260709"></script>
+  <script src="/static/admin-nfc.js?v=20260723"></script>
   <script src="/static/admin-reports.js?v=20260709"></script>
   <script src="/static/admin-groups.js?v=20260709"></script>
   <script src="/static/admin-orders.js?v=20260709"></script>
