@@ -158,8 +158,12 @@ function cardPublicHtml(cardId: string): string {
     var CATALOG = null, BYID = {}, ALIAS = {};
     function resolveDesign(tid) {
       var id = tid || '';
-      if (!BYID[id] && ALIAS[id]) id = ALIAS[id];        // 구 template_id → 신규 자동매핑
+      if (!BYID[id] && ALIAS[id]) id = ALIAS[id];        // 구 template_id 전체 → 신규 자동매핑
       if (BYID[id]) return BYID[id];
+      // 합성 레거시 id(예: ocean_coral__center) → 팔레트 부분만 별칭/매칭 (앱 회신 2026-07-22 §2, 앱과 동일 폴백)
+      var pal = String(tid || '').split('__')[0];
+      if (ALIAS[pal] && BYID[ALIAS[pal]]) return BYID[ALIAS[pal]];
+      if (BYID[pal]) return BYID[pal];
       var def = (CATALOG && CATALOG.default) || 'deepblue__classic';
       return BYID[def] || null;
     }
