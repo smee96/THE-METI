@@ -533,6 +533,15 @@ export function appLandingHtml(): string {
   .fcard h3{font-size:18px;font-weight:700;margin:0 0 8px;letter-spacing:-.01em;}
   .fcard p{font-size:14.5px;line-height:1.6;color:var(--sub);margin:0;}
 
+  /* ── 이렇게 써요 (3단계) ── */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:48px;}
+  .stepc{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:30px 26px;box-shadow:0 1px 2px rgba(14,23,38,.03),0 14px 30px -22px rgba(14,23,38,.25);}
+  .stepn{width:46px;height:46px;border-radius:14px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:21px;font-weight:800;letter-spacing:-.02em;}
+  .stepc h3{font-size:18px;font-weight:700;margin:18px 0 8px;letter-spacing:-.01em;}
+  .stepc p{font-size:14.5px;line-height:1.6;color:var(--sub);margin:0;}
+  .stepc .ar{position:absolute;top:44px;right:-13px;z-index:2;color:var(--line);display:flex;}
+  .stepc:last-child .ar{display:none;}
+
   /* ── 충전 ── */
   .recharge{background:var(--surface);}
   .recharge .inner{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;padding-top:92px;padding-bottom:92px;}
@@ -589,6 +598,8 @@ export function appLandingHtml(): string {
     .hero-photo{max-width:480px;margin:14px auto 0;}
     h1.hh{font-size:38px;}
     .feat-grid{grid-template-columns:1fr 1fr;}
+    .steps{grid-template-columns:1fr;}
+    .stepc .ar{display:none;}
     .recharge .inner{grid-template-columns:1fr;gap:36px;padding-top:64px;padding-bottom:64px;}
     .price-grid{grid-template-columns:1fr;}
     .pad-sec{padding:64px 0;}
@@ -654,6 +665,39 @@ export function appLandingHtml(): string {
     <div class="hero-photo">
       <img src="/static/brand/hero-people.jpg" width="820" height="990"
            alt="ELID로 연결되는 비즈니스 미팅" loading="eager" decoding="async" />
+    </div>
+  </div>
+</section>
+
+<!-- 이렇게 써요 (첫 방문자용 3단계 요약) -->
+<section class="pad-sec" id="how">
+  <div class="wrap">
+    <div class="center">
+      <span class="eyebrow">시작하기</span>
+      <h2 class="sec" style="margin-top:18px;">3단계면 끝, 이렇게 써요</h2>
+      <p class="lead" style="margin-top:14px;">복잡한 설정은 없어요 — <strong>만들고 · 주고받고 · 이어가면</strong> 됩니다.</p>
+    </div>
+    <div class="steps">
+      <div class="stepc">
+        <div class="stepn">1</div>
+        <h3>내 명함 만들기</h3>
+        <p>이름·회사·연락처만 넣으면 1분 완성. 종이 명함은 이제 안녕 👋</p>
+        <span class="ar"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      </div>
+      <div class="stepc">
+        <div class="stepn">2</div>
+        <h3>폰 맞대고 교환</h3>
+        <p>폰을 맞대거나(NFC) QR을 찍으면 끝. 받은 명함은 자동으로 명함첩에 정리돼요.</p>
+        <span class="ar"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      </div>
+      <div class="stepc">
+        <div class="stepn">3</div>
+        <h3>관계로 이어가기</h3>
+        <p>교환한 사람과 채팅·그룹·행사로 계속 연결. 명함을 넘어, 진짜 인맥으로.</p>
+      </div>
+    </div>
+    <div class="center" style="margin-top:38px;">
+      <a class="btn btn-lg btn-gold" href="/login">무료로 시작하기</a>
     </div>
   </div>
 </section>
