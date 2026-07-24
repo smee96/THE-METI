@@ -454,6 +454,21 @@ app.get('/card/:id', (c) => {
   return c.html(cardPublicHtml(cardId))
 })
 
+// QR 토큰 스캔(앱 미설치자의 일반 카메라) → 공개 카드 뷰(HTML).
+// 앱은 qr_url(`/cards/qr/{token}` — /api/v1 접두어 없음)을 origin에 붙여 QR을 만들기 때문에,
+// 브라우저가 이 웹 경로로 진입한다. in-app 교환용 JSON API는 /api/v1/cards/qr/:token 로 그대로 유지.
+// 유효(미만료) 토큰 → 200(카드 렌더), 무효/만료 → 404. (브라우저 뷰이므로 used_at 소비하지 않음)
+app.get('/cards/qr/:token', async (c) => {
+  const token = c.req.param('token')
+  const rec = await c.env.DB.prepare(
+    `SELECT card_id FROM qr_tokens WHERE token = ? AND expires_at > datetime('now')`
+  ).bind(token).first<{ card_id: number }>()
+  if (!rec) {
+    return c.html('<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ELID</title></head><body style="font-family:-apple-system,sans-serif;text-align:center;padding:64px 24px;color:#64748b"><p style="font-size:13px;letter-spacing:.2em;color:#94a3b8">EL<span style="color:#C9A86A">I</span>D</p><h1 style="font-size:17px;margin-top:20px;color:#334155">유효하지 않거나 만료된 QR 코드입니다.</h1></body></html>', 404)
+  }
+  return c.html(cardPublicHtml(String(rec.card_id)))
+})
+
 // ════════════════════════════════════════════════════════════
 // ── 법적 문서 (개인정보처리방침 / 이용약관) ─────────────────
 app.get('/privacy', (c) => c.html(privacyPolicyHtml()))
@@ -615,7 +630,21 @@ app.get('/invite/:token', (c) => {
   return c.html(invitePageHtml(token))
 })
 
-// ── API 404 ───────────────────────────────────────────────
+// ── 미매칭 폴백(전역 404) ─────────────────────────────────
+// ⚠️ 반드시 명시적 catch-all 라우트로 처리한다(단순 app.notFound 의존 금지).
+// 원인: @hono/vite-cloudflare-pages 래퍼가 `worker.notFound(app.notFoundHandler)`로 설정하는데
+// Hono 4.12에서 notFoundHandler는 private 필드라 `app.notFoundHandler`가 undefined → worker의
+// notFound가 undefined가 된다. 그 결과 "미매칭 + 매칭 미들웨어 1개(logger)"인 요청은 Hono의
+// 단일 미들웨어 fast-path에서 `undefined.call()`을 호출해 500이 났다(모든 미지 URL이 500).
+// 명시적 catch-all은 항상 매칭되어 fast-path(length===1)를 피하므로 정상 404를 반환한다.
+app.all('*', (c) => {
+  if (c.req.path.startsWith('/api/')) {
+    return c.json({ success: false, error: '요청한 엔드포인트를 찾을 수 없습니다.' }, 404)
+  }
+  return c.html('<h1>Not Found</h1>', 404)
+})
+
+// 방어용(도달하지 않지만 유지) — 상단 catch-all이 실제 404를 담당
 app.notFound((c) => {
   if (c.req.path.startsWith('/api/')) {
     return c.json({ success: false, error: '요청한 엔드포인트를 찾을 수 없습니다.' }, 404)
