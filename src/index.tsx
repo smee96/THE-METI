@@ -44,8 +44,13 @@ function cardPublicHtml(cardId: string): string {
   <link rel="stylesheet" href="/static/tailwind.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
   <meta property="og:title" content="ELID 디지털 명함">
-  <meta property="og:image" content="https://the-meti.pages.dev/static/brand/elid-appicon-navy-512.png">
   <meta property="og:description" content="QR 코드로 명함을 교환하세요">
+  <meta property="og:image" content="https://the-meti.pages.dev/static/brand/og-cover.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="ELID — 연결을 더 가볍게, 비즈니스를 더 스마트하게">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://the-meti.pages.dev/static/brand/og-cover.jpg">
   <style>
     .section-title { font-size:.7rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#94a3b8; margin-bottom:.5rem; }
     .tag-chip { display:inline-block; padding:.2rem .6rem; border-radius:9999px; font-size:.72rem; font-weight:500; background:#eff6ff; color:#2563eb; margin:.15rem; }
@@ -471,7 +476,12 @@ function invitePageHtml(token: string): string {
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
   <meta property="og:title" content="ELID 그룹 초대">
   <meta property="og:description" content="ELID 그룹에 초대되었습니다.">
-  <meta property="og:image" content="https://the-meti.pages.dev/static/brand/elid-appicon-navy-512.png">
+  <meta property="og:image" content="https://the-meti.pages.dev/static/brand/og-cover.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="ELID — 연결을 더 가볍게, 비즈니스를 더 스마트하게">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://the-meti.pages.dev/static/brand/og-cover.jpg">
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">
   <div id="container" class="w-full max-w-sm">

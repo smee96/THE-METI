@@ -445,7 +445,12 @@ export function appLandingHtml(): string {
 <title>ELID — 명함을 넘어, 관계로</title>
 <meta property="og:title" content="ELID — 명함을 넘어, 관계로" />
 <meta property="og:description" content="디지털 명함 기반 종합 네트워킹 플랫폼" />
-<meta property="og:image" content="https://the-meti.pages.dev/static/brand/elid-appicon-navy-512.png" />
+<meta property="og:image" content="https://the-meti.pages.dev/static/brand/og-cover.jpg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="ELID — 연결을 더 가볍게, 비즈니스를 더 스마트하게" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://the-meti.pages.dev/static/brand/og-cover.jpg" />
 <link rel="icon" type="image/svg+xml" href="/static/brand/favicon.svg" />
 <link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon-32.png" />
 <link rel="icon" type="image/png" sizes="16x16" href="/static/brand/favicon-16.png" />
