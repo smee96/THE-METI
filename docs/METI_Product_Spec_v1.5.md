@@ -45,12 +45,13 @@ METI는 그룹·행사·레슨 기반의 네트워킹 플랫폼입니다.
 
 ## 3. 플랜 구조
 
-| 플랜 | 월 포인트 | 그룹 최대 멤버 | 기본 명함 수 | 구독 방식 |
-|------|-----------|---------------|------------|-----------|
-| free | 0 P | 2명 | 3개 | 무료 |
-| pro | 10,000 P | 10명 | 10개 | Apple IAP / Google Play |
-| business | 500,000 P | 무제한 | 무제한 | Apple IAP / Google Play |
+| 플랜 | 월 포인트 | 그룹 개설(소유) | 그룹 최대 멤버 | 기본 명함 수 | 구독 방식 |
+|------|-----------|----------------|---------------|------------|-----------|
+| free | 0 P | 3개 | 2명 | 3개 | 무료 |
+| pro | 10,000 P | 10개 | 10명 | 10개 | Apple IAP / Google Play |
+| business | 500,000 P | 무제한 | 무제한 | 무제한 | Apple IAP / Google Play |
 
+> **그룹 참여(가입)**: 전 플랜 **무제한** (개설/소유 개수만 플랜별 제한, `plans.max_groups`로 강제).  
 > **구독 결제**: Apple IAP(`com.meti.pro_monthly`, `com.meti.business_monthly`) + Google Play Billing  
 > **웹 결제** (레슨·행사 상품·포인트 충전): Toss Payments + Stripe (확정)
 

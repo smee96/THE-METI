@@ -53,6 +53,26 @@ groups.post(
     const userId = c.get('userId')
     const body = c.req.valid('json')
 
+    // 플랜별 그룹 개설(소유) 개수 제한 — plans.max_groups (null = 무제한). 참여(가입)는 무제한 유지.
+    const userPlan = c.get('userPlan')
+    const groupPlanRow = await c.env.DB.prepare(
+      'SELECT max_groups FROM plans WHERE code = ?'
+    ).bind(userPlan).first<{ max_groups: number | null }>()
+    const maxGroups = groupPlanRow?.max_groups ?? null
+    if (maxGroups !== null) {
+      const owned = await c.env.DB.prepare(
+        `SELECT COUNT(*) as total FROM groups WHERE admin_user_id = ? AND is_deleted = 0 AND status IN ('active','pending')`
+      ).bind(userId).first<{ total: number }>()
+      if ((owned?.total ?? 0) >= maxGroups) {
+        return c.json({
+          success: false,
+          error: `${userPlan.toUpperCase()} 플랜의 그룹 개설 한도(${maxGroups}개)에 도달했습니다.`,
+          error_code: 'plan_group_limit_reached',
+          upgrade_required: true
+        }, 403)
+      }
+    }
+
     const result = await c.env.DB.prepare(`
       INSERT INTO groups (name, description, purpose, visibility, status, admin_user_id, max_members)
       VALUES (?, ?, ?, ?, 'pending', ?, ?)
