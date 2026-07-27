@@ -801,7 +801,7 @@ export function appLandingHtml(): string {
         <div class="pp">₩0<small> /월</small></div>
         <p class="pd">개인 네트워킹의 시작</p>
         <ul>
-          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#1B9C73" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 디지털 명함 1개</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#1B9C73" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 디지털 명함 3개</li>
           <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#1B9C73" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> NFC·QR 교환 무제한</li>
           <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#1B9C73" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 명함첩 · 그룹 참여</li>
         </ul>
@@ -813,7 +813,7 @@ export function appLandingHtml(): string {
         <div class="pp">₩9,900<small> /월</small></div>
         <p class="pd">전문가를 위한 모든 것</p>
         <ul>
-          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#C9A86A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 명함 무제한 + 맞춤 마감</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#C9A86A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 명함 10개 + 맞춤 마감</li>
           <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#C9A86A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 그룹 개설 · 행사 주최</li>
           <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#C9A86A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 리워드 적립 2배 · 충전 보너스</li>
         </ul>
@@ -824,7 +824,7 @@ export function appLandingHtml(): string {
         <div class="pp">맞춤<small> 견적</small></div>
         <p class="pd">조직을 위한 통합 관리</p>
         <ul>
-          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#1B9C73" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 팀 명함 · 브랜드 통일</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#1B9C73" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 명함 무제한 · 팀 브랜드 통일</li>
           <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#1B9C73" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 어드민 콘솔 · 통계</li>
           <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#1B9C73" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 파트너 API · 전담 지원</li>
         </ul>

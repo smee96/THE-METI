@@ -47,9 +47,9 @@ METI는 그룹·행사·레슨 기반의 네트워킹 플랫폼입니다.
 
 | 플랜 | 월 포인트 | 그룹 최대 멤버 | 기본 명함 수 | 구독 방식 |
 |------|-----------|---------------|------------|-----------|
-| free | 0 P | 2명 | 1개 | 무료 |
-| pro | 10,000 P | 10명 | 3개 | Apple IAP / Google Play |
-| business | 500,000 P | 무제한 | 10개 | Apple IAP / Google Play |
+| free | 0 P | 2명 | 3개 | 무료 |
+| pro | 10,000 P | 10명 | 10개 | Apple IAP / Google Play |
+| business | 500,000 P | 무제한 | 무제한 | Apple IAP / Google Play |
 
 > **구독 결제**: Apple IAP(`com.meti.pro_monthly`, `com.meti.business_monthly`) + Google Play Billing  
 > **웹 결제** (레슨·행사 상품·포인트 충전): Toss Payments + Stripe (확정)
@@ -62,9 +62,9 @@ METI는 그룹·행사·레슨 기반의 네트워킹 플랫폼입니다.
 
 | 플랜 | 기본 명함 수 | 추가 명함 비용 |
 |------|------------|--------------|
-| free | 1개 | 1개당 5,000원 |
-| pro | 3개 | 1개당 5,000원 |
-| business | 10개 | 1개당 5,000원 |
+| free | 3개 | 1개당 5,000원 |
+| pro | 10개 | 1개당 5,000원 |
+| business | 무제한 | (기본 무제한) |
 
 ### 4.2 추가 명함 구매
 - 기본 수량 초과 시 1개당 **5,000원** 웹 결제
