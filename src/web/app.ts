@@ -803,7 +803,7 @@ export function appLandingHtml(): string {
         <ul>
           <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#1B9C73" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 디지털 명함 3개</li>
           <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#1B9C73" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> NFC·QR 교환 무제한</li>
-          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#1B9C73" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 명함첩 · 그룹 참여</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#1B9C73" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 명함첩 · 그룹 참여·개설(2인)</li>
         </ul>
         <a class="btn btn-lg btn-light" style="border:1px solid var(--line);" href="/login">무료로 시작</a>
       </div>
@@ -814,7 +814,7 @@ export function appLandingHtml(): string {
         <p class="pd">전문가를 위한 모든 것</p>
         <ul>
           <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#C9A86A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 명함 10개 + 맞춤 마감</li>
-          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#C9A86A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 그룹 개설 · 행사 주최</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#C9A86A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 그룹 10인 개설 · 행사 주최</li>
           <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#C9A86A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> 리워드 적립 2배 · 충전 보너스</li>
         </ul>
         <a class="btn btn-lg btn-gold" href="/login">Pro 시작하기</a>

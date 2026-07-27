@@ -75,8 +75,11 @@ cards.post(
       'SELECT COUNT(*) as total FROM cards WHERE user_id = ? AND is_deleted = 0'
     ).bind(userId).first<{ total: number }>()
 
-    const maxCards: Record<string, number | null> = { free: 3, pro: 10, business: null }
-    const max = maxCards[userPlan]
+    // 플랜별 명함 한도 — plans 테이블에서 조회(어드민 편집값 반영, null = 무제한)
+    const planRow = await c.env.DB.prepare(
+      'SELECT max_cards FROM plans WHERE code = ?'
+    ).bind(userPlan).first<{ max_cards: number | null }>()
+    const max = planRow?.max_cards ?? null
     if (max !== null && (cardCount?.total ?? 0) >= max) {
       return c.json({
         success: false,
