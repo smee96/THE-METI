@@ -219,7 +219,7 @@ export function termsOfServiceHtml(): string {
     <!-- 제2조 -->
     <h2>제2조 용어 정의</h2>
     <ul>
-      <li><strong>"서비스"</strong>란 ${SERVICE} 앱 및 웹(https://the-meti.pages.dev)을 통해 제공되는 디지털 명함 교환, 그룹·행사·레슨 관리, 채팅, 포인트 등 일체의 서비스를 말합니다.</li>
+      <li><strong>"서비스"</strong>란 ${SERVICE} 앱 및 웹(https://my-elid.com)을 통해 제공되는 디지털 명함 교환, 그룹·행사·레슨 관리, 채팅, 포인트 등 일체의 서비스를 말합니다.</li>
       <li><strong>"이용자"</strong>란 이 약관에 동의하고 서비스를 이용하는 회원을 말합니다.</li>
       <li><strong>"명함"</strong>이란 이용자가 서비스 내에서 생성하는 디지털 명함 정보를 말합니다.</li>
       <li><strong>"그룹"</strong>이란 이용자들이 공통 목적으로 구성하는 서비스 내 모임 단위를 말합니다.</li>
@@ -229,7 +229,7 @@ export function termsOfServiceHtml(): string {
     <!-- 제3조 -->
     <h2>제3조 약관의 게시 및 변경</h2>
     <ol>
-      <li>회사는 이 약관을 서비스 내 설정 메뉴 및 https://the-meti.pages.dev/terms 에 게시합니다.</li>
+      <li>회사는 이 약관을 서비스 내 설정 메뉴 및 https://my-elid.com/terms 에 게시합니다.</li>
       <li>회사는 관련 법령을 위반하지 않는 범위에서 약관을 변경할 수 있으며, 변경 시 시행일 7일 전부터 공지합니다. 중요 사항 변경 시에는 30일 전 공지합니다.</li>
       <li>이용자가 변경 약관 시행일 이후에도 서비스를 계속 이용하면 변경 약관에 동의한 것으로 간주합니다.</li>
     </ol>

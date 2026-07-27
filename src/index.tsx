@@ -45,12 +45,12 @@ function cardPublicHtml(cardId: string): string {
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
   <meta property="og:title" content="ELID 디지털 명함">
   <meta property="og:description" content="QR 코드로 명함을 교환하세요">
-  <meta property="og:image" content="https://the-meti.pages.dev/static/brand/og-cover.jpg">
+  <meta property="og:image" content="https://my-elid.com/static/brand/og-cover.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="ELID — 연결을 더 가볍게, 비즈니스를 더 스마트하게">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:image" content="https://the-meti.pages.dev/static/brand/og-cover.jpg">
+  <meta name="twitter:image" content="https://my-elid.com/static/brand/og-cover.jpg">
   <style>
     .section-title { font-size:.7rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#94a3b8; margin-bottom:.5rem; }
     .tag-chip { display:inline-block; padding:.2rem .6rem; border-radius:9999px; font-size:.72rem; font-weight:500; background:#eff6ff; color:#2563eb; margin:.15rem; }
@@ -127,7 +127,7 @@ function cardPublicHtml(cardId: string): string {
       </div>
 
       <!-- ⑧ CTA -->
-      <a href="https://the-meti.pages.dev" target="_blank"
+      <a href="https://my-elid.com" target="_blank"
         class="block w-full py-3.5 bg-blue-600 text-white text-center rounded-2xl font-semibold hover:bg-blue-700 transition shadow">
         <i class="fas fa-id-card mr-2"></i>ELID로 명함 교환하기
       </a>
@@ -365,11 +365,24 @@ function cardPublicHtml(cardId: string): string {
 
 // ── 글로벌 미들웨어 ───────────────────────────────────────
 app.use('*', logger())
+
+// www → apex 301 정규화 (대시보드 Redirect Rule 대신 워커에서 처리).
+// www.my-elid.com·apex 둘 다 같은 Pages 워커로 유입되므로 여기서 통일한다.
+// (참고: /static/* 은 _routes.json exclude라 워커를 안 타므로 www 정적자산은 리다이렉트 대상 아님 — 무해)
+app.use('*', async (c, next) => {
+  const u = new URL(c.req.url)
+  if (u.hostname === 'www.my-elid.com') {
+    u.hostname = 'my-elid.com'
+    return c.redirect(u.toString(), 301)
+  }
+  return next()
+})
+
 app.use('/api/*', cors({
   origin: [
-    'https://meti.io',
-    'https://admin.meti.io',
-    'https://my.meti.io',
+    'https://my-elid.com',
+    'https://www.my-elid.com',
+    'https://staging.my-elid.com',
     'https://the-meti.pages.dev',
     'https://www.the-meti.pages.dev',
     'http://localhost:3000',
@@ -491,12 +504,12 @@ function invitePageHtml(token: string): string {
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
   <meta property="og:title" content="ELID 그룹 초대">
   <meta property="og:description" content="ELID 그룹에 초대되었습니다.">
-  <meta property="og:image" content="https://the-meti.pages.dev/static/brand/og-cover.jpg">
+  <meta property="og:image" content="https://my-elid.com/static/brand/og-cover.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="ELID — 연결을 더 가볍게, 비즈니스를 더 스마트하게">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:image" content="https://the-meti.pages.dev/static/brand/og-cover.jpg">
+  <meta name="twitter:image" content="https://my-elid.com/static/brand/og-cover.jpg">
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">
   <div id="container" class="w-full max-w-sm">
@@ -549,7 +562,7 @@ function invitePageHtml(token: string): string {
     <div id="invite-error" class="hidden bg-white rounded-3xl shadow-2xl p-8 text-center">
       <i class="fas fa-exclamation-circle text-red-400 text-3xl mb-3"></i>
       <p id="invite-error-msg" class="text-gray-600">유효하지 않은 초대 링크입니다.</p>
-      <a href="https://meti.io" class="mt-4 inline-block text-blue-600 text-sm hover:underline">ELID 홈으로 이동</a>
+      <a href="https://my-elid.com" class="mt-4 inline-block text-blue-600 text-sm hover:underline">ELID 홈으로 이동</a>
     </div>
   </div>
 
@@ -606,7 +619,7 @@ function invitePageHtml(token: string): string {
             <i class="fas fa-sign-in-alt mr-2"></i>로그인 후 웹에서 참여
           </a>
           <p class="text-center text-sm text-gray-400">앱이 없으신가요?
-            <a href="https://meti.io" class="text-blue-600 hover:underline">ELID 다운로드</a>
+            <a href="https://my-elid.com" class="text-blue-600 hover:underline">ELID 다운로드</a>
           </p>
         \`;
 

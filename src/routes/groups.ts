@@ -542,7 +542,7 @@ groups.post(
 
     return c.json(ok({
       token,
-      invite_url: `https://the-meti.pages.dev/invite/${token}`,  // 앱 딥링크 or 웹 URL
+      invite_url: `https://my-elid.com/invite/${token}`,  // 앱 딥링크 or 웹 URL
       label: body.label ?? null,
       max_uses: body.max_uses ?? null,
       expires_at: expiresAt
@@ -581,7 +581,7 @@ groups.get('/:id/invite-links', authMiddleware, async (c) => {
   // 각 링크에 invite_url 추가
   const links = rows.results.map((row: Record<string, unknown>) => ({
     ...row,
-    invite_url: `https://the-meti.pages.dev/invite/${row.token}`
+    invite_url: `https://my-elid.com/invite/${row.token}`
   }))
 
   return c.json(ok(links))
