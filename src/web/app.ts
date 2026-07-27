@@ -270,6 +270,11 @@ export function appRegisterHtml(): string {
     }
     input::placeholder{color:var(--mute);}
     input[type=text]:focus,input[type=email]:focus,input[type=password]:focus{border-color:var(--navy);background:#fff;box-shadow:0 0 0 3px rgba(11,30,64,.09);}
+    .pwmsg{font-size:12.5px;font-weight:600;margin:7px 2px 0;min-height:15px;}
+    .pwmsg.match{color:#2563eb;}   /* 파란색계열 — 일치 */
+    .pwmsg.nomatch{color:#DC2626;} /* 붉은색계열 — 불일치 */
+    #pw2.ok{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.12);}
+    #pw2.bad{border-color:#DC2626;box-shadow:0 0 0 3px rgba(220,38,38,.12);}
     .terms{background:var(--bg);border:1.5px solid var(--line);border-radius:14px;padding:14px 16px;margin:16px 0;}
     .all-row{display:flex;align-items:center;gap:9px;padding-bottom:11px;margin-bottom:11px;border-bottom:1px solid var(--line);}
     .all-row label{font-size:14px;font-weight:700;color:var(--ink);cursor:pointer;}
@@ -331,11 +336,12 @@ export function appRegisterHtml(): string {
         </div>
         <div class="field">
           <label for="pw">비밀번호</label>
-          <input type="password" id="pw" placeholder="8자 이상" autocomplete="new-password">
+          <input type="password" id="pw" placeholder="8자 이상" autocomplete="new-password" oninput="checkPw()">
         </div>
         <div class="field">
-          <label for="birth">생년월일</label>
-          <input type="date" id="birth" autocomplete="bday">
+          <label for="pw2">비밀번호 확인</label>
+          <input type="password" id="pw2" placeholder="비밀번호 다시 입력" autocomplete="new-password" oninput="checkPw()">
+          <p id="pwmsg" class="pwmsg"></p>
         </div>
 
         <div class="terms">
@@ -371,6 +377,22 @@ export function appRegisterHtml(): string {
       const items = document.querySelectorAll('.item');
       document.getElementById('agree-all').checked = [...items].every(cb => cb.checked);
     }
+    function checkPw() {
+      const pw  = document.getElementById('pw').value;
+      const pw2 = document.getElementById('pw2').value;
+      const msg = document.getElementById('pwmsg');
+      const inp = document.getElementById('pw2');
+      inp.classList.remove('ok', 'bad');
+      msg.classList.remove('match', 'nomatch');
+      if (!pw2) { msg.textContent = ''; return; }
+      if (pw === pw2) {
+        msg.textContent = '✓ 비밀번호가 일치합니다.';
+        msg.classList.add('match'); inp.classList.add('ok');
+      } else {
+        msg.textContent = '✕ 비밀번호가 일치하지 않습니다.';
+        msg.classList.add('nomatch'); inp.classList.add('bad');
+      }
+    }
 
     document.getElementById('frm').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -383,18 +405,14 @@ export function appRegisterHtml(): string {
         err.style.display = 'block'; return;
       }
 
-      const birth = document.getElementById('birth').value;
-      if (!birth) {
-        err.textContent = '생년월일을 입력해 주세요.';
+      const pw  = document.getElementById('pw').value;
+      const pw2 = document.getElementById('pw2').value;
+      if (pw.length < 8) {
+        err.textContent = '비밀번호는 8자 이상이어야 합니다.';
         err.style.display = 'block'; return;
       }
-      // 만 19세 미만 가입 차단 (서버에서도 재검증)
-      const b = new Date(birth), now = new Date();
-      let age = now.getFullYear() - b.getFullYear();
-      const m = now.getMonth() - b.getMonth();
-      if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
-      if (age < 19) {
-        err.textContent = '만 19세 미만은 가입할 수 없습니다.';
+      if (pw !== pw2) {
+        err.textContent = '비밀번호가 일치하지 않습니다.';
         err.style.display = 'block'; return;
       }
 
@@ -409,7 +427,6 @@ export function appRegisterHtml(): string {
             name:         document.getElementById('name').value.trim(),
             email:        document.getElementById('email').value.trim(),
             password:     document.getElementById('pw').value,
-            birth_date:   birth,
             account_type: 'personal'
           })
         });
