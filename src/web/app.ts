@@ -680,8 +680,8 @@ export function appLandingHtml(): string {
       </div>
     </div>
     <div class="hero-photo">
-      <img src="/static/brand/hero-people.jpg" width="820" height="990"
-           alt="ELID로 연결되는 비즈니스 미팅" loading="eager" decoding="async" />
+      <img src="/static/brand/hero-woman.jpg" width="830" height="1057"
+           alt="ELID 디지털 명함을 스마트폰으로 보여주는 사용자" loading="eager" decoding="async" />
     </div>
   </div>
 </section>
