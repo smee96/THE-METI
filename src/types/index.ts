@@ -14,6 +14,10 @@ export type Bindings = {
   TOSS_CLIENT_KEY?: string   // 미설정 환경에서는 충전 결제 비활성
   TOSS_SECRET_KEY?: string
   FCM_SERVICE_ACCOUNT?: string  // Firebase 서비스 계정 키 JSON — 미설정 시 푸시 비활성
+  // ── Universal Links / App Links (딥링크) — 앱 식별자 확보 후 secret 주입, 미설정 시 빈 연관 ──
+  APPLE_APP_ID?: string   // 형식: <TeamID>.<BundleID>  예) ABCDE12345.com.meti.app
+  ANDROID_PACKAGE?: string  // 미설정 시 'com.meti.app'
+  ANDROID_SHA256?: string   // 콤마 구분 SHA256 인증서 지문
 }
 
 export type Variables = {

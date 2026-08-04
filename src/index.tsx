@@ -487,6 +487,23 @@ app.get('/cards/qr/:token', async (c) => {
 app.get('/privacy', (c) => c.html(privacyPolicyHtml()))
 app.get('/terms',   (c) => c.html(termsOfServiceHtml()))
 
+// ── Universal Links / App Links (딥링크: 카드공유·QR·초대를 앱에서 바로 열기) ──
+// 앱 식별자(Apple Team ID·Android SHA256 지문) 확보 후 secret 주입 → 즉시 활성. 미설정 시 빈 연관(무해).
+app.get('/.well-known/apple-app-site-association', (c) => {
+  const appID = c.env.APPLE_APP_ID
+  return c.json({
+    applinks: { apps: [], details: appID ? [{ appID, paths: ['/card/*', '/cards/qr/*', '/invite/*'] }] : [] }
+  })
+})
+app.get('/.well-known/assetlinks.json', (c) => {
+  const pkg = c.env.ANDROID_PACKAGE || 'com.meti.app'
+  const fps = (c.env.ANDROID_SHA256 || '').split(',').map(s => s.trim()).filter(Boolean)
+  return c.json(fps.length ? [{
+    relation: ['delegate_permission/common.handle_all_urls'],
+    target: { namespace: 'android_app', package_name: pkg, sha256_cert_fingerprints: fps }
+  }] : [])
+})
+
 // ── 그룹 초대 페이지 (앱 미설치자용)
 // ════════════════════════════════════════════════════════════
 function invitePageHtml(token: string): string {
