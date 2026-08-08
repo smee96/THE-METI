@@ -25,7 +25,11 @@
     "APP_NAME": "ELID",
     "APP_ENV": "production",
     "JWT_EXPIRES_IN": "7d",
-    "REFRESH_TOKEN_EXPIRES_IN": "30d"
+    "REFRESH_TOKEN_EXPIRES_IN": "30d",
+    // 파트너 SSO 공개 파라미터 (개인키는 secret) — 배포 시 vars가 대시보드
+    // plain_text 변수를 대체하므로 공개값은 반드시 여기서 관리한다
+    "PARTNER_JWT_KID": "elid-partner-2026-08",
+    "PARTNER_JWT_ISS": "https://my-elid.com"
   },
 
   // ── 스테이징 (staging 브랜치 → Cloudflare preview 환경) ─
@@ -50,7 +54,9 @@
         "APP_NAME": "ELID",
         "APP_ENV": "staging",
         "JWT_EXPIRES_IN": "7d",
-        "REFRESH_TOKEN_EXPIRES_IN": "30d"
+        "REFRESH_TOKEN_EXPIRES_IN": "30d",
+        "PARTNER_JWT_KID": "elid-partner-stg-2026-08",
+        "PARTNER_JWT_ISS": "https://staging.the-meti.pages.dev"
         // TOSS_CLIENT_KEY / TOSS_SECRET_KEY 는 secret으로 관리
         // (wrangler pages secret put — vars 평문 금지: Pages는 배포 시 vars가
         //  대시보드 secret을 덮어쓰므로 실키가 이 자리에 들어가는 순간 사고가 된다)
