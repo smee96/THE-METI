@@ -11,8 +11,8 @@ import type { Bindings } from '../types'
 const ALG = 'RS256'
 const TOKEN_TTL_SEC = 300 // 확정 스펙: exp = iat + 300
 
-// iss 값 — 도메인 전환(2026-08-04, my-elid.com) 반영. 대표 확정 전까지 잠정값이며
-// PARTNER_JWT_ISS 시크릿으로 재배포 없이 교체 가능하다. (인박스 질의 중)
+// iss 값 — 대표 확정(2026-08-08): prod = https://my-elid.com (도메인 전환 반영).
+// 환경별 실값은 wrangler.jsonc vars의 PARTNER_JWT_ISS가 우선한다.
 const DEFAULT_ISS = 'https://my-elid.com'
 const DEFAULT_KID = 'elid-partner-2026-08'
 

@@ -76,5 +76,5 @@
   // TOSS_CLIENT_KEY / TOSS_SECRET_KEY — 토스페이먼츠 키 (미설정 시 충전 비활성)
   // PARTNER_JWT_PRIVATE_KEY — 파트너 SSO launch-token RS256 개인키(PKCS8 PEM, 미설정 시 발급 비활성)
   // PARTNER_JWT_KID         — JWKS kid (기본 elid-partner-2026-08)
-  // PARTNER_JWT_ISS         — launch-token iss (기본 https://my-elid.com — 대표 확정 전 잠정)
+  // PARTNER_JWT_ISS         — launch-token iss (prod=https://my-elid.com, 2026-08-08 확정)
 }
