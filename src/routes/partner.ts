@@ -6,6 +6,7 @@ import { ok, fail } from '../middleware/response'
 import { authMiddleware } from '../middleware/auth'
 import { creditWallet } from '../lib/wallet'
 import { sendPushToUsers } from '../lib/push'
+import { issueLaunchToken } from '../lib/partner-token'
 
 const partner = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -102,7 +103,7 @@ partner.post(
     const pinfo = await c.env.DB.prepare(
       `SELECT commission_rate FROM partner_services WHERE id = ?`
     ).bind(partnerId).first<{ commission_rate: number }>()
-    const rate = pinfo?.commission_rate ?? 0.15
+    const rate = pinfo?.commission_rate ?? 0.20  // 해피트리 확정 회신(2026-07-08) 기준 20%
 
     const gross = body.amount ?? null
     const currency = body.currency ?? (gross != null ? 'KRW' : null)
@@ -180,6 +181,147 @@ partner.post(
     }, '리워드가 지급되었습니다.'))
   }
 )
+
+// ── POST /api/v1/partner/settlement ───────────────────
+// 해피트리 확정 회신(2026-07-08) §1-3: 정산 통지 수신 (정산 전용 —
+// 유저 포인트 적립·알림 없음. /reward와 달리 유저 원장을 건드리지 않는다)
+// 멱등: (partner_id, order_id) 유일 — outbox 백오프 재시도로 같은 통지가 여러 번 온다
+partner.post(
+  '/settlement',
+  partnerAuth,
+  zValidator('json', z.object({
+    external_user_key: z.string().regex(/^[0-9a-f]{64}$/, 'external_user_key는 64자리 hex여야 합니다.'),
+    event_type: z.enum(['star_purchase', 'star_purchase_refund']),
+    amount: z.number().int().positive(),            // 결제/환불 원금 — 환불도 양수로 받는다
+    currency: z.string().length(3).transform(s => s.toUpperCase()),
+    order_id: z.string().min(1).max(128),           // 멱등 키 (이벤트당 유일)
+    ref_order_id: z.string().min(1).max(128).nullable().optional(),
+    occurred_at: z.string().datetime({ offset: true }).optional(),
+  })),
+  async (c) => {
+    const partnerId = c.get('partnerId') as number
+    const body = c.req.valid('json')
+
+    const isRefund = body.event_type === 'star_purchase_refund'
+    if (isRefund && !body.ref_order_id) {
+      return c.json(fail('환불 통지에는 ref_order_id(원 결제 order_id)가 필요합니다.'), 400)
+    }
+
+    // 유저 매핑 확인
+    const mapping = await c.env.DB.prepare(`
+      SELECT user_id FROM partner_user_mapping
+      WHERE partner_id = ? AND external_user_key = ?
+    `).bind(partnerId, body.external_user_key).first<{ user_id: number }>()
+
+    if (!mapping) {
+      return c.json({ success: false, code: 'user_not_found', error: '유저 매핑을 찾을 수 없습니다.' }, 404)
+    }
+
+    // 정산액 = ±floor(원금 × 수수료율). 환불은 역정산(음수)
+    const pinfo = await c.env.DB.prepare(
+      `SELECT commission_rate FROM partner_services WHERE id = ?`
+    ).bind(partnerId).first<{ commission_rate: number }>()
+    const rate = pinfo?.commission_rate ?? 0.20
+    const magnitude = Math.floor(body.amount * rate)
+    const settlement = isRefund ? -magnitude : magnitude
+    const grossSigned = isRefund ? -body.amount : body.amount
+    const billingPeriod = new Date().toISOString().slice(0, 7)  // YYYY-MM
+
+    // 멱등 삽입 — 이미 처리된 order_id면 재집계 없이 duplicate 응답
+    const insert = await c.env.DB.prepare(`
+      INSERT INTO partner_settlement_events
+        (partner_id, external_user_key, user_id, event_type, amount, currency,
+         order_id, ref_order_id, commission_rate, settlement_amount, billing_period, occurred_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(partner_id, order_id) DO NOTHING
+    `).bind(
+      partnerId, body.external_user_key, mapping.user_id, body.event_type,
+      body.amount, body.currency, body.order_id, body.ref_order_id ?? null,
+      rate, settlement, billingPeriod, body.occurred_at ?? null
+    ).run()
+
+    if (insert.meta.changes === 0) {
+      const prev = await c.env.DB.prepare(`
+        SELECT settlement_amount, currency FROM partner_settlement_events
+        WHERE partner_id = ? AND order_id = ?
+      `).bind(partnerId, body.order_id).first<{ settlement_amount: number; currency: string }>()
+      return c.json(ok({
+        accepted: true,
+        order_id: body.order_id,
+        settlement_amount: prev?.settlement_amount ?? settlement,
+        currency: prev?.currency ?? body.currency,
+        duplicate: true,
+      }))
+    }
+
+    // 월·파트너·통화 단위 정산 집계 누적 (환불은 음수로 상쇄)
+    await c.env.DB.prepare(`
+      INSERT INTO partner_settlements
+        (partner_id, billing_period, currency, gross_total, settlement_total, event_count)
+      VALUES (?, ?, ?, ?, ?, 1)
+      ON CONFLICT(partner_id, billing_period, currency) DO UPDATE SET
+        gross_total      = gross_total + excluded.gross_total,
+        settlement_total = settlement_total + excluded.settlement_total,
+        event_count      = event_count + 1,
+        updated_at       = datetime('now')
+    `).bind(partnerId, billingPeriod, body.currency, grossSigned, settlement).run()
+
+    return c.json(ok({
+      accepted: true,
+      order_id: body.order_id,
+      settlement_amount: settlement,
+      currency: body.currency,
+      duplicate: false,
+    }))
+  }
+)
+
+// ── POST /api/v1/partner/services/:id/launch-token ────
+// ELID 앱이 파트너 웹뷰(해피트리 /play)를 열 때 쓰는 1회용 SSO 토큰 (앱 사용자 인증)
+// 확정 회신 §1-2: RS256 · aud/partner_id = 파트너 slug · TTL 5분 · jti 원타임(파트너측 검증)
+partner.post('/services/:id/launch-token', authMiddleware, async (c) => {
+  const serviceId = parseInt(c.req.param('id'))
+  if (!Number.isInteger(serviceId) || serviceId <= 0) {
+    return c.json(fail('유효하지 않은 파트너 ID입니다.'), 400)
+  }
+
+  const svc = await c.env.DB.prepare(`
+    SELECT id, slug, webview_url, open_mode FROM partner_services
+    WHERE id = ? AND status = 'active'
+  `).bind(serviceId).first<{ id: number; slug: string | null; webview_url: string | null; open_mode: string }>()
+
+  if (!svc) return c.json(fail('파트너를 찾을 수 없습니다.'), 404)
+  if (!svc.slug) return c.json(fail('SSO 진입을 지원하지 않는 파트너입니다.'), 400)
+
+  const userId = c.get('userId') as number
+
+  // 유저 매핑 확보 — /partner/user-map과 동일한 결정론적 해시 (원본 ID 비공유)
+  const encoder = new TextEncoder()
+  const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(`${svc.id}:${userId}`))
+  const externalKey = Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, '0')).join('')
+  await c.env.DB.prepare(`
+    INSERT OR IGNORE INTO partner_user_mapping (partner_id, user_id, external_user_key)
+    VALUES (?, ?, ?)
+  `).bind(svc.id, userId, externalKey).run()
+
+  const issued = await issueLaunchToken(c.env, svc.slug, externalKey)
+  if (!issued) {
+    return c.json(fail('launch-token 서명 키가 설정되지 않았습니다.'), 503)
+  }
+
+  // webview_url이 있으면 토큰을 붙인 진입 URL까지 만들어준다 (앱은 그대로 웹뷰 오픈)
+  const launchUrl = svc.webview_url
+    ? `${svc.webview_url}${svc.webview_url.includes('?') ? '&' : '?'}token=${encodeURIComponent(issued.token)}`
+    : null
+
+  return c.json(ok({
+    token: issued.token,
+    expires_in: issued.expires_in,
+    open_mode: svc.open_mode,
+    launch_url: launchUrl,
+  }))
+})
 
 // ── GET /api/v1/partner/user-balance ──────────────────
 // 파트너가 유저 리워드 잔액 조회

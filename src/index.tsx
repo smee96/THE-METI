@@ -18,6 +18,7 @@ import pointsRoutes   from './routes/points'
 import usersRoutes    from './routes/users'
 import notificationsRoutes from './routes/notifications'
 import staticRouter   from './static-serve'
+import { publicJwks } from './lib/partner-token'
 
 // Web UI HTML 템플릿
 import { adminLoginHtml, adminAppHtml }                from './web/admin'
@@ -495,6 +496,14 @@ app.get('/.well-known/apple-app-site-association', (c) => {
     applinks: { apps: [], details: appID ? [{ appID, paths: ['/card/*', '/cards/qr/*', '/invite/*'] }] : [] }
   })
 })
+// ── 파트너 SSO 공개키 (JWKS) — 해피트리가 launch-token을 자체 검증하는 URL ──
+// 개인키(PARTNER_JWT_PRIVATE_KEY secret)에서 공개 부분만 파생 공표. 미설정 시 빈 keys(무해).
+// 키 로테이션: JWKS에 신규 kid 추가 후 구키 유지(겹침 기간) → 무중단 (확정 회신 §1-2)
+app.get('/.well-known/partner-jwks.json', async (c) => {
+  const jwks = await publicJwks(c.env)
+  return c.json(jwks, 200, { 'Cache-Control': 'public, max-age=300' })
+})
+
 app.get('/.well-known/assetlinks.json', (c) => {
   const pkg = c.env.ANDROID_PACKAGE || 'com.meti.app'
   const fps = (c.env.ANDROID_SHA256 || '').split(',').map(s => s.trim()).filter(Boolean)
