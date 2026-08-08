@@ -56,7 +56,10 @@
         "JWT_EXPIRES_IN": "7d",
         "REFRESH_TOKEN_EXPIRES_IN": "30d",
         "PARTNER_JWT_KID": "elid-partner-stg-2026-08",
-        "PARTNER_JWT_ISS": "https://staging.the-meti.pages.dev"
+        "PARTNER_JWT_ISS": "https://staging.the-meti.pages.dev",
+        // B-2 잔액조회: 해피트리 API 베이스 (키는 HT_PARTNER_KEY secret)
+        // 해피트리는 단일 배포 + 파트너 레지스트리로 staging/prod 구분
+        "HT_BALANCE_BASE_URL": "https://happy-tree-game.pages.dev"
         // TOSS_CLIENT_KEY / TOSS_SECRET_KEY 는 secret으로 관리
         // (wrangler pages secret put — vars 평문 금지: Pages는 배포 시 vars가
         //  대시보드 secret을 덮어쓰므로 실키가 이 자리에 들어가는 순간 사고가 된다)
@@ -77,4 +80,7 @@
   // PARTNER_JWT_PRIVATE_KEY — 파트너 SSO launch-token RS256 개인키(PKCS8 PEM, 미설정 시 발급 비활성)
   // PARTNER_JWT_KID         — JWKS kid (기본 elid-partner-2026-08)
   // PARTNER_JWT_ISS         — launch-token iss (prod=https://my-elid.com, 2026-08-08 확정)
+  // HT_PARTNER_KEY          — 해피트리 발급 X-HT-Partner-Key (B-2 잔액조회. 미설정 시 503 비활성)
+  //                           ⚠ prod는 해피트리가 ELID prod 파트너를 등록한 뒤에 설정한다
+  //                           (prod vars에 HT_BALANCE_BASE_URL도 그때 추가)
 }

@@ -15,3 +15,7 @@ PARTNER_WEBHOOK_SECRET=change-me
 # PARTNER_JWT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 # PARTNER_JWT_KID=elid-partner-local
 # PARTNER_JWT_ISS=http://localhost:3000
+
+# B-2 파트너 잔액조회 (해피트리) — 미설정 시 503 비활성
+# HT_PARTNER_KEY=htpk_...
+# HT_BALANCE_BASE_URL=https://happy-tree-game.pages.dev

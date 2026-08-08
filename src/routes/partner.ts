@@ -7,6 +7,7 @@ import { authMiddleware } from '../middleware/auth'
 import { creditWallet } from '../lib/wallet'
 import { sendPushToUsers } from '../lib/push'
 import { issueLaunchToken } from '../lib/partner-token'
+import { fetchPartnerBalance } from '../lib/partner-balance'
 
 const partner = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -321,6 +322,47 @@ partner.post('/services/:id/launch-token', authMiddleware, async (c) => {
     open_mode: svc.open_mode,
     launch_url: launchUrl,
   }))
+})
+
+// ── GET /api/v1/partner/services/:id/balance ──────────
+// B-2: 앱 제휴 탭 표시용 파트너 게임재화 잔액 (해피트리 프록시 + 10초 캐시)
+// 확정 회신 §2: 재화 표시 = ELID 네이티브 UI → 이 엔드포인트가 그 데이터 소스
+partner.get('/services/:id/balance', authMiddleware, async (c) => {
+  const serviceId = parseInt(c.req.param('id'))
+  if (!Number.isInteger(serviceId) || serviceId <= 0) {
+    return c.json(fail('유효하지 않은 파트너 ID입니다.'), 400)
+  }
+
+  const svc = await c.env.DB.prepare(`
+    SELECT id, slug FROM partner_services WHERE id = ? AND status = 'active'
+  `).bind(serviceId).first<{ id: number; slug: string | null }>()
+
+  if (!svc) return c.json(fail('파트너를 찾을 수 없습니다.'), 404)
+  if (svc.slug !== 'happytree') {
+    return c.json(fail('잔액 조회를 지원하지 않는 파트너입니다.'), 400)
+  }
+
+  const userId = c.get('userId') as number
+
+  // external_user_key는 결정론적 해시 — 매핑 저장은 launch-token 쪽에서 하므로 계산만
+  const encoder = new TextEncoder()
+  const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(`${svc.id}:${userId}`))
+  const externalKey = Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, '0')).join('')
+
+  const result = await fetchPartnerBalance(c.env, externalKey)
+  if (!result) {
+    return c.json(fail('파트너 잔액 조회가 아직 설정되지 않았습니다.'), 503)
+  }
+  if (result.status === 'not_linked') {
+    // 첫 SSO 진입 전 — 앱은 "게임 시작 전" 상태로 표시
+    return c.json({ success: false, code: 'user_not_linked', error: '아직 게임을 시작하지 않은 사용자입니다.' }, 404)
+  }
+  if (result.status === 'error') {
+    console.error(`파트너 잔액 조회 실패: HTTP ${result.httpStatus}`)
+    return c.json(fail('파트너 잔액 조회에 실패했습니다.'), 502)
+  }
+  return c.json(ok(result.data))
 })
 
 // ── GET /api/v1/partner/user-balance ──────────────────

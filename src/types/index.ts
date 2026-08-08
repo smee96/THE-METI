@@ -18,6 +18,9 @@ export type Bindings = {
   PARTNER_JWT_PRIVATE_KEY?: string  // RS256 개인키 (PKCS8 PEM) — secret
   PARTNER_JWT_KID?: string          // JWKS kid (기본 elid-partner-2026-08)
   PARTNER_JWT_ISS?: string          // iss 클레임 (prod=https://my-elid.com — 2026-08-08 확정)
+  // ── B-2 파트너 잔액조회 (해피트리) — 둘 다 있어야 활성, 미설정 시 503 ──
+  HT_PARTNER_KEY?: string           // 해피트리 발급 X-HT-Partner-Key — secret
+  HT_BALANCE_BASE_URL?: string      // 해피트리 API 베이스 (vars)
   // ── Universal Links / App Links (딥링크) — 앱 식별자 확보 후 secret 주입, 미설정 시 빈 연관 ──
   APPLE_APP_ID?: string   // 형식: <TeamID>.<BundleID>  예) ABCDE12345.com.meti.app
   ANDROID_PACKAGE?: string  // 미설정 시 'com.meti.app'
