@@ -389,6 +389,11 @@ products.get('/payments/payment-token/verify', async (c) => {
 // ══════════════════════════════════════════════════════════════
 // POST /api/v1/payments/subscription/verify-apple
 // Apple IAP 구독 영수증 검증
+// ⛔ 스토어 계정 미확보 — 영수증을 Apple에 검증하지 않고 플랜을 부여하는 경로라
+//    검증 구현 전까지 차단(verify-web과 동일 정책). 스키마가 임의 문자열을 통과시키므로
+//    열어두면 로그인 사용자가 위조 영수증으로 유료 플랜을 취득할 수 있다.
+//    재개 조건: App Store Server API 자격증명(issuer ID·key ID·.p8) 확보 후
+//    아래 가드 제거 + TODO 검증 구현.
 // ══════════════════════════════════════════════════════════════
 products.post(
   '/payments/subscription/verify-apple',
@@ -399,6 +404,8 @@ products.post(
     transaction_id  : z.string().min(1),
   })),
   async (c) => {
+    return c.json(fail('구독 결제 기능 준비 중입니다. (스토어 검증 연동 전)'), 503)
+
     const userId = c.get('userId')
     const body   = c.req.valid('json')
 
@@ -435,6 +442,10 @@ products.post(
 // ══════════════════════════════════════════════════════════════
 // POST /api/v1/payments/subscription/verify-google
 // Google Play Billing 구독 영수증 검증
+// ⛔ 스토어 계정 미확보 — verify-apple과 동일 사유로 차단.
+//    재개 조건: Play Developer API 서비스 계정 JSON 확보 후 가드 제거 + TODO 검증 구현.
+//    (재개 시 package_name 기본값과 planMap 상품ID를 확정 번들ID로 갱신할 것 —
+//     `ELID_Decision_BundleID_2026-08-08.md`: com.meti.* → com.elid.app)
 // ══════════════════════════════════════════════════════════════
 products.post(
   '/payments/subscription/verify-google',
@@ -445,6 +456,8 @@ products.post(
     package_name  : z.string().default('com.meti.app'),
   })),
   async (c) => {
+    return c.json(fail('구독 결제 기능 준비 중입니다. (스토어 검증 연동 전)'), 503)
+
     const userId = c.get('userId')
     const body   = c.req.valid('json')
 

@@ -19,3 +19,9 @@ PARTNER_WEBHOOK_SECRET=change-me
 # B-2 파트너 잔액조회 (해피트리) — 미설정 시 503 비활성
 # HT_PARTNER_KEY=htpk_...
 # HT_BALANCE_BASE_URL=https://happy-tree-game.pages.dev
+
+# 트랜잭션 메일 (Brevo) — 미설정 시 비밀번호 재설정 503
+# 헤더명이 api-key다 (Bearer 아님). 로컬 테스트는 Brevo 대시보드에서 검증된 발신자 필요
+# BREVO_API_KEY=xkeysib-...
+# EMAIL_FROM=ELID <noreply@my-elid.com>
+# APP_BASE_URL=http://localhost:3000

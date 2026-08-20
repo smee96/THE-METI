@@ -453,6 +453,12 @@ app.get('/app/login',    (c) => c.redirect('/login'))
 app.get('/app/register', (c) => c.html(appRegisterHtml()))
 app.get('/app',          (c) => c.redirect('/'))
 
+// 앱이 쓰는 초대 경로 별칭 (앱 회신 2026-08-06 §1)
+// 정식 경로는 /invite/:token 하나다. 앱 intent-filter에 /app/invite/* 가 함께
+// 등록돼 있어 서버가 정식 경로로 흡수한다(앱 재배포 없이 통일).
+// ⚠️ 반드시 아래 '/app/*' SPA 셸보다 먼저 등록할 것 — Hono는 선등록 라우트가 이긴다.
+app.get('/app/invite/:token', (c) => c.redirect(`/invite/${c.req.param('token')}`, 301))
+
 // 나머지 /app/* 전체 → SPA shell (JS가 라우팅 처리)
 app.get('/app/*', (c) => c.html(appShellHtml('ELID')))
 
@@ -667,6 +673,126 @@ function invitePageHtml(token: string): string {
 app.get('/invite/:token', (c) => {
   const token = c.req.param('token')
   return c.html(invitePageHtml(token))
+})
+
+// ── 비밀번호 재설정 페이지 (메일 링크 도착지)
+// ════════════════════════════════════════════════════════════
+function resetPasswordPageHtml(token: string): string {
+  return `<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ELID 비밀번호 재설정</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" type="image/svg+xml" href="/static/brand/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon-32.png">
+  <link rel="apple-touch-icon" href="/static/brand/favicon-180.png">
+  <link rel="stylesheet" href="/static/tailwind.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-sm">
+    <div class="text-center mb-6">
+      <p class="text-sm text-gray-500 font-semibold tracking-widest">EL<span style="color:#C9A86A">I</span>D</p>
+    </div>
+
+    <div class="bg-white rounded-3xl shadow-2xl overflow-hidden">
+      <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white text-center">
+        <div class="w-14 h-14 bg-white bg-opacity-20 rounded-2xl flex items-center justify-center mx-auto mb-3">
+          <i class="fas fa-lock text-white text-2xl"></i>
+        </div>
+        <p class="text-blue-100 text-sm">비밀번호 재설정</p>
+      </div>
+
+      <div class="p-6">
+        <!-- 입력 폼 -->
+        <div id="form-view">
+          <p class="text-sm text-gray-500 mb-4 text-center">새 비밀번호를 입력해 주세요.</p>
+          <input id="pw" type="password" placeholder="새 비밀번호 (8자 이상)" autocomplete="new-password"
+                 class="w-full px-4 py-3 mb-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <input id="pw2" type="password" placeholder="새 비밀번호 확인" autocomplete="new-password"
+                 class="w-full px-4 py-3 mb-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <p id="msg" class="text-xs text-red-500 mb-3 min-h-[1rem]"></p>
+          <button id="submit-btn" onclick="submitReset()"
+                  class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl text-sm transition">
+            비밀번호 변경
+          </button>
+        </div>
+
+        <!-- 완료 -->
+        <div id="done-view" class="hidden text-center py-4">
+          <i class="fas fa-circle-check text-green-500 text-4xl mb-3"></i>
+          <p class="text-gray-800 font-semibold mb-1">비밀번호가 변경되었습니다</p>
+          <p class="text-sm text-gray-500">앱으로 돌아가 새 비밀번호로 로그인해 주세요.</p>
+        </div>
+
+        <!-- 오류(만료·사용됨) -->
+        <div id="error-view" class="hidden text-center py-4">
+          <i class="fas fa-circle-exclamation text-red-500 text-4xl mb-3"></i>
+          <p class="text-gray-800 font-semibold mb-1">링크가 유효하지 않습니다</p>
+          <p id="error-detail" class="text-sm text-gray-500">만료되었거나 이미 사용된 링크입니다. 다시 요청해 주세요.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var TOKEN = ${JSON.stringify(token)};
+
+    function show(id) {
+      ['form-view', 'done-view', 'error-view'].forEach(function (v) {
+        document.getElementById(v).classList.toggle('hidden', v !== id);
+      });
+    }
+
+    async function submitReset() {
+      var pw = document.getElementById('pw').value;
+      var pw2 = document.getElementById('pw2').value;
+      var msg = document.getElementById('msg');
+      var btn = document.getElementById('submit-btn');
+
+      if (pw.length < 8)  { msg.textContent = '비밀번호는 8자 이상이어야 합니다.'; return; }
+      if (pw !== pw2)     { msg.textContent = '비밀번호가 일치하지 않습니다.'; return; }
+      msg.textContent = '';
+      btn.disabled = true;
+      btn.textContent = '변경 중...';
+
+      try {
+        var res = await fetch('/api/v1/auth/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: TOKEN, password: pw })
+        });
+        var body = await res.json();
+        if (res.ok && body.success) {
+          show('done-view');
+          return;
+        }
+        if (res.status === 400) {
+          show('error-view');
+          return;
+        }
+        msg.textContent = (body && body.error) || '변경에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+      } catch (e) {
+        msg.textContent = '네트워크 오류가 발생했습니다.';
+      }
+      btn.disabled = false;
+      btn.textContent = '비밀번호 변경';
+    }
+
+    document.getElementById('pw2').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') submitReset();
+    });
+
+    if (!TOKEN) show('error-view');
+  </script>
+</body>
+</html>`
+}
+
+app.get('/reset-password', (c) => {
+  return c.html(resetPasswordPageHtml(c.req.query('token') || ''))
 })
 
 // ── 미매칭 폴백(전역 404) ─────────────────────────────────

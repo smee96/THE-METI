@@ -21,6 +21,10 @@ export type Bindings = {
   // ── B-2 파트너 잔액조회 (해피트리) — 둘 다 있어야 활성, 미설정 시 503 ──
   HT_PARTNER_KEY?: string           // 해피트리 발급 X-HT-Partner-Key — secret
   HT_BALANCE_BASE_URL?: string      // 해피트리 API 베이스 (vars)
+  // ── 트랜잭션 메일 (Brevo) — 둘 다 있어야 활성, 미설정 시 비밀번호 재설정 503 ──
+  BREVO_API_KEY?: string    // Brevo API 키 — secret (헤더명 api-key, Bearer 아님)
+  EMAIL_FROM?: string       // 발신자. 예) "ELID <noreply@my-elid.com>" (vars)
+  APP_BASE_URL?: string     // 메일 링크 기준 URL (vars, 미설정 시 https://my-elid.com)
   // ── Universal Links / App Links (딥링크) — 앱 식별자 확보 후 secret 주입, 미설정 시 빈 연관 ──
   APPLE_APP_ID?: string   // 형식: <TeamID>.<BundleID>  예) ABCDE12345.com.meti.app
   ANDROID_PACKAGE?: string  // 미설정 시 'com.meti.app'

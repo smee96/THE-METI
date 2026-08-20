@@ -4,6 +4,7 @@ import { z } from 'zod'
 import type { Bindings, Variables } from '../types'
 import { authMiddleware } from '../middleware/auth'
 import { ok, fail } from '../middleware/response'
+import { emailConfigured, sendEmail, appBaseUrl, passwordResetEmail } from '../lib/email'
 
 const auth = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -130,7 +131,9 @@ auth.post(
       `INSERT OR IGNORE INTO point_wallets (owner_type, owner_id, balance) VALUES ('user', ?, 0)`
     ).bind(userId).run()
 
-    // TODO: 이메일 발송 (추후 이메일 서비스 연동)
+    // 인증 메일은 발송하지 않는다 — 현재 정책상 가입 즉시 is_verified=1이라
+    // email_verifications 행은 보관용이다. 인증을 필수화하려면 위 INSERT의
+    // is_verified를 0으로 바꾸고 여기서 sendEmail(lib/email)을 호출할 것.
     return c.json(ok({
       user_id: userId,
       email,
@@ -369,10 +372,17 @@ auth.post(
   async (c) => {
     const email = normEmail(c.req.valid('json').email)
 
+    // 메일 미설정이면 토큰만 쌓이고 사용자는 영영 못 받는다 → 먼저 막는다.
+    // (가입 여부 조회보다 앞에 둬야 응답 차이로 계정 존재가 새지 않는다)
+    if (!emailConfigured(c.env)) {
+      return c.json(fail('비밀번호 재설정 메일 발송이 아직 설정되지 않았습니다. 고객센터로 문의해 주세요.'), 503)
+    }
+
     const user = await c.env.DB.prepare(
       'SELECT id FROM users WHERE email = ? AND is_deleted = 0'
     ).bind(email).first<{ id: number }>()
 
+    // 미가입 이메일도 동일 응답 — 계정 존재 여부 열거 방지
     if (!user) {
       return c.json(ok(null, '비밀번호 재설정 이메일이 발송되었습니다.'))
     }
@@ -384,7 +394,15 @@ auth.post(
       INSERT INTO password_resets (user_id, token, expires_at) VALUES (?, ?, ?)
     `).bind(user.id, resetToken, expiresAt).run()
 
-    // TODO: 이메일 발송
+    const resetUrl = `${appBaseUrl(c.env)}/reset-password?token=${resetToken}`
+    const mail = passwordResetEmail(resetUrl)
+    const sent = await sendEmail(c.env, { to: email, ...mail })
+
+    if (sent.status !== 'sent') {
+      console.error('[forgot-password] 메일 발송 실패', sent)
+      return c.json(fail('메일 발송에 실패했습니다. 잠시 후 다시 시도해 주세요.'), 502)
+    }
+
     return c.json(ok(null, '비밀번호 재설정 이메일이 발송되었습니다.'))
   }
 )
