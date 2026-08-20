@@ -38,7 +38,10 @@
     // ⚠ Play App Signing 사용 시 Play가 재서명한 키의 SHA256이 별도로 생긴다 —
     //    스토어 등록 후 그 값을 콤마로 이어붙일 것(배열로 함께 나간다).
     "ANDROID_PACKAGE": "com.elid.app",
-    "ANDROID_SHA256": "09:8F:95:55:28:1A:EC:9C:91:DD:9B:E8:03:06:93:7B:68:70:9F:ED:17:63:98:FC:CE:6B:F1:2F:BF:9E:5E:72"
+    "ANDROID_SHA256": "09:8F:95:55:28:1A:EC:9C:91:DD:9B:E8:03:06:93:7B:68:70:9F:ED:17:63:98:FC:CE:6B:F1:2F:BF:9E:5E:72",
+    // B-2 잔액조회 (키는 HT_PARTNER_KEY secret) — 해피트리 prod 등록 완료(2026-08-20)로 활성.
+    // 해피트리는 단일 배포 + 파트너 레지스트리로 staging/prod를 구분하므로 base는 preview와 같다.
+    "HT_BALANCE_BASE_URL": "https://happy-tree-game.pages.dev"
     // APPLE_APP_ID 는 Apple 계정 신규 개설 후 <TeamID>.com.elid.app 로 주입
     // (미설정 시 apple-app-site-association 은 빈 연관 — iOS는 capability 연결 전이라 무해)
   },
