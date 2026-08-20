@@ -74,7 +74,12 @@
         // 트랜잭션 메일 — 발신 도메인은 prod와 공용(Brevo에서 my-elid.com 1회 검증),
         // 링크만 스테이징으로 향한다
         "EMAIL_FROM": "ELID <noreply@my-elid.com>",
-        "APP_BASE_URL": "https://staging.the-meti.pages.dev"
+        "APP_BASE_URL": "https://staging.the-meti.pages.dev",
+        // App Links — vars는 환경 간 상속되지 않아 preview에도 같은 값을 둔다.
+        // 앱 intent-filter는 my-elid.com만 등록돼 있어 스테이징에서 실검증이
+        // 일어나진 않지만, 값을 비워두면 배포마다 wrangler 경고가 뜬다.
+        "ANDROID_PACKAGE": "com.elid.app",
+        "ANDROID_SHA256": "09:8F:95:55:28:1A:EC:9C:91:DD:9B:E8:03:06:93:7B:68:70:9F:ED:17:63:98:FC:CE:6B:F1:2F:BF:9E:5E:72"
         // TOSS_CLIENT_KEY / TOSS_SECRET_KEY 는 secret으로 관리
         // (wrangler pages secret put — vars 평문 금지: Pages는 배포 시 vars가
         //  대시보드 secret을 덮어쓰므로 실키가 이 자리에 들어가는 순간 사고가 된다)
