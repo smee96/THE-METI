@@ -26,8 +26,8 @@ export type Bindings = {
   EMAIL_FROM?: string       // 발신자. 예) "ELID <noreply@my-elid.com>" (vars)
   APP_BASE_URL?: string     // 메일 링크 기준 URL (vars, 미설정 시 https://my-elid.com)
   // ── Universal Links / App Links (딥링크) — 앱 식별자 확보 후 secret 주입, 미설정 시 빈 연관 ──
-  APPLE_APP_ID?: string   // 형식: <TeamID>.<BundleID>  예) ABCDE12345.com.meti.app
-  ANDROID_PACKAGE?: string  // 미설정 시 'com.meti.app'
+  APPLE_APP_ID?: string   // 형식: <TeamID>.com.elid.app — Apple 계정 신규 개설 대기(TeamID 미확보)
+  ANDROID_PACKAGE?: string  // 미설정 시 'com.elid.app' (앱 확정 2026-08-20)
   ANDROID_SHA256?: string   // 콤마 구분 SHA256 인증서 지문
 }
 

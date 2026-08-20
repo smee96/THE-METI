@@ -396,8 +396,10 @@ partner.get('/user-balance', partnerAuth, async (c) => {
 // B-2: 앱용 파트너 서비스 목록 (status=active, 일반 사용자용)
 // ══════════════════════════════════════════════════════════════
 partner.get('/services', authMiddleware, async (c) => {
+  // slug 포함 — 앱이 파트너를 이름 문자열("해피트리")로 식별하던 것을 없앤다
+  // (앱 요청 2026-08-20 §5-1. 잔액 엔드포인트도 slug='happytree'로 분기한다)
   const rows = await c.env.DB.prepare(`
-    SELECT id, name, description, webview_url, open_mode
+    SELECT id, slug, name, description, webview_url, open_mode
     FROM partner_services
     WHERE status = 'active'
       AND webview_url IS NOT NULL

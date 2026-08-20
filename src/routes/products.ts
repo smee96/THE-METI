@@ -400,7 +400,7 @@ products.post(
   authMiddleware,
   zValidator('json', z.object({
     receipt_data    : z.string().min(1),
-    product_id      : z.string().min(1),   // e.g. com.meti.pro_monthly
+    product_id      : z.string().min(1),   // e.g. com.elid.app.pro_monthly
     transaction_id  : z.string().min(1),
   })),
   async (c) => {
@@ -409,10 +409,10 @@ products.post(
     const userId = c.get('userId')
     const body   = c.req.valid('json')
 
-    // 플랜 매핑
+    // 플랜 매핑 — 앱 확정 상품 ID (앱 전달 2026-08-20). 스토어 등록은 계정 확보 후
     const planMap: Record<string, string> = {
-      'com.meti.pro_monthly'     : 'pro',
-      'com.meti.business_monthly': 'business',
+      'com.elid.app.pro_monthly'     : 'pro',
+      'com.elid.app.business_monthly': 'business',
     }
     const newPlan = planMap[body.product_id]
     if (!newPlan) return c.json(fail('알 수 없는 상품 ID입니다.'), 400)
@@ -444,16 +444,16 @@ products.post(
 // Google Play Billing 구독 영수증 검증
 // ⛔ 스토어 계정 미확보 — verify-apple과 동일 사유로 차단.
 //    재개 조건: Play Developer API 서비스 계정 JSON 확보 후 가드 제거 + TODO 검증 구현.
-//    (재개 시 package_name 기본값과 planMap 상품ID를 확정 번들ID로 갱신할 것 —
-//     `ELID_Decision_BundleID_2026-08-08.md`: com.meti.* → com.elid.app)
+//    (상품ID·package_name은 2026-08-20 확정값 com.elid.app 기준으로 갱신 완료 —
+//     `ELID_App_to_Server_BundleID_Signing_2026-08-20.md`. 스토어 등록은 계정 확보 후)
 // ══════════════════════════════════════════════════════════════
 products.post(
   '/payments/subscription/verify-google',
   authMiddleware,
   zValidator('json', z.object({
     purchase_token: z.string().min(1),
-    product_id    : z.string().min(1),   // e.g. com.meti.pro_monthly
-    package_name  : z.string().default('com.meti.app'),
+    product_id    : z.string().min(1),   // e.g. com.elid.app.pro_monthly
+    package_name  : z.string().default('com.elid.app'),
   })),
   async (c) => {
     return c.json(fail('구독 결제 기능 준비 중입니다. (스토어 검증 연동 전)'), 503)
@@ -462,8 +462,8 @@ products.post(
     const body   = c.req.valid('json')
 
     const planMap: Record<string, string> = {
-      'com.meti.pro_monthly'     : 'pro',
-      'com.meti.business_monthly': 'business',
+      'com.elid.app.pro_monthly'     : 'pro',
+      'com.elid.app.business_monthly': 'business',
     }
     const newPlan = planMap[body.product_id]
     if (!newPlan) return c.json(fail('알 수 없는 상품 ID입니다.'), 400)

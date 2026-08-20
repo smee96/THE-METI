@@ -511,7 +511,8 @@ app.get('/.well-known/partner-jwks.json', async (c) => {
 })
 
 app.get('/.well-known/assetlinks.json', (c) => {
-  const pkg = c.env.ANDROID_PACKAGE || 'com.meti.app'
+  // 앱 확정 번들ID (앱 전달 2026-08-20): 양 플랫폼 com.elid.app
+  const pkg = c.env.ANDROID_PACKAGE || 'com.elid.app'
   const fps = (c.env.ANDROID_SHA256 || '').split(',').map(s => s.trim()).filter(Boolean)
   return c.json(fps.length ? [{
     relation: ['delegate_permission/common.handle_all_urls'],
